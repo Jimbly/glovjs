@@ -64,6 +64,15 @@ export function textureLoadCount() {
   return load_count;
 }
 
+let texture_loading_state = false;
+export function textureSetIsLoading(value) {
+  texture_loading_state = value;
+}
+
+function textureIsLoading() {
+  return texture_loading_state || isLoading();
+}
+
 let texture_stream_delay = 0;
 export function texturesDelayStreamingPostLoad() {
   if (!textureLoadCount()) {
@@ -514,7 +523,7 @@ Texture.prototype.texStorage = function (levels, gl_internal_format, width, heig
 
 function uploadPrep(is_compressed, tex, data, per_mipmap_data) {
   let size = tex.width * tex.height * tex.format.count;
-  let do_sync = size <= ASYNC_TEXTURE_SIZE || isLoading() || tex.for_reload;
+  let do_sync = size <= ASYNC_TEXTURE_SIZE || textureIsLoading() || tex.for_reload;
   let total_levels = 1;
   let leveloffs = 0;
   let do_prealloc = engine.webgl2 && is_compressed || !is_compressed;
