@@ -75,15 +75,18 @@ module.exports = function (gb) {
       '!**/*.ogg',
       '!**/*.webm',
       '!**/*.js.map',
-      '!**/*.gz', // at least: outputs from compress_files_dev
+      '!**/*.gz', // at least: outputs from client_compress_dev
     ],
-    compress_files_dev: [ // compressed even in development mode
-      // 'client_texproc_output:**/*.txp-astc',
-      'client_texproc_output:**/*.txp-dxt',
-      // 'client_texproc_output:**/*.astc',
-      'client_texproc_output:**/*.dxt',
+    gzipped_textures: [
+      // These files:
+      //   A) are stored gzipped even in the cache
+      //   B) are compressed (.gz) even in development
+      //   C) are only output compressed in both dev (.gz) and prod (.br, .gz)
+      '.dxt',
+      '.astc',
+      '.txp-dxt',
+      '.txp-astc'
     ],
-    texproc_gzexts: ['.dxt', '.astc', '.txp-dxt', '.txp-astc'],
     client_fsdata: [
       'client/shaders/**',
       'glov/client/shaders/**',

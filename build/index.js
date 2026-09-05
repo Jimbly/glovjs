@@ -320,7 +320,7 @@ gb.task({
   ...gbcache({
     key: 'texproc',
     version: 2,
-    gzexts: config.texproc_gzexts,
+    gzexts: config.gzipped_textures,
   }, texproc({
     format_exclude: config.astc_in_dev ? [] : ['astc'],
   })),
@@ -331,6 +331,7 @@ gb.task({
   input: [
     'client_texproc:**',
     'client_texproc:!**/*.tflag',
+    ...config.gzipped_textures.map((ext) => `client_texproc:!**/*${ext}`),
   ],
   type: gb.SINGLE,
   target: 'dev',
@@ -687,13 +688,14 @@ gb.task({
 
 gb.task({
   name: 'client_compress_dev',
-  input: config.compress_files_dev,
+  input: config.gzipped_textures.map((ext) => `client_texproc:**/*${ext}`),
   target: 'dev',
   ...compress({
     globs: ['**'],
     passthrough: false,
     brotli: false,
     noexistcheck: true,
+    minsize: false,
   }),
 });
 
@@ -919,20 +921,6 @@ function noBundleTasks(elem) {
   return true;
 }
 
-function noTextureTask(elem) {
-  if (elem.split(':')[0] === 'client_texproc_output') {
-    return false;
-  }
-  return true;
-}
-
-function noFSData(elem) {
-  if (elem.split(':')[0] === 'client_fsdata') {
-    return false;
-  }
-  return true;
-}
-
 gb.task({
   name: 'build.prod.pngextract',
   input: [
@@ -1022,10 +1010,6 @@ gb.task({
   func: copy,
 });
 
-function noClientHTML(a) {
-  return !a.startsWith('client_html');
-}
-
 gb.task({
   name: 'asset_hash_prod',
   input: [
@@ -1060,7 +1044,11 @@ gb.task({
     ...bundle_tasks.map(addStarStarJSON), // things excluded in build.prod.uglify
     'build.prod.client_fsdata:**',
     'build.prod.texfinal:**',
-    ...client_input_globs.filter(noBundleTasks).filter(noTextureTask).filter(noFSData).filter(noClientHTML),
+    ...client_input_globs.filter(noBundleTasks)
+      .filter((a) => !a.startsWith('client_texproc_output:'))
+      .filter((a) => !a.startsWith('client_fsdata:'))
+      .filter((a) => !a.startsWith('client_html'))
+      .filter((a) => !a.startsWith('client_compress_dev:')),
   ],
   type: gb.SINGLE,
   func: copy,
@@ -1179,12 +1167,28 @@ gb.task({
   name: 'build.prod.compress',
   input: [
     'prod.posthash:**',
+    ...config.gzipped_textures.map((ext) => `prod.posthash:!**/*${ext}`),
     ...config.extra_prod_inputs,
   ],
   target: 'prod',
   ...compress({
     globs: config.compress_files,
+    max: true,
     passthrough: true,
+  }),
+});
+
+gb.task({
+  name: 'build.prod.compresstex',
+  input: [
+    ...config.gzipped_textures.map((ext) => `prod.posthash:**/*${ext}`),
+  ],
+  target: 'prod',
+  ...compress({
+    globs: ['**'],
+    max: true,
+    passthrough: false,
+    minsize: false,
   }),
 });
 
@@ -1201,7 +1205,13 @@ gb.task({
 
 gb.task({
   name: 'build.prod.client',
-  deps: ['build.prod.compress', 'build.prod.texfinal', 'build.zip', ...config.extra_prod_tasks],
+  deps: [
+    'build.prod.compress',
+    'build.prod.compresstex',
+    'build.prod.texfinal',
+    'build.zip',
+    ...config.extra_prod_tasks
+  ],
 });
 gb.task({
   name: 'build',

@@ -1,4 +1,4 @@
-const { brotliCompress, gzip } = require('zlib');
+const { constants, brotliCompress, gzip } = require('zlib');
 const { asyncParallel } = require('glov-async');
 const gb = require('glov-build');
 const micromatch = require('micromatch');
@@ -7,9 +7,11 @@ module.exports = function (opts) {
   let { globs, passthrough, noexistcheck } = opts;
   let do_brotli = opts.brotli ?? true;
   let do_gzip = opts.gzip ?? true;
-  let min_savings = 512; // must be at least this many bytes smaller
-  let min_savings_ratio = 0.95; // must be at least this compression ratio
-  let min_size = 1024; // source file must be this big or larger to even try
+  let do_minsize = opts.minsize ?? true;
+  let min_savings = do_minsize ? 512 : -Infinity; // must be at least this many bytes smaller
+  let min_savings_ratio = do_minsize ? 0.95 : Infinity; // must be at least this compression ratio
+  let min_size = do_minsize ? 1024 : 0; // source file must be this big or larger to even try
+  let do_max = opts.max ?? false;
 
   function gbif(fn) {
     return function (job, done) {
@@ -32,10 +34,15 @@ module.exports = function (opts) {
     }
     let initial_size = file.contents.length;
     let tasks = [];
-    if (do_brotli && initial_size > min_size) {
+    if (do_brotli && initial_size >= min_size) {
       tasks.push(function (next) {
         function doit() {
-          brotliCompress(file.contents, function (err, buffer_br) {
+          let params = {
+            [constants.BROTLI_PARAM_QUALITY]: do_max ? 11 : 6,
+          };
+          brotliCompress(file.contents, {
+            params,
+          }, function (err, buffer_br) {
             if (!err) {
               if (
                 initial_size - buffer_br.length > min_savings &&
@@ -62,10 +69,14 @@ module.exports = function (opts) {
         }
       });
     }
-    if (do_gzip && initial_size > min_size) {
+    if (do_gzip && initial_size >= min_size) {
       tasks.push(function (next) {
         function doit() {
-          gzip(file.contents, function (err, buffer_gz) {
+          let params = {};
+          if (do_max) {
+            params.level = constants.Z_BEST_COMPRESSION;
+          }
+          gzip(file.contents, params, function (err, buffer_gz) {
             if (!err) {
               if (
                 initial_size - buffer_gz.length > min_savings &&
