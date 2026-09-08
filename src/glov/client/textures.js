@@ -547,7 +547,8 @@ function uploadPrep(is_compressed, tex, data, per_mipmap_data) {
   // if we downsampled, adjust width/height (for GPU mem calculations, but might confuse other logic?)
   tex.width = base_level.width;
   tex.height = base_level.height;
-  let no_mipmaps = !engine.webgl2 && (!isPowerOfTwo(tex.width) || !isPowerOfTwo(tex.height));
+  let no_mipmaps = !engine.webgl2 && (!isPowerOfTwo(tex.width) || !isPowerOfTwo(tex.height)) ||
+    is_compressed && !per_mipmap_data;
   if (no_mipmaps) {
     total_levels = 1;
   }
