@@ -1,6 +1,7 @@
 /* global XMLHttpRequest */
 
 const assert = require('assert');
+const { callbackify, unpromisify } = require('glov/common/util');
 
 const { random, round } = Math;
 
@@ -25,6 +26,8 @@ function labelFromURL(url) {
   return m ? m[1] : url;
 }
 
+let nativeFetch = window.fetch || null;
+
 export function fetch(params, cb) {
   let is_done = false;
   let timer;
@@ -42,6 +45,50 @@ export function fetch(params, cb) {
   method = method || 'GET';
   assert(url);
   label = label || labelFromURL(url);
+
+  if (nativeFetch && false) {
+    // This mostly works, however it creates larger (untracked) stalls when loading textures
+    // If we use this path: need to add timeout logic
+    let options = {
+      method,
+      headers: {
+        ...headers,
+      },
+      mode: 'cors',
+    };
+    if (body !== undefined) {
+      if (typeof body === 'object') {
+        options.headers['Content-Type'] = 'application/json';
+        options.body = JSON.stringify(body);
+      } else {
+        options.body = String(body);
+      }
+    }
+    profilerStart('nativeFetch');
+    nativeFetch(url, options).then(function (resp) {
+      if (!resp.ok) {
+        return void callbackify(resp.text.bind(resp))(function (err, resp_body) {
+          if (err) {
+            return void done(err);
+          }
+          done(String(resp.status), resp_body);
+        });
+      }
+      let resp_func = response_type === 'arraybuffer' ? 'arrayBuffer' :
+        response_type === 'json' ? 'json' : 'text';
+      profilerStart('nativeFetch:getResponse');
+      callbackify(resp[resp_func].bind(resp))(function (err, resp_body) {
+        if (err) {
+          return void done(err);
+        }
+        done(null, resp_body);
+      });
+      profilerStop('nativeFetch:getResponse');
+    }, unpromisify(done));
+    profilerStop('nativeFetch');
+    return;
+  }
+
   let xhr = new XMLHttpRequest();
   xhr.open(method, url, true);
   if (timeout) {
