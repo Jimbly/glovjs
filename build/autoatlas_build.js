@@ -7,7 +7,7 @@ const gb = require('glov-build');
 const yaml = require('js-yaml');
 const { parse9Patch } = require('./9patch');
 const asyncHashed = require('./asynchashed.js');
-const { pngAlloc, pngRead, pngWrite } = require('./png');
+const { pngAlloc, pngRead, pngWrite } = require('./pngnative');
 const { ceil, floor, max, sqrt } = Math;
 
 function nextHighestPowerOfTwo(x) {

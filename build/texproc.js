@@ -19,7 +19,7 @@ const {
   pngAlloc,
   pngRead,
   pngWrite,
-} = require('./png.js');
+} = require('./pngnative');
 const { texPackMakeTXP } = require('./texpack');
 
 const { max, min, floor, random } = Math;

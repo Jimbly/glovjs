@@ -1,7 +1,7 @@
 const { inspect } = require('util');
 const gb = require('glov-build');
 const { max } = Math;
-const { pngAlloc, pngRead, pngWrite } = require('./png.js');
+const { pngAlloc, pngRead, pngWrite } = require('./pngnative');
 
 const preamble = `const { vec4 } = require('glov/common/vmath.js');
 const { spritesheetRegister } = require('glov/client/spritesheet.js');
