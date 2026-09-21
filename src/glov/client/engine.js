@@ -1320,6 +1320,11 @@ export function setPixelyStrict(on) {
     render_height = undefined;
   }
 }
+// Must be called out-of-frame (use setTimeout or addPreTickFunc) if not at startup
+export function setRenderDims(w, h) {
+  render_width = w;
+  render_height = h;
+}
 
 export function setPixelPerfect(pixel_perfect) {
   render_pixel_perfect = pixel_perfect;
