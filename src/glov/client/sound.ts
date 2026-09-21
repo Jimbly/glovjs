@@ -69,6 +69,7 @@ interface HowlSound {
   volume(vol?: number, id?: number): void;
   seek(seek?: number, id?: number): HowlSound | number;
   playing(id?: number): boolean;
+  ended(id?: number): boolean;
   duration(id?: number): number;
 
   // If spatial plugin is loaded:
@@ -667,7 +668,10 @@ export function soundPlay(
     name: soundid,
     volume_current: volume,
     stop: sound.stop.bind(sound, id),
-    playing: sound.playing.bind(sound, id), // not reliable if it hasn't started yet? :(
+    playing: function () {
+      // return sound.playing(id); // not reliable if it hasn't started yet? :(
+      return !sound.ended(id);
+    },
     location: (time?: number) => { // get current location
       let v;
       if (time !== undefined) {

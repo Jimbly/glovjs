@@ -57,7 +57,7 @@
     "@babel/preset-env": "7.15.6",
     "@babel/preset-typescript": "^7.17.12",
     "@jimbly/babel-plugin-transform-modules-simple-commonjs": "0.0.3",
-    "@jimbly/howler": "0.1.10",
+    "@jimbly/howler": "0.1.11",
     "@jimbly/parse-dds": "^1.0.0",
     "@jimbly/spine-core": "^4.0.27",
     "@jimbly/texture-compressor": "^1.0.0",
