@@ -209,6 +209,9 @@ module.exports = function (options) {
         let nch = channels.length;
         let sample_rate = decode_ret.sampleRate;
         let audio_buffer = new AudioBufferF32(channels, sample_rate);
+        if (!nch || !channels[0].length) {
+          return void done('Empty audio buffer');
+        }
 
         if (options.outputs.includes('ogg') && !ext_exists.ogg) {
           wrapBlob();
