@@ -459,8 +459,8 @@ function texproc(opts) {
       let dest2 = pngAlloc({ width: next_w, height: next_h, byte_depth: 4 });
       ret.push(dest2);
 
-      drawImageBilinear(dest2, 4, 0, 0, next_w, next_w,
-        img, 4, 0, 0, last_w, last_w, 0xF);
+      drawImageBilinear(dest2, 4, 0, 0, next_w, next_h,
+        img, 4, 0, 0, last_w, last_h, 0xF);
 
       last_w = next_w;
       last_h = next_h;
