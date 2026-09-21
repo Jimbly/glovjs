@@ -191,7 +191,13 @@ module.exports = function (options) {
           });
         } else {
           assert.equal(my_ext, 'wav');
-          next(null, wav.decode(file.contents));
+          let ret;
+          try {
+            ret = wav.decode(file.contents);
+          } catch (e) {
+            return void next(e);
+          }
+          next(null, ret);
         }
       }
 
