@@ -172,6 +172,14 @@ export function v2copy(out: Vec2, a: ROVec2): Vec2 {
   return out;
 }
 
+export function v2cross(a: ROVec2, b: ROVec2): number {
+  let a0 = a[0];
+  let a1 = a[1];
+  let b0 = b[0];
+  let b1 = b[1];
+  return a0*b1 - b0*a1;
+}
+
 export function v2dist(a: ROVec2, b: ROVec2): number {
   return sqrt((a[0] - b[0]) * (a[0] - b[0]) +
     (a[1] - b[1]) * (a[1] - b[1]));
