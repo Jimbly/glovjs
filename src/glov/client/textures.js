@@ -149,6 +149,9 @@ export function textureGetAll() {
 export function textureWhite() {
   return textures.white;
 }
+export function textureBlack() {
+  return textures.black;
+}
 export function textureZero() {
   return textures.invisible;
 }
@@ -1827,6 +1830,19 @@ export function textureStartup() {
       255, 255, 255, 255,
       255, 255, 255, 255,
       255, 255, 255, 255,
+    ]),
+  });
+
+  textureLoad({
+    name: 'black',
+    width: 2, height: 2,
+    nozoom: true,
+    format: TEXTURE_FORMAT.RGBA8,
+    data: new Uint8Array([
+      0, 0, 0, 255,
+      0, 0, 0, 255,
+      0, 0, 0, 255,
+      0, 0, 0, 255,
     ]),
   });
 
