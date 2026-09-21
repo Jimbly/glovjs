@@ -1253,7 +1253,7 @@ class ChatUI {
       } :
       this.handle_cmd_parse;
     cmd_parse.handle(this.getAccessObj(), str, function (err?: string | null, resp?: unknown) {
-      if (err && cmd_parse.was_not_found) {
+      if (err && cmd_parse.was_not_found && netSubs()) {
         // forward to server
         netSubs().sendCmdParse(str, handleResult);
       } else {
