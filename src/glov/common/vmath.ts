@@ -523,6 +523,18 @@ export function m4TransformVec3(out: Vec3, a: ROVec3, m: Mat4): Vec3 {
   return out;
 }
 
+export function v4mulMat4(out: Vec4, a: ROVec4, m: Mat4): Vec4 {
+  let x = a[0];
+  let y = a[1];
+  let z = a[2];
+  let w = a[3];
+  out[0] = x * m[0] + y * m[4] + z * m[8] + w * m[12];
+  out[1] = x * m[1] + y * m[5] + z * m[9] + w * m[13];
+  out[2] = x * m[2] + y * m[6] + z * m[10] + w * m[14];
+  out[3] = x * m[3] + y * m[7] + z * m[11] + w * m[15];
+  return out;
+}
+
 export function v3normalize(out: Vec3, a: ROVec3): Vec3 {
   let len = a[0]*a[0] + a[1]*a[1] + a[2]*a[2];
   if (len > 0) {
