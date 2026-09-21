@@ -127,6 +127,9 @@ export let KEYS = {
   PERIOD: 190,
   SLASH: 191,
   TILDE: 192,
+
+  BRACKET_LEFT: 219,
+  BRACKET_RIGHT: 221,
 };
 if (typeof Proxy === 'function') {
   // Catch referencing keys that are not in our map
