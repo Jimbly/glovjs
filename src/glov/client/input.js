@@ -184,6 +184,7 @@ const { cmd_parse } = require('./cmds.js');
 const engine = require('./engine.js');
 const { renderNeeded } = require('./engine.js');
 const in_event = require('./in_event.js');
+const { qwertyKeyCodeFromEvent } = require('./keycode');
 const local_storage = require('./local_storage.js');
 const { abs, max, min, sqrt } = Math;
 const { normalizeWheel } = require('./normalize_mousewheel.js');
@@ -482,7 +483,7 @@ function releaseAllKeysDown(evt) {
 function onKeyUp(event) {
   renderNeeded();
   protectUnload(event.ctrlKey);
-  let code = event.keyCode;
+  let code = qwertyKeyCodeFromEvent(event);
   if (!(letEventThrough(event) & EVENT_TO_DOM)) {
     event.stopPropagation();
     event.preventDefault();
@@ -508,7 +509,7 @@ function onKeyUp(event) {
 
 function onKeyDown(event) {
   protectUnload(event.ctrlKey);
-  let code = event.keyCode;
+  let code = qwertyKeyCodeFromEvent(event);
   let no_stop = (letEventThrough(event) & EVENT_TO_DOM) ||
     code >= KEYS.F5 && code <= KEYS.F12 || // Chrome debug hotkeys
     code === KEYS.F4 && (event.altKey || event.metaKey || event.ctrlKey) || // Windows/Electron close window hotkey
