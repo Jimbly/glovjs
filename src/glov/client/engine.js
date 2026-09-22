@@ -13,7 +13,12 @@ let startup_funcs = [];
 exports.require = require; // For browser console debugging
 
 const assert = require('assert');
-const { actionTopOfFrame } = require('./actions');
+const {
+  internal: {
+    actionStartup,
+    actionTopOfFrame,
+  },
+} = require('./actions');
 const { bindsCheck } = require('./binds');
 const {
   is_android,
@@ -1511,6 +1516,7 @@ export function startup(params) {
   camera2d.startup();
   spriteStartup();
   input.startup(canvas, params);
+  actionStartup();
   modelStartup();
 
   window.addEventListener('blur', onBlur, false);
