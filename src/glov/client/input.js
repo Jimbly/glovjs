@@ -1531,7 +1531,7 @@ export function keyUpEdge(keycode, opts) {
 
 export function padGetAxes(out, stickindex, padindex) {
   assert(stickindex >= 0 && stickindex < NUM_STICKS);
-  if (padindex === undefined) {
+  if (padindex === undefined || padindex === ANY) {
     let sub = vec2();
     v2set(out, 0, 0);
     for (let ii = 0; ii < gamepad_data.length; ++ii) {
@@ -1544,44 +1544,50 @@ export function padGetAxes(out, stickindex, padindex) {
   v2copy(out, sticks[stickindex]);
 }
 
-function padButtonDownInternal(gpd, ps, padcode) {
+function padButtonDownInternal(gpd, ps, padcode, peek) {
   if (ps[padcode]) {
     return engine.frame_dt;
   }
   return 0;
 }
-function padButtonDownEdgeInternal(gpd, ps, padcode) {
+function padButtonDownEdgeInternal(gpd, ps, padcode, peek) {
   if (ps[padcode] === DOWN_EDGE) {
-    ps[padcode] = DOWN;
+    if (!peek) {
+      ps[padcode] = DOWN;
+    }
     return 1;
   }
   return 0;
 }
-function padButtonUpEdgeInternal(gpd, ps, padcode) {
+function padButtonUpEdgeInternal(gpd, ps, padcode, peek) {
   if (padcode === ANY) {
     let r = 0;
     for (let ii = 0; ii < PAD.ANALOG_UP; ++ii) {
       if (ps[ii] === UP_EDGE) {
-        delete ps[padcode];
+        if (!peek) {
+          delete ps[padcode];
+        }
         r++;
       }
     }
     return r;
   }
   if (ps[padcode] === UP_EDGE) {
-    delete ps[padcode];
+    if (!peek) {
+      delete ps[padcode];
+    }
     return 1;
   }
   return 0;
 }
 
-function padButtonShared(fn, padcode, padindex) {
+function padButtonShared(fn, padcode, padindex, opts) {
   assert(padcode !== undefined);
   let r = 0;
   // Handle calling without a specific pad index
-  if (padindex === undefined) {
+  if (padindex === undefined || padindex === ANY) {
     for (let ii = 0; ii < pad_states.length; ++ii) {
-      r += padButtonShared(fn, padcode, ii);
+      r += padButtonShared(fn, padcode, ii, opts);
     }
     return r;
   }
@@ -1595,23 +1601,25 @@ function padButtonShared(fn, padcode, padindex) {
   }
   let ps = pad_states[padindex];
 
+  let peek = Boolean(opts && opts.peek);
+
   let am = ANALOG_MAP[padcode];
   if (am) {
     for (let ii = 0; ii < am.length; ++ii) {
-      r += fn(gpd, ps, am[ii]) || 0;
+      r += fn(gpd, ps, am[ii], peek) || 0;
     }
   }
-  r += fn(gpd, ps, padcode);
+  r += fn(gpd, ps, padcode, peek);
   return r;
 }
-export function padButtonDown(padcode, padindex) {
-  return padButtonShared(padButtonDownInternal, padcode, padindex);
+export function padButtonDown(padcode, padindex, opts) {
+  return padButtonShared(padButtonDownInternal, padcode, padindex, opts);
 }
-export function padButtonDownEdge(padcode, padindex) {
-  return padButtonShared(padButtonDownEdgeInternal, padcode, padindex);
+export function padButtonDownEdge(padcode, padindex, opts) {
+  return padButtonShared(padButtonDownEdgeInternal, padcode, padindex, opts);
 }
-export function padButtonUpEdge(padcode, padindex) {
-  return padButtonShared(padButtonUpEdgeInternal, padcode, padindex);
+export function padButtonUpEdge(padcode, padindex, opts) {
+  return padButtonShared(padButtonUpEdgeInternal, padcode, padindex, opts);
 }
 
 let start_pos = vec2();
