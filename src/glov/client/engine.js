@@ -13,6 +13,8 @@ let startup_funcs = [];
 exports.require = require; // For browser console debugging
 
 const assert = require('assert');
+const { actionTopOfFrame } = require('./actions');
+const { bindsCheck } = require('./binds');
 const {
   is_android,
   is_ios,
@@ -1168,6 +1170,8 @@ function tick(timestamp) {
 
   soundTick(dt);
   input.tickInput();
+  actionTopOfFrame();
+  bindsCheck();
   uiTick(dt);
 
   if (need_repos) {
