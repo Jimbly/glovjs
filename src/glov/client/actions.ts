@@ -5,7 +5,7 @@ export const internal = {
 
 import assert from 'assert';
 import { CmdRespFunc } from 'glov/common/cmd_parse';
-import { BIND_CTRL, BIND_SHIFT, bindKB, bindPad } from './binds';
+import { BIND_CTRL, BIND_EVENT_ALL, BIND_SHIFT, bindKB, bindPad } from './binds';
 import { platformGetID } from './client_config';
 import { cmd_parse } from './cmds';
 import { KEYS, PAD } from './input';
@@ -42,12 +42,15 @@ export type ActionKey = keyof ActionRegistry;
 
 type ActionState = {
   down: number;
+  down_time: number;
   down_edge: number;
 };
 let action_state = {} as Record<ActionKey, ActionState>;
 
 // Can be called for external events trigger actions (e.g. on-screen controls),
 //   though e.g. cmd_parse.handle('myaction 0') also works
+// note: for simulated events, only artificial minimum (non-0) down_time will be returned,
+//   need more logic otherwise to track this
 export function actionTriggerEdge(action_key: ActionKey, is_down: boolean): void {
   let action = action_state[action_key];
   assert(action);
@@ -60,14 +63,21 @@ export function actionTriggerEdge(action_key: ActionKey, is_down: boolean): void
 }
 
 function actionCmd(action_key: ActionKey, value: string, resp_func: CmdRespFunc): void {
+  value = value.trim();
   if (!value) {
     actionTriggerEdge(action_key, true);
     actionTriggerEdge(action_key, false);
   } else {
-    if (Number(value)) {
+    let params = value.split(' ');
+    if (params[0] === 'down') {
       actionTriggerEdge(action_key, true);
-    } else {
+    } else if (params[0] === 'up') {
       actionTriggerEdge(action_key, false);
+    } else if (params[0] === 'time' && isFinite(Number(params[1]))) {
+      let action = action_state[action_key];
+      action.down_time = max(action.down_time, Number(params[1]));
+    } else {
+      return resp_func(`Usage: /${action_key} down|up|time [milliseconds]`);
     }
   }
   resp_func();
@@ -78,6 +88,7 @@ export function actionRegister(action_key: ActionKey): void {
   action_state[action_key] = {
     down: 0,
     down_edge: 0,
+    down_time: 0,
   };
   cmd_parse.register({
     cmd: action_key,
@@ -90,7 +101,7 @@ export function actionBindKB(key: keyof typeof KEYS, action_key: ActionKey, modi
   bindKB({
     key,
     cmd: action_key,
-    mode: 'hold',
+    events: BIND_EVENT_ALL,
     modifiers,
   });
 }
@@ -98,7 +109,7 @@ export function actionBindPad(pad: keyof typeof PAD, action_key: ActionKey): voi
   bindPad({
     key: pad,
     cmd: action_key,
-    mode: 'hold',
+    events: BIND_EVENT_ALL,
   });
 }
 
@@ -106,6 +117,7 @@ function actionTopOfFrame(): void {
   for (let key in action_state) {
     let action = action_state[key as ActionKey];
     action.down_edge = 0;
+    action.down_time = 0;
   }
 }
 
@@ -130,7 +142,7 @@ export function actionEdge(action_key: ActionKey, opts?: ActionOpts): number {
 export function actionDown(action_key: ActionKey): number {
   let state = action_state[action_key];
   assert(state);
-  return state.down;
+  return state.down_time;
 }
 
 function actionStartup(): void {

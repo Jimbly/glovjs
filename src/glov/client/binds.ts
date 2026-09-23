@@ -5,22 +5,33 @@ export const BIND_ALT = 1<<2;
 import { Rec } from 'glov/common/types';
 import { cmd_parse } from './cmds';
 import {
+  ANY,
   keyDown,
   keyDownEdge,
   KEYS,
   keyUpEdge,
   PAD,
+  padButtonDown,
   padButtonDownEdge,
   padButtonUpEdge,
 } from './input';
 
 export type ValidKey = keyof typeof KEYS;
 export type ValidPad = keyof typeof PAD;
-export type BindMode = 'hold' | 'fire';
+export const BIND_EVENT_DOWN = 1<<0;
+export const BIND_EVENT_UP = 1<<1;
+export const BIND_EVENT_TIME = 1<<2;
+export const BIND_EVENT_DOWNUP = BIND_EVENT_DOWN | BIND_EVENT_UP;
+export const BIND_EVENT_ALL = BIND_EVENT_DOWNUP | BIND_EVENT_TIME;
+export type BindEvents =
+  // in theory, any bitmask allowed, but probably only these two are useful
+  typeof BIND_EVENT_DOWN |
+  typeof BIND_EVENT_DOWNUP |
+  typeof BIND_EVENT_ALL;
 
 type Bind = {
   cmd: string;
-  mode: BindMode;
+  events: BindEvents;
 };
 type BindList = {
   code: number;
@@ -33,7 +44,7 @@ let pad_binds: Rec<ValidPad, BindList> = {};
 export type BindOpt<T> = {
   key: T;
   cmd: string;
-  mode: BindMode;
+  events: BindEvents;
   modifiers?: number;
 };
 
@@ -46,7 +57,7 @@ export function bindKB(opt: BindOpt<ValidKey>): void {
   let arr = entry.list_by_mod[mod] = entry.list_by_mod[mod] || [];
   arr.push({
     cmd: opt.cmd,
-    mode: opt.mode,
+    events: opt.events,
   });
 }
 
@@ -59,18 +70,26 @@ export function bindPad(opt: BindOpt<ValidPad>): void {
   let arr = entry.list_by_mod[mod] = entry.list_by_mod[mod] || [];
   arr.push({
     cmd: opt.cmd,
-    mode: opt.mode,
+    events: opt.events,
   });
 }
 
 const bind_set = [{
   list: kb_binds,
   downEdge: keyDownEdge,
+  down: keyDown,
   upEdge: keyUpEdge,
 }, {
   list: pad_binds,
-  downEdge: padButtonDownEdge,
-  upEdge: padButtonUpEdge,
+  downEdge: function (code: number, opts?: { peek?: boolean }) {
+    return padButtonDownEdge(code, ANY, opts);
+  },
+  down: function (code: number, opts?: { peek?: boolean }) {
+    return padButtonDown(code, ANY, opts);
+  },
+  upEdge: function (code: number, opts?: { peek?: boolean }) {
+    return padButtonUpEdge(code, ANY, opts);
+  },
 }];
 
 // We're peeking all checks because we have default binds on all of the keys
@@ -111,10 +130,8 @@ export function bindsCheck(): void {
           }
           for (let ii = 0; ii < list.length; ++ii) {
             let bind = list[ii];
-            if (bind.mode === 'hold') {
-              cmd_parse.handle(undefined, `${bind.cmd} 1`);
-            } else {
-              cmd_parse.handle(undefined, bind.cmd);
+            if (bind.events & BIND_EVENT_DOWN) {
+              cmd_parse.handle(undefined, `${bind.cmd} down`);
             }
           }
           bindlist.down_mod = mod;
@@ -122,13 +139,25 @@ export function bindsCheck(): void {
           break;
         }
       }
+      let down_time = set.down(bindlist.code);
+      if (down_time) {
+        let list = bindlist.list_by_mod[bindlist.down_mod];
+        if (list) {
+          for (let ii = 0; ii < list.length; ++ii) {
+            let bind = list[ii];
+            if (bind.events & BIND_EVENT_TIME) {
+              cmd_parse.handle(undefined, `${bind.cmd} time ${down_time}`);
+            }
+          }
+        }
+      }
       if (set.upEdge(bindlist.code, PEEK)) {
         let list = bindlist.list_by_mod[bindlist.down_mod];
         if (list) {
           for (let ii = 0; ii < list.length; ++ii) {
             let bind = list[ii];
-            if (bind.mode === 'hold') {
-              cmd_parse.handle(undefined, `${bind.cmd} 0`);
+            if (bind.events & BIND_EVENT_UP) {
+              cmd_parse.handle(undefined, `${bind.cmd} up`);
             }
           }
         }

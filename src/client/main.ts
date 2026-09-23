@@ -4,6 +4,7 @@ const local_storage = require('glov/client/local_storage');
 local_storage.setStoragePrefix('glovjs-playground'); // Before requiring anything else that might load from this
 
 import assert from 'assert';
+import { actionDown, actionEdge } from 'glov/client/actions';
 import { autoAtlas } from 'glov/client/autoatlas';
 import { platformParameterGet, platformSetRichPresence } from 'glov/client/client_config';
 import { editBox } from 'glov/client/edit_box';
@@ -20,14 +21,10 @@ import {
 import {
   inputClick,
   keyDown,
-  keyDownEdge,
   KEYS,
   mouseDownOverBounds,
   mouseOver,
   mousePos,
-  PAD,
-  padButtonDown,
-  padButtonDownEdge,
 } from 'glov/client/input';
 import { netInit } from 'glov/client/net';
 import {
@@ -838,10 +835,10 @@ export function main(): void {
     test_character.dx = 0;
     test_character.dy = 0;
     if (!uiHandlingNav()) { // could do WASD regardless
-      test_character.dx -= keyDown(KEYS.LEFT) + keyDown(KEYS.A) + padButtonDown(PAD.LEFT);
-      test_character.dx += keyDown(KEYS.RIGHT) + keyDown(KEYS.D) + padButtonDown(PAD.RIGHT);
-      test_character.dy -= keyDown(KEYS.UP) + keyDown(KEYS.W) + padButtonDown(PAD.UP);
-      test_character.dy += keyDown(KEYS.DOWN) + keyDown(KEYS.S) + padButtonDown(PAD.DOWN);
+      test_character.dx -= actionDown('left');
+      test_character.dx += actionDown('right');
+      test_character.dy -= actionDown('up');
+      test_character.dy += actionDown('down');
     }
     if (test_character.dx < 0) {
       sprites.animation.setState('idle_left');
@@ -877,7 +874,7 @@ export function main(): void {
     });
     if (mouseDownOverBounds(bounds)) {
       v4copy(test_color_sprite, color_yellow);
-    } else if (inputClick(bounds) || !uiHandlingNav() && keyDownEdge(KEYS.SPACE)) {
+    } else if (inputClick(bounds) || !uiHandlingNav() && actionEdge('accept')) {
       v4copy(test_color_sprite, (test_color_sprite[2] === 0) ? color_white : color_red);
       soundPlay('test', {
         // screen-centered sound
@@ -1095,8 +1092,7 @@ export function main(): void {
       test3D();
     }
 
-
-    // Debuggin full canvas stretching
+    // Debugging full canvas stretching
     // const camera2d = require('glov/client/camera2d.js');
     // drawLine(camera2d.x0(), camera2d.y0(), camera2d.x1(), camera2d.y1(), Z.BORDERS + 1, 1, 0.95,[1,0,1,0.5]);
     // drawLine(camera2d.x1(), camera2d.y0(), camera2d.x0(), camera2d.y1(), Z.BORDERS + 1, 1, 0.95,[1,0,1,0.5]);
@@ -1109,7 +1105,7 @@ export function main(): void {
     //     touch_state: input.touch_state,
     //   }, undefined, 2));
 
-    if (keyDownEdge(KEYS.ESC) || padButtonDownEdge(PAD.B)) {
+    if (actionEdge('cancel')) {
       pad_controls_sprite = !pad_controls_sprite;
     }
   }
