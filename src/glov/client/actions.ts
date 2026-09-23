@@ -5,10 +5,21 @@ export const internal = {
 
 import assert from 'assert';
 import { CmdRespFunc } from 'glov/common/cmd_parse';
-import { BIND_CTRL, BIND_EVENT_ALL, BIND_SHIFT, bindInEventCB, bindKB, bindLayerRegister, bindPad } from './binds';
+import {
+  BIND_EVENT_ALL,
+  bindInEventCB,
+  bindKB,
+  bindLayerRegister,
+  bindPad,
+} from './binds';
 import { platformGetID } from './client_config';
 import { cmd_parse } from './cmds';
-import { KEYS, PAD } from './input';
+import {
+  KEYS,
+  MOD_CTRL,
+  MOD_SHIFT,
+  PAD,
+} from './input';
 import { EventCallback } from './ui';
 
 /*
@@ -169,9 +180,9 @@ function actionStartup(): void {
   actionBindPad('LEFT_BUMPER', 'prev');
   actionBindPad('RIGHT_BUMPER', 'next');
   actionBindKB('TAB', 'next');
-  actionBindKB('TAB', 'prev', BIND_SHIFT);
+  actionBindKB('TAB', 'prev', MOD_SHIFT);
   if (platformGetID() === 'electron') {
-    actionBindKB('TAB', 'prev', BIND_CTRL);
+    actionBindKB('TAB', 'prev', MOD_CTRL);
   }
   // note: these input events, not actions/binds, are disabled if widget is stealing keyboard input
   actionBindKB('UP', 'up');

@@ -1,7 +1,3 @@
-export const BIND_SHIFT = 1<<0;
-export const BIND_CTRL = 1<<1;
-export const BIND_ALT = 1<<2;
-
 export const BIND_EVENT_DOWN = 1<<0;
 export const BIND_EVENT_UP = 1<<1;
 export const BIND_EVENT_TIME = 1<<2;
@@ -16,8 +12,12 @@ import {
   ANY,
   keyDown,
   keyDownEdge,
+  keyDownLastMod,
   KEYS,
   keyUpEdge,
+  MOD_ALT,
+  MOD_CTRL,
+  MOD_SHIFT,
   PAD,
   padButtonDown,
   padButtonDownEdge,
@@ -120,12 +120,16 @@ export function bindPad(opt: BindOpt<ValidPad>): void {
 const bind_set = [{
   list: kb_binds,
   downEdge: keyDownEdge,
+  downEdgeLastMod: keyDownLastMod,
   down: keyDown,
   upEdge: keyUpEdge,
 }, {
   list: pad_binds,
   downEdge: function (code: number, opts?: { peek?: boolean }) {
     return padButtonDownEdge(code, ANY, opts);
+  },
+  downEdgeLastMod: function () {
+    return 0;
   },
   down: function (code: number, opts?: { peek?: boolean }) {
     return padButtonDown(code, ANY, opts);
@@ -145,12 +149,6 @@ export function bindInEventCB(cmd: string, in_event_cb: EventCallback): void {
 // We're peeking all checks because we have default binds on all of the keys
 // that apps maybe currently querying with the input API
 const PEEK = { peek: true };
-
-const MODIFIERS = [
-  [KEYS.SHIFT, BIND_SHIFT],
-  [KEYS.CTRL, BIND_CTRL],
-  [KEYS.ALT, BIND_ALT],
-] as const;
 
 function handleUp(bindlist: BindList): void {
   assert(bindlist.down.length);
@@ -212,21 +210,41 @@ function handleDown(bindlist: BindList, mod_list: number[]): void {
   }
 }
 
-export function bindsCheck(): void {
-  // TODO: allow overriding cmd_parse.handle with chatUI.cmdParse for binding to
-  //   network actions and access level checks?
+const MODIFIERS = [
+  MOD_SHIFT,
+  MOD_CTRL,
+  MOD_ALT,
+] as const;
+let mod_list_cache: Rec<number, number[]> = {};
+function modListFromMod(mod: number): number[] {
+  let entry = mod_list_cache[mod];
+  if (entry) {
+    return entry;
+  }
 
   let mod_list = [0];
   for (let ii = 0; ii < MODIFIERS.length; ++ii) {
     // TODO: we can pull the modifiers off of the actual event instead for better reliability
-    if (keyDown(MODIFIERS[ii][0])) {
+    if (mod & MODIFIERS[ii]) {
       let len = mod_list.length;
       for (let jj = 0; jj < len; ++jj) {
-        mod_list.push(mod_list[jj] | MODIFIERS[ii][1]);
+        mod_list.push(mod_list[jj] | MODIFIERS[ii]);
       }
     }
   }
   mod_list.reverse();
+  mod_list_cache[mod] = mod_list;
+  return mod_list;
+}
+
+export function bindsCheck(): void {
+  // TODO: allow overriding cmd_parse.handle with chatUI.cmdParse for binding to
+  //   network actions and access level checks?
+
+  let base_mod = (keyDown(KEYS.SHIFT) ? MOD_SHIFT : 0) |
+    (keyDown(KEYS.CTRL) ? MOD_CTRL : 0) |
+    (keyDown(KEYS.ALT) ? MOD_ALT : 0);
+  let base_mod_list = modListFromMod(base_mod);
   for (let jj = 0; jj < bind_set.length; ++jj) {
     let set = bind_set[jj];
     for (let key in set.list) {
@@ -234,8 +252,8 @@ export function bindsCheck(): void {
 
       // check if any of the binds for the current mod need an in_event_cb
       let in_event_cb: EventCallback | undefined;
-      for (let kk = 0; kk < mod_list.length; ++kk) {
-        let mod = mod_list[kk];
+      for (let kk = 0; kk < base_mod_list.length; ++kk) {
+        let mod = base_mod_list[kk];
         let list = bindlist.list_by_mod[mod];
         if (list) {
           for (let ii = 0; ii < list.length; ++ii) {
@@ -248,13 +266,15 @@ export function bindsCheck(): void {
           }
         }
       }
-
       let param = in_event_cb ? {
         peek: true,
         in_event_cb,
       } : PEEK;
+
       let up_edge = set.upEdge(bindlist.code, param);
       let down_edge = set.downEdge(bindlist.code, param);
+      let down_mod = down_edge ? set.downEdgeLastMod() : 0;
+      let mod_list = modListFromMod(down_mod);
 
       // if required, first release any held down events from previous frames
       while (up_edge && bindlist.down.length) {

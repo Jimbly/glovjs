@@ -27,6 +27,9 @@ deprecate(exports, 'mouseDown', 'mouseDownAnywhere, mouseDownMidClick, mouseDown
 
 import {
   ANY,
+  MOD_ALT,
+  MOD_CTRL,
+  MOD_SHIFT,
   POINTERLOCK,
 } from './input_constants';
 
@@ -321,6 +324,7 @@ function KeyData() {
   this.down_time = 0;
   this.up_edge = 0;
   this.state = UP;
+  this.down_mod = 0;
 }
 KeyData.prototype.keyUp = function (event) {
   ++this.up_edge;
@@ -567,6 +571,9 @@ function onKeyDown(event) {
   if (ks.state !== DOWN) { // not a repeat event
     ++ks.down_edge;
     ks.state = DOWN;
+    ks.down_mod = (event.shiftKey ? MOD_SHIFT : 0) |
+      (event.ctrlKey ? MOD_CTRL : 0) |
+      (event.altKey ? MOD_ALT : 0);
     ks.origin_time = eventTimestamp(event);
     // ks.down_start = ks.origin_time;
 
@@ -1487,6 +1494,10 @@ export function numTouches() {
   return Object.keys(touches).length;
 }
 
+let last_mod;
+export function keyDownLastMod() {
+  return last_mod;
+}
 export function keyDown(keycode) {
   if (keycode === KEYS.CTRL) {
     ctrl_checked = true;
@@ -1508,6 +1519,7 @@ export function keyDown(keycode) {
   if (!ks) {
     return 0;
   }
+  last_mod = ks.down_mod;
   if (ks.state === DOWN) {
     assert(ks.down_time); // Will fire if we call keyDown() before tickInput()
   }
@@ -1528,6 +1540,7 @@ export function keyDownEdge(keycode, opts) {
   if (!ks) {
     return 0;
   }
+  last_mod = ks.down_mod;
   let r = ks.down_edge;
   if (!opts || !opts.peek) {
     ks.down_edge = 0;
