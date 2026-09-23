@@ -5,9 +5,11 @@ export const internal = {
 
 import assert from 'assert';
 import { CmdRespFunc } from 'glov/common/cmd_parse';
-import { bindKB, bindPad } from './binds';
+import { BIND_CTRL, BIND_SHIFT, bindKB, bindPad } from './binds';
 import { cmd_parse } from './cmds';
 import { KEYS, PAD } from './input';
+import { EventCallback } from './ui';
+import { platformGetID } from './client_config';
 
 /*
 
@@ -30,6 +32,8 @@ export interface ActionRegistry {
   left: 0;
   down: 0;
   right: 0;
+  prev: 0;
+  next: 0;
   accept: 0;
   cancel: 0;
 }
@@ -82,11 +86,12 @@ export function actionRegister(action_key: ActionKey): void {
   });
 }
 
-export function actionBindKB(key: keyof typeof KEYS, action_key: ActionKey): void {
+export function actionBindKB(key: keyof typeof KEYS, action_key: ActionKey, modifiers?: number): void {
   bindKB({
     key,
     cmd: action_key,
-    mode: 'hold'
+    mode: 'hold',
+    modifiers,
   });
 }
 export function actionBindPad(pad: keyof typeof PAD, action_key: ActionKey): void {
@@ -104,11 +109,21 @@ function actionTopOfFrame(): void {
   }
 }
 
-export function actionEdge(action_key: ActionKey): number {
+export type ActionOpts = {
+  in_event_cb?: EventCallback | null; // for clicks and key presses
+  peek?: boolean;
+};
+
+export function actionEdge(action_key: ActionKey, opts?: ActionOpts): number {
   let state = action_state[action_key];
   assert(state);
   let ret = state.down_edge;
-  state.down_edge = 0;
+  if (!(opts && opts.peek)) {
+    state.down_edge = 0;
+  }
+  if (opts && opts.in_event_cb) {
+    // TODO: bindInEventCB(action_key, opts.in_event_cb);
+  }
   return ret;
 }
 
@@ -123,42 +138,12 @@ function actionStartup(): void {
   actionRegister('left');
   actionRegister('down');
   actionRegister('right');
+  actionRegister('prev');
+  actionRegister('next');
   actionRegister('accept');
   actionRegister('cancel');
 
-  actionBindKB('UP', 'up');
-  actionBindKB('W', 'up');
-  actionBindKB('LEFT', 'left');
-  actionBindKB('A', 'left');
-  actionBindKB('DOWN', 'down');
-  actionBindKB('S', 'down');
-  actionBindKB('RIGHT', 'right');
-  actionBindKB('D', 'right');
-  // actionBindKB('Z', 'accept');
-  // actionBindKB('X', 'cancel');
-  // actionBindKB('C', 'accept');
-  // actionBindKB('J', 'accept');
-  // actionBindKB('K', 'cancel');
-  // actionBindKB('L', 'accept');
-  // actionBindKB('Q', 'cancel');
-  // actionBindKB('E', 'accept');
-  actionBindKB('SPACE', 'accept');
-  actionBindKB('ESC', 'cancel');
-  actionBindKB('BACKSPACE', 'cancel');
-  actionBindKB('ENTER', 'accept');
-
-  actionBindPad('SELECT', 'accept');
-  actionBindPad('CANCEL', 'cancel');
-  actionBindPad('X', 'accept');
-  actionBindPad('Y', 'cancel');
-  // actionBindPad('LEFT_BUMPER', 'accept');
-  // actionBindPad('RIGHT_BUMPER', 'accept');
-  // actionBindPad('LEFT_TRIGGER', 'cancel');
-  // actionBindPad('RIGHT_TRIGGER', 'cancel');
-  actionBindPad('BACK', 'cancel');
-  // actionBindPad('START', 'cancel');
-  // actionBindPad('LEFT_STICK', 'accept');
-  // actionBindPad('RIGHT_STICK', 'accept');
+  // basic nav set - active even when an edit box has keyboard focus
   actionBindPad('UP', 'up');
   actionBindPad('DOWN', 'down');
   actionBindPad('LEFT', 'left');
@@ -167,4 +152,46 @@ function actionStartup(): void {
   actionBindPad('ANALOG_LEFT', 'left');
   actionBindPad('ANALOG_DOWN', 'down');
   actionBindPad('ANALOG_RIGHT', 'right');
+  actionBindPad('LEFT_BUMPER', 'prev');
+  actionBindPad('RIGHT_BUMPER', 'next');
+  actionBindKB('TAB', 'next');
+  actionBindKB('TAB', 'prev', BIND_SHIFT);
+  if (platformGetID() === 'electron') {
+    actionBindKB('TAB', 'prev', BIND_CTRL);
+  }
+
+  // simplenav set - always active except if a widget is stealing keyboard input
+  // TODO move these into navsimple set
+  actionBindKB('UP', 'up');
+  actionBindKB('LEFT', 'left');
+  actionBindKB('DOWN', 'down');
+  actionBindKB('RIGHT', 'right');
+
+  // extended nav set - active based on app's needs
+  // TODO: move these to an extended bind set
+  actionBindKB('W', 'up');
+  actionBindKB('A', 'left');
+  actionBindKB('S', 'down');
+  actionBindKB('D', 'right');
+  actionBindKB('NUMPAD8', 'up');
+  actionBindKB('NUMPAD4', 'left');
+  actionBindKB('NUMPAD5', 'down');
+  actionBindKB('NUMPAD2', 'down');
+  actionBindKB('NUMPAD6', 'right');
+
+  // general binds
+  actionBindKB('SPACE', 'accept');
+  actionBindKB('ENTER', 'accept');
+  actionBindPad('SELECT', 'accept');
+
+  actionBindKB('ESC', 'cancel');
+  actionBindKB('BACKSPACE', 'cancel');
+  actionBindPad('CANCEL', 'cancel');
+
+  // recommended extras:
+  // actionBindKB('E', 'accept');
+  // actionBindKB('Q', 'cancel');
+  // actionBindPad('X', 'accept');
+  // actionBindPad('Y', 'cancel');
+  // actionBindPad('BACK', 'cancel');
 }
