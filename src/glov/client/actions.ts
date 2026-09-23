@@ -1,6 +1,7 @@
 export const internal = {
   actionStartup, // eslint-disable-line @typescript-eslint/no-use-before-define
   actionTopOfFrame, // eslint-disable-line @typescript-eslint/no-use-before-define
+  actionEatAll, // eslint-disable-line @typescript-eslint/no-use-before-define
 };
 
 import assert from 'assert';
@@ -132,6 +133,10 @@ function actionTopOfFrame(): void {
     action.down_edge = 0;
     action.down_time = 0;
   }
+}
+
+function actionEatAll(): void {
+  actionTopOfFrame();
 }
 
 export type ActionOpts = {

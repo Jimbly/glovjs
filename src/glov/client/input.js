@@ -185,6 +185,7 @@ export const PAD = {
   RSTICK_RIGHT: 27,
 };
 
+const { internal: { actionEatAll } } = require('./actions');
 const { is_firefox, is_mac_osx } = require('./browser.js');
 const camera2d = require('./camera2d.js');
 const { cmd_parse } = require('./cmds.js');
@@ -1259,6 +1260,7 @@ export function eatAllInput(skip_mouse) {
     input_eaten_mouse = true;
   }
   input_eaten_kb = true;
+  actionEatAll();
 }
 
 export function eatAllKeyboardInput() {
