@@ -5,7 +5,7 @@ export const internal = {
 
 import assert from 'assert';
 import { CmdRespFunc } from 'glov/common/cmd_parse';
-import { BIND_CTRL, BIND_EVENT_ALL, BIND_SHIFT, bindKB, bindPad } from './binds';
+import { BIND_CTRL, BIND_EVENT_ALL, BIND_SHIFT, bindKB, bindLayerRegister, bindPad } from './binds';
 import { platformGetID } from './client_config';
 import { cmd_parse } from './cmds';
 import { KEYS, PAD } from './input';
@@ -97,19 +97,21 @@ export function actionRegister(action_key: ActionKey): void {
   });
 }
 
-export function actionBindKB(key: keyof typeof KEYS, action_key: ActionKey, modifiers?: number): void {
+export function actionBindKB(key: keyof typeof KEYS, action_key: ActionKey, modifiers?: number, layer?: string): void {
   bindKB({
     key,
     cmd: action_key,
     events: BIND_EVENT_ALL,
     modifiers,
+    layer,
   });
 }
-export function actionBindPad(pad: keyof typeof PAD, action_key: ActionKey): void {
+export function actionBindPad(pad: keyof typeof PAD, action_key: ActionKey, layer?: string): void {
   bindPad({
     key: pad,
     cmd: action_key,
     events: BIND_EVENT_ALL,
+    layer,
   });
 }
 
@@ -179,15 +181,16 @@ function actionStartup(): void {
 
   // extended nav set - active based on app's needs
   // TODO: move these to an extended bind set
-  actionBindKB('W', 'up');
-  actionBindKB('A', 'left');
-  actionBindKB('S', 'down');
-  actionBindKB('D', 'right');
-  actionBindKB('NUMPAD8', 'up');
-  actionBindKB('NUMPAD4', 'left');
-  actionBindKB('NUMPAD5', 'down');
-  actionBindKB('NUMPAD2', 'down');
-  actionBindKB('NUMPAD6', 'right');
+  bindLayerRegister('navext', 20);
+  actionBindKB('W', 'up', 0, 'navext');
+  actionBindKB('A', 'left', 0, 'navext');
+  actionBindKB('S', 'down', 0, 'navext');
+  actionBindKB('D', 'right', 0, 'navext');
+  actionBindKB('NUMPAD8', 'up', 0, 'navext');
+  actionBindKB('NUMPAD4', 'left', 0, 'navext');
+  actionBindKB('NUMPAD5', 'down', 0, 'navext');
+  actionBindKB('NUMPAD2', 'down', 0, 'navext');
+  actionBindKB('NUMPAD6', 'right', 0, 'navext');
 
   // general binds
   actionBindKB('SPACE', 'accept');

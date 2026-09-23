@@ -380,7 +380,7 @@ export function spotUnfocus(): void {
 export function spotSetNavtype(type: SpotNavtypeEnum): void {
   bindLayerSet('navext', type === SPOT_NAVTYPE_EXTENDED);
 }
-spotSetNavtype(SPOT_NAVTYPE_EXTENDED);
+// spotSetNavtype(SPOT_NAVTYPE_EXTENDED); no: must be past startup
 
 export function spotSuppressKBNav(left_right: boolean, up_down: boolean): void {
   assert(left_right);
