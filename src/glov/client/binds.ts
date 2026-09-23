@@ -10,6 +10,7 @@ export const BIND_EVENT_ALL = BIND_EVENT_DOWNUP | BIND_EVENT_TIME;
 
 import assert from 'assert';
 import { Rec, TSMap } from 'glov/common/types';
+import { empty } from 'glov/common/util';
 import { cmd_parse } from './cmds';
 import {
   ANY,
@@ -22,6 +23,7 @@ import {
   padButtonDownEdge,
   padButtonUpEdge,
 } from './input';
+import { EventCallback } from './ui';
 
 export type ValidKey = keyof typeof KEYS;
 export type ValidPad = keyof typeof PAD;
@@ -133,6 +135,13 @@ const bind_set = [{
   },
 }];
 
+let in_event_cbs: TSMap<EventCallback> = {};
+
+export function bindInEventCB(cmd: string, in_event_cb: EventCallback): void {
+  in_event_cbs[cmd] = in_event_cb;
+}
+
+
 // We're peeking all checks because we have default binds on all of the keys
 // that apps maybe currently querying with the input API
 const PEEK = { peek: true };
@@ -222,8 +231,30 @@ export function bindsCheck(): void {
     let set = bind_set[jj];
     for (let key in set.list) {
       let bindlist = set.list[key as keyof typeof set.list]!;
-      let up_edge = set.upEdge(bindlist.code, PEEK);
-      let down_edge = set.downEdge(bindlist.code, PEEK);
+
+      // check if any of the binds for the current mod need an in_event_cb
+      let in_event_cb: EventCallback | undefined;
+      for (let kk = 0; kk < mod_list.length; ++kk) {
+        let mod = mod_list[kk];
+        let list = bindlist.list_by_mod[mod];
+        if (list) {
+          for (let ii = 0; ii < list.length; ++ii) {
+            let bind = list[ii];
+            if (in_event_cbs[bind.cmd]) {
+              if (layers[bind.layer]!.active) {
+                in_event_cb = in_event_cbs[bind.cmd];
+              }
+            }
+          }
+        }
+      }
+
+      let param = in_event_cb ? {
+        peek: true,
+        in_event_cb,
+      } : PEEK;
+      let up_edge = set.upEdge(bindlist.code, param);
+      let down_edge = set.downEdge(bindlist.code, param);
 
       // if required, first release any held down events from previous frames
       while (up_edge && bindlist.down.length) {
@@ -260,5 +291,8 @@ export function bindsCheck(): void {
         handleUp(bindlist);
       }
     }
+  }
+  if (!empty(in_event_cbs)) {
+    in_event_cbs = {};
   }
 }

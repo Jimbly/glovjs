@@ -5,7 +5,7 @@ export const internal = {
 
 import assert from 'assert';
 import { CmdRespFunc } from 'glov/common/cmd_parse';
-import { BIND_CTRL, BIND_EVENT_ALL, BIND_SHIFT, bindKB, bindLayerRegister, bindPad } from './binds';
+import { BIND_CTRL, BIND_EVENT_ALL, BIND_SHIFT, bindInEventCB, bindKB, bindLayerRegister, bindPad } from './binds';
 import { platformGetID } from './client_config';
 import { cmd_parse } from './cmds';
 import { KEYS, PAD } from './input';
@@ -128,7 +128,7 @@ export type ActionOpts = {
   peek?: boolean;
 };
 
-export function actionEdge(action_key: ActionKey, opts?: ActionOpts): number {
+export function actionEdge(action_key: ActionKey, opts?: ActionOpts | null): number {
   let state = action_state[action_key];
   assert(state);
   let ret = state.down_edge;
@@ -136,7 +136,7 @@ export function actionEdge(action_key: ActionKey, opts?: ActionOpts): number {
     state.down_edge = 0;
   }
   if (opts && opts.in_event_cb) {
-    // TODO: bindInEventCB(action_key, opts.in_event_cb);
+    bindInEventCB(action_key, opts.in_event_cb);
   }
   return ret;
 }
