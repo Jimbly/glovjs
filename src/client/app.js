@@ -16,6 +16,8 @@ function onLoad() {
   // require('glov/client/worker_comm.js').startup(); // First, so it gets loading quickly (if workers required)
   if (window.conf_env === 'multiplayer') {
     require('./multiplayer.js').main();
+  } else if (window.conf_env === 'pointerlock') {
+    require('./pointerlock.js').main();
   } else if (window.conf_env === 'entity') {
     require('./enttest.js').main();
   } else {

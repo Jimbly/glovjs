@@ -13,6 +13,13 @@ module.exports = function (config) {
     },
     zip: false,
   }, {
+    name: 'pointerlock',
+    defines: {
+      PLATFORM: 'web',
+      ENV: 'pointerlock',
+    },
+    zip: false,
+  }, {
     name: 'entity',
     defines: {
       PLATFORM: 'web',
