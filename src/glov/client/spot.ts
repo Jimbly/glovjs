@@ -63,6 +63,8 @@ export interface SpotParamBase {
   hotkey: number | null; // optional keyboard hotkey
   hotkeys: number[] | null; // optional keyboard hotkeys
   hotpad: number | null; // optional gamepad button
+  hotaction: ActionKey | null; // optional action hotkey/buttons
+  hotactions: ActionKey[] | null; // optional action hotkeys/buttons
   // (silently) ensures we have the focus this frame (e.g. if dragging a slider, the slider
   // should retain focus even without mouseover)
   focus_steal: boolean;
@@ -95,6 +97,8 @@ export const SPOT_DEFAULT = {
   hotkey: null,
   hotkeys: null,
   hotpad: null,
+  hotaction: null,
+  hotactions: null,
   focus_steal: false,
   sticky_focus: false,
   focus_upon_activation: false,
@@ -209,7 +213,7 @@ import assert from 'assert';
 const { abs, max } = Math;
 import verify from 'glov/common/verify';
 import { Vec2, Vec4 } from 'glov/common/vmath.js';
-import { actionEdge } from './actions';
+import { actionEdge, ActionKey } from './actions';
 import { bindLayerSet } from './binds';
 import * as camera2d from './camera2d.js';
 import { platformParameterGet } from './client_config';
@@ -238,7 +242,6 @@ import {
   mouseMoved,
   mouseOver,
   mousePosIsTouch,
-  PAD,
   padButtonDownEdge,
 } from './input.js';
 import {
@@ -1302,7 +1305,7 @@ export function spot(param: SpotParam): SpotRet {
     }
     if (is_button && !disabled && kb_focused && !suppress_pad) {
       let key_opts = in_event_cb ? { in_event_cb } : null;
-      if (keyDownEdge(KEYS.SPACE, key_opts) || keyDownEdge(KEYS.RETURN, key_opts) || padButtonDownEdge(PAD.A)) {
+      if (actionEdge('accept', key_opts)) {
         button_activate = true;
       }
     }
@@ -1310,23 +1313,33 @@ export function spot(param: SpotParam): SpotRet {
   if (!disabled) {
     const hotkey = param.hotkey === undefined ? def.hotkey : param.hotkey;
     const hotkeys = param.hotkeys === undefined ? def.hotkeys : param.hotkeys;
+    const hotaction = param.hotaction === undefined ? def.hotaction : param.hotaction;
+    const hotactions = param.hotactions === undefined ? def.hotactions : param.hotactions;
     const hotpad = param.hotpad === undefined ? def.hotpad : param.hotpad;
-    if (hotkey || hotkeys) {
-      let key_opts = in_event_cb ? { in_event_cb } : null;
-      if (hotkey && keyDownEdge(hotkey, key_opts)) {
-        button_activate = true;
-      }
-      if (hotkeys) {
-        for (let ii = 0; ii < hotkeys.length; ++ii) {
-          if (keyDownEdge(hotkeys[ii], key_opts)) {
-            button_activate = true;
-          }
+    let key_opts = in_event_cb ? { in_event_cb } : null;
+    if (hotkey && keyDownEdge(hotkey, key_opts)) {
+      button_activate = true;
+    }
+    if (hotkeys) {
+      for (let ii = 0; ii < hotkeys.length; ++ii) {
+        if (keyDownEdge(hotkeys[ii], key_opts)) {
+          button_activate = true;
         }
       }
     }
     if (hotpad !== null) {
       if (padButtonDownEdge(hotpad)) {
         button_activate = true;
+      }
+    }
+    if (hotaction && actionEdge(hotaction, key_opts)) {
+      button_activate = true;
+    }
+    if (hotactions) {
+      for (let ii = 0; ii < hotactions.length; ++ii) {
+        if (actionEdge(hotactions[ii], key_opts)) {
+          button_activate = true;
+        }
       }
     }
     if (async_activate_key === param.key_computed) {
