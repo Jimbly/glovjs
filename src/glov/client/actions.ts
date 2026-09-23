@@ -6,10 +6,10 @@ export const internal = {
 import assert from 'assert';
 import { CmdRespFunc } from 'glov/common/cmd_parse';
 import { BIND_CTRL, BIND_SHIFT, bindKB, bindPad } from './binds';
+import { platformGetID } from './client_config';
 import { cmd_parse } from './cmds';
 import { KEYS, PAD } from './input';
 import { EventCallback } from './ui';
-import { platformGetID } from './client_config';
 
 /*
 
@@ -159,12 +159,10 @@ function actionStartup(): void {
   if (platformGetID() === 'electron') {
     actionBindKB('TAB', 'prev', BIND_CTRL);
   }
-
-  // simplenav set - always active except if a widget is stealing keyboard input
-  // TODO move these into navsimple set
+  // note: these input events, not actions/binds, are disabled if widget is stealing keyboard input
   actionBindKB('UP', 'up');
-  actionBindKB('LEFT', 'left');
   actionBindKB('DOWN', 'down');
+  actionBindKB('LEFT', 'left');
   actionBindKB('RIGHT', 'right');
 
   // extended nav set - active based on app's needs

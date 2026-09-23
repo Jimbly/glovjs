@@ -209,8 +209,10 @@ import assert from 'assert';
 const { abs, max } = Math;
 import verify from 'glov/common/verify';
 import { Vec2, Vec4 } from 'glov/common/vmath.js';
+import { actionEdge } from './actions';
+import { bindLayerSet } from './binds';
 import * as camera2d from './camera2d.js';
-import { platformGetID, platformParameterGet } from './client_config';
+import { platformParameterGet } from './client_config';
 import * as engine from './engine.js';
 import {
   FontStyle,
@@ -222,6 +224,7 @@ import {
   dragOver,
   inputClick,
   inputEatenMouse,
+  inputSuppressKeys,
   inputTouchMode,
   keyDown,
   keyDownEdge,
@@ -373,162 +376,19 @@ export function spotUnfocus(): void {
   pad_mode = false;
 }
 
-type SpotNavKeysEntry = {
-  keys?: number[];
-  pads?: number[];
-  shift_keys?: number[];
-  unshift_keys?: number[];
-};
-type SpotNavKeys = Record<SpotNavEnum, SpotNavKeysEntry>;
-const spot_nav_keys_base: SpotNavKeys = {
-  [SPOT_NAV_LEFT]: {
-    pads: [PAD.LEFT],
-  },
-  [SPOT_NAV_UP]: {
-    pads: [PAD.UP],
-  },
-  [SPOT_NAV_RIGHT]: {
-    pads: [PAD.RIGHT],
-  },
-  [SPOT_NAV_DOWN]: {
-    pads: [PAD.DOWN],
-  },
-  [SPOT_NAV_PREV]: {
-    shift_keys: [KEYS.TAB],
-    pads: [PAD.LEFT_BUMPER],
-  },
-  [SPOT_NAV_NEXT]: {
-    pads: [PAD.RIGHT_BUMPER],
-    unshift_keys: [KEYS.TAB],
-  },
-};
-const spot_nav_keys_simple: SpotNavKeys = {
-  [SPOT_NAV_LEFT]: {
-    keys: [KEYS.LEFT],
-    pads: spot_nav_keys_base[SPOT_NAV_LEFT].pads,
-  },
-  [SPOT_NAV_UP]: {
-    keys: [KEYS.UP],
-    pads: spot_nav_keys_base[SPOT_NAV_UP].pads,
-  },
-  [SPOT_NAV_RIGHT]: {
-    keys: [KEYS.RIGHT],
-    pads: spot_nav_keys_base[SPOT_NAV_RIGHT].pads,
-  },
-  [SPOT_NAV_DOWN]: {
-    keys: [KEYS.DOWN],
-    pads: spot_nav_keys_base[SPOT_NAV_DOWN].pads,
-  },
-  [SPOT_NAV_PREV]: spot_nav_keys_base[SPOT_NAV_PREV],
-  [SPOT_NAV_NEXT]: spot_nav_keys_base[SPOT_NAV_NEXT],
-};
-const spot_nav_keys_extended: SpotNavKeys = {
-  [SPOT_NAV_LEFT]: {
-    keys: spot_nav_keys_simple[SPOT_NAV_LEFT].keys!.concat([KEYS.A, KEYS.NUMPAD4]),
-    pads: spot_nav_keys_simple[SPOT_NAV_LEFT].pads,
-  },
-  [SPOT_NAV_UP]: {
-    keys: spot_nav_keys_simple[SPOT_NAV_UP].keys!.concat([KEYS.W, KEYS.NUMPAD8]),
-    pads: spot_nav_keys_simple[SPOT_NAV_UP].pads,
-  },
-  [SPOT_NAV_RIGHT]: {
-    keys: spot_nav_keys_simple[SPOT_NAV_RIGHT].keys!.concat([KEYS.D, KEYS.NUMPAD6]),
-    pads: spot_nav_keys_simple[SPOT_NAV_RIGHT].pads,
-  },
-  [SPOT_NAV_DOWN]: {
-    keys: spot_nav_keys_simple[SPOT_NAV_DOWN].keys!.concat([KEYS.S, KEYS.NUMPAD5, KEYS.NUMPAD2]),
-    pads: spot_nav_keys_simple[SPOT_NAV_DOWN].pads,
-  },
-  [SPOT_NAV_PREV]: spot_nav_keys_base[SPOT_NAV_PREV],
-  [SPOT_NAV_NEXT]: spot_nav_keys_base[SPOT_NAV_NEXT],
-};
-function keyDownShifted(key: number): boolean {
-  // Use Ctrl+Tab on Electron since the Steam overlay will intercept shift+tab
-  return (keyDown(KEYS.SHIFT) || platformGetID() === 'electron' && keyDown(KEYS.CTRL)) && keyDownEdge(key);
-}
-function keyDownUnshifted(key: number): boolean {
-  return !keyDown(KEYS.SHIFT) && keyDownEdge(key);
-}
-function compileSpotNavKeysEntry(entry: SpotNavKeysEntry): () => boolean {
-  let fns: ((() => boolean) | (() => number))[] = [];
-  if (entry.keys) {
-    for (let ii = 0; ii < entry.keys.length; ++ii) {
-      fns.push(keyDownEdge.bind(null, entry.keys[ii]));
-    }
-  }
-  if (entry.pads) {
-    for (let ii = 0; ii < entry.pads.length; ++ii) {
-      fns.push(padButtonDownEdge.bind(null, entry.pads[ii]));
-    }
-  }
-  if (entry.shift_keys) {
-    for (let ii = 0; ii < entry.shift_keys.length; ++ii) {
-      fns.push(keyDownShifted.bind(null, entry.shift_keys[ii]));
-    }
-  }
-  if (entry.unshift_keys) {
-    for (let ii = 0; ii < entry.unshift_keys.length; ++ii) {
-      fns.push(keyDownUnshifted.bind(null, entry.unshift_keys[ii]));
-    }
-  }
-  return function () {
-    for (let ii = 0; ii < fns.length; ++ii) {
-      if (fns[ii]()) {
-        return true;
-      }
-    }
-    return false;
-  };
-}
-type SpotNavKeysCompiled = Record<SpotNavEnum, () => boolean>;
-function compileSpotNavKeys(keys: SpotNavKeys): SpotNavKeysCompiled {
-  return {
-    [SPOT_NAV_LEFT]: compileSpotNavKeysEntry(keys[SPOT_NAV_LEFT]),
-    [SPOT_NAV_UP]: compileSpotNavKeysEntry(keys[SPOT_NAV_UP]),
-    [SPOT_NAV_RIGHT]: compileSpotNavKeysEntry(keys[SPOT_NAV_RIGHT]),
-    [SPOT_NAV_DOWN]: compileSpotNavKeysEntry(keys[SPOT_NAV_DOWN]),
-    [SPOT_NAV_PREV]: compileSpotNavKeysEntry(keys[SPOT_NAV_PREV]),
-    [SPOT_NAV_NEXT]: compileSpotNavKeysEntry(keys[SPOT_NAV_NEXT]),
-  };
-}
-const compiled_nav_base = compileSpotNavKeys(spot_nav_keys_base);
-const compiled_nav_simple = compileSpotNavKeys(spot_nav_keys_simple);
-const compiled_nav_extended = compileSpotNavKeys(spot_nav_keys_extended);
-let spot_nav_type: SpotNavtypeEnum;
-let spot_nav_keys: SpotNavKeysCompiled;
+// TODO: deprecate this and all apps just use bindLayerSet directly?
 export function spotSetNavtype(type: SpotNavtypeEnum): void {
-  spot_nav_type = type;
-  spot_nav_keys = (type === SPOT_NAVTYPE_SIMPLE) ? compiled_nav_simple : compiled_nav_extended;
+  bindLayerSet('navext', type === SPOT_NAVTYPE_EXTENDED);
 }
 spotSetNavtype(SPOT_NAVTYPE_EXTENDED);
-function resetNavKeys(): void {
-  spot_nav_keys = (spot_nav_type === SPOT_NAVTYPE_SIMPLE) ? compiled_nav_simple : compiled_nav_extended;
-}
-let suppress_kb_nav_this_frame = false;
 
 export function spotSuppressKBNav(left_right: boolean, up_down: boolean): void {
-  suppress_kb_nav_this_frame = true;
   assert(left_right);
-  let active = (spot_nav_type === SPOT_NAVTYPE_SIMPLE) ? compiled_nav_simple : compiled_nav_extended;
   if (up_down) {
-    spot_nav_keys = {
-      [SPOT_NAV_LEFT]: compiled_nav_base[SPOT_NAV_LEFT],
-      [SPOT_NAV_UP]: compiled_nav_base[SPOT_NAV_UP],
-      [SPOT_NAV_RIGHT]: compiled_nav_base[SPOT_NAV_RIGHT],
-      [SPOT_NAV_DOWN]: compiled_nav_base[SPOT_NAV_DOWN],
-      [SPOT_NAV_PREV]: active[SPOT_NAV_PREV],
-      [SPOT_NAV_NEXT]: active[SPOT_NAV_NEXT],
-    };
+    inputSuppressKeys('arrows');
   } else {
     // just left/right arrows, but still all text input keys
-    spot_nav_keys = {
-      [SPOT_NAV_LEFT]: compiled_nav_base[SPOT_NAV_LEFT],
-      [SPOT_NAV_UP]: compiled_nav_simple[SPOT_NAV_UP],
-      [SPOT_NAV_RIGHT]: compiled_nav_base[SPOT_NAV_RIGHT],
-      [SPOT_NAV_DOWN]: compiled_nav_simple[SPOT_NAV_DOWN],
-      [SPOT_NAV_PREV]: active[SPOT_NAV_PREV],
-      [SPOT_NAV_NEXT]: active[SPOT_NAV_NEXT],
-    };
+    inputSuppressKeys('leftright');
   }
 }
 
@@ -1004,10 +864,6 @@ export function spotEndOfFrame(): void {
   frame_spots = [];
   frame_autofocus_spots = {};
   async_activate_key = null;
-  if (!suppress_kb_nav_this_frame) {
-    resetNavKeys();
-  }
-  suppress_kb_nav_this_frame = false;
 }
 
 function frameSpotsPush(param: SpotListElem): void {
@@ -1108,11 +964,19 @@ export function spotMouseoverHook(pos_param_in: Box, param: MouseOverParam): voi
   }
 }
 
+const spot_nav_actions = {
+  [SPOT_NAV_LEFT]: 'left',
+  [SPOT_NAV_UP]: 'up',
+  [SPOT_NAV_RIGHT]: 'right',
+  [SPOT_NAV_DOWN]: 'down',
+  [SPOT_NAV_PREV]: 'prev',
+  [SPOT_NAV_NEXT]: 'next',
+} as const;
 function keyCheck(nav_dir: SpotNavEnum): boolean {
   if (suppress_pad) {
     return false;
   }
-  return spot_nav_keys[nav_dir]();
+  return Boolean(actionEdge(spot_nav_actions[nav_dir]));
 }
 
 type SpotParamWithOut = SpotParam & {

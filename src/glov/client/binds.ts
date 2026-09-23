@@ -136,3 +136,7 @@ export function bindsCheck(): void {
     }
   }
 }
+
+export function bindLayerSet(layer_name: string, active: boolean): void {
+  // TODO
+}
