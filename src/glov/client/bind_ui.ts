@@ -86,7 +86,7 @@ function defaultLayer(cmd: string): string {
       let tail = str.slice(0, -(cmd.length + 1));
       let idx = tail.lastIndexOf(' ');
       assert(idx > 0);
-      tail = tail.slice(idx);
+      tail = tail.slice(idx + 1);
       return tail;
     }
   }

@@ -1,8 +1,9 @@
 export const BIND_EVENT_DOWN = 1<<0;
 export const BIND_EVENT_UP = 1<<1;
 export const BIND_EVENT_TIME = 1<<2;
-export const BIND_EVENT_DOWNUP = BIND_EVENT_DOWN | BIND_EVENT_UP;
-export const BIND_EVENT_ALL = BIND_EVENT_DOWNUP | BIND_EVENT_TIME;
+export const BIND_EVENT_WITH_PARAMS = 1<<3;
+export const BIND_EVENT_DOWNUP = BIND_EVENT_DOWN | BIND_EVENT_UP | BIND_EVENT_WITH_PARAMS;
+export const BIND_EVENT_ALL = BIND_EVENT_DOWNUP | BIND_EVENT_TIME | BIND_EVENT_WITH_PARAMS;
 
 // Anything on layers at this priority or higher gets executed automatically
 // before ticking, so will be active in modal dialogs, etc.
@@ -285,7 +286,7 @@ function handleUp(bindlist: BindList): void {
             // up events must always be delivered if the down was delivered
             // TODO: maybe only bump the level if we know the down was delivered?
             level: Infinity,
-            cmd: `${bind.cmd} up`,
+            cmd: (bind.events & BIND_EVENT_WITH_PARAMS) ? `${bind.cmd} up` : bind.cmd,
           });
         }
       }
@@ -314,7 +315,7 @@ function handleDown(bindlist: BindList, mod_list: number[]): void {
       if (bind.events & BIND_EVENT_DOWN) {
         cmd_queue.push({
           level: layers[bind.layer]!.priority,
-          cmd: `${bind.cmd} down`,
+          cmd: (bind.events & BIND_EVENT_WITH_PARAMS) ? `${bind.cmd} down` : bind.cmd,
         });
       }
     }
@@ -452,7 +453,7 @@ export function bindsCheck(): void {
                 if (bind.events & BIND_EVENT_TIME) {
                   cmd_queue.push({
                     level: layers[bind.layer]!.priority,
-                    cmd: `${bind.cmd} time ${down_time}`,
+                    cmd: (bind.events & BIND_EVENT_WITH_PARAMS) ? `${bind.cmd} time ${down_time}` : bind.cmd,
                   });
                 }
               }
