@@ -1826,7 +1826,7 @@ class ChatUI {
     // TODO: should this be in runLate?
     bindDispatch({
       level: 0, // run all binds that were not yet dispatched
-      handler: this.cmdParseLogged.bind(this),
+      handler: this.cmdParse.bind(this),
     });
 
     if (!anything_visible && (isMenuUp() || hide_light)) {

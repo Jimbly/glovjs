@@ -1,7 +1,7 @@
 import assert from 'assert';
 import { CmdRespFunc } from 'glov/common/cmd_parse';
 import { Optional, TSMap } from 'glov/common/types';
-import { capitalize, identity } from 'glov/common/util';
+import { capitalize, identity, plural } from 'glov/common/util';
 import { actionExists } from './actions';
 import {
   BIND_EVENT_ALL,
@@ -92,12 +92,6 @@ function defaultLayer(cmd: string): string {
 function addUserBind(param: UserBindParam): void {
   const { bindtype, key, modifiers, cmd } = param;
   let { layer } = param;
-  if (persist_binds) {
-    user_binds.binds = user_binds.binds || [];
-    let str = bindToString(param);
-    user_binds.binds.push(str);
-    localStorageSetJSON<UserBinds>('binds', user_binds);
-  }
   let events = BIND_EVENT_DOWN;
   if (actionExists(cmd)) {
     events = BIND_EVENT_ALL;
@@ -111,6 +105,18 @@ function addUserBind(param: UserBindParam): void {
         layer = 'navext';
       }
     }
+    param.layer = layer;
+  }
+  if (persist_binds) {
+    let str = bindToString(param);
+    //first: check if we can restore a base bind that's unbound
+    if (user_binds.unbinds && user_binds.unbinds.includes(str)) {
+      user_binds.unbinds = user_binds.unbinds.filter((unbind) => unbind !== str);
+    } else {
+      user_binds.binds = user_binds.binds || [];
+      user_binds.binds.push(str);
+    }
+    localStorageSetJSON<UserBinds>('binds', user_binds);
   }
   bindBind(bindtype, {
     key,
@@ -134,21 +140,30 @@ function unbindSub(opt: {
     let diff = false;
     for (let ii = 0; ii < results.length; ++ii) {
       let cmd2 = results[ii];
+      let layer = opt.layer;
+      let m = cmd2.match(/^([^ ]+)\.(.+)$/);
+      if (m) {
+        layer = m[1];
+        cmd2 = m[2];
+      }
       let full_bind = bindToString({
         ...opt,
+        layer,
         cmd: cmd2,
       });
       if (user_binds.binds) {
-        let idx = user_binds.binds.indexOf(full_bind);
-        if (idx !== -1) {
+        let idx;
+        while ((idx = user_binds.binds.indexOf(full_bind)) !== -1) {
           user_binds.binds.splice(idx, 1);
           diff = true;
         }
       }
       if (base_binds.includes(full_bind)) {
         user_binds.unbinds = user_binds.unbinds || [];
-        user_binds.unbinds.push(full_bind);
-        diff = true;
+        if (!user_binds.unbinds.includes(full_bind)) {
+          user_binds.unbinds.push(full_bind);
+          diff = true;
+        }
       }
     }
     if (diff) {
@@ -210,7 +225,7 @@ function unbindFromString(param: string): string | string[] {
 }
 
 const split_regex = /^([^ ]+) (.+)$/;
-function addBindFromString(param: string): string | null {
+function addBindFromString(param: string, auto_unbind: boolean): string | null {
   let m1 = param.match(split_regex);
   if (!m1) {
     return 'Expected 2 arguments';
@@ -243,13 +258,15 @@ function addBindFromString(param: string): string | null {
     }
     validkey = key as ValidPad; // TypeScript TODO: inputValidKeyName should handle this coercion
   }
-  unbindSub({
-    bindtype,
-    modifiers,
-    key: validkey,
-    layer,
-    // no cmd, unbind any matching key on this layer
-  });
+  if (auto_unbind) {
+    unbindSub({
+      bindtype,
+      modifiers,
+      key: validkey,
+      layer,
+      // no cmd, unbind any matching key on this layer
+    });
+  }
   addUserBind({
     bindtype,
     modifiers,
@@ -266,7 +283,7 @@ cmd_parse.register({
   prefix_usage_with_help: true,
   usage: BIND_USAGE,
   func: function (param: string, resp_func: CmdRespFunc): void {
-    let err = addBindFromString(param);
+    let err = addBindFromString(param, true);
     if (err) {
       resp_func(`${err}\n${BIND_USAGE}`);
     } else {
@@ -298,7 +315,8 @@ cmd_parse.register({
 cmd_parse.register({
   cmd: 'bindlist',
   help: 'Lists all current binds',
-  usage: 'Also copies user binds to your clipboard',
+  usage: 'Usage: **/bindlist**\n' +
+    'Usage: **/bindlist copy** (also copies to clipboard)',
   prefix_usage_with_help: true,
   func: function (param: string, resp_func: CmdRespFunc): void {
     let list = bindExport();
@@ -312,9 +330,36 @@ cmd_parse.register({
         ` ${entry.layer !== 'default' ? `${entry.layer}.` : ''}${entry.cmd}`;
       (is_default ? ret_default : ret_user).push(line);
     }
-    copyTextToClipboard(ret_user.join('\n')); // TODO: also add appropriate unbinds?
+    if (param.toLowerCase() === 'copy') {
+      copyTextToClipboard(ret_user.join('\n')); // TODO: also add appropriate unbinds?
+    }
     resp_func(null, `**Active default binds**:\n${ret_default.join('\n')}\n\n` +
       `**Active user binds**:\n${ret_user.join('\n')}`);
+  }
+});
+
+cmd_parse.register({
+  cmd: 'bindreset',
+  help: 'Resets all binds to defaults',
+  func: function (param: string, resp_func: CmdRespFunc): void {
+    let diffs = 0;
+    // Remove all extra binds
+    if (user_binds.binds) {
+      let list = user_binds.binds.slice(0);
+      for (let ii = 0; ii < list.length; ++ii) {
+        unbindFromString(list[ii]);
+        ++diffs;
+      }
+    }
+    // Restore all unbinds
+    if (user_binds.unbinds) {
+      let list = user_binds.unbinds.slice(0);
+      for (let ii = 0; ii < list.length; ++ii) {
+        addBindFromString(list[ii], false);
+        ++diffs;
+      }
+    }
+    resp_func(null, `Restored ${diffs} ${plural(diffs, 'bind')}`);
   }
 });
 
@@ -331,7 +376,7 @@ export function bindUIStartup(): void {
       let str = user_binds.unbinds[ii];
       let res = unbindFromString(str);
       if (!Array.isArray(res) || !res.length) {
-        console.error(`Error applying saved bind "${str}": "${Array.isArray(res) ? 'Bind not found' : res}"`);
+        console.error(`Error applying saved unbind "${str}": "${Array.isArray(res) ? 'Bind not found' : res}"`);
         user_binds.unbinds.splice(ii, 1);
       }
     }
@@ -339,7 +384,7 @@ export function bindUIStartup(): void {
   if (user_binds.binds) {
     for (let ii = user_binds.binds.length - 1; ii >= 0; --ii) {
       let str = user_binds.binds[ii];
-      let err = addBindFromString(str);
+      let err = addBindFromString(str, false);
       if (err) {
         console.error(`Error applying saved bind "${str}": "${err}"`);
         user_binds.binds.splice(ii, 1);
