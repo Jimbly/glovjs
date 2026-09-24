@@ -15,7 +15,7 @@ import {
   ValidPad,
 } from './binds';
 import { cmd_parse } from './cmds';
-import { inputValidKeyName, inputValidPadName } from './input';
+import { inputValidKeyName, inputValidPadName, KEYS } from './input';
 import {
   MOD_ALT,
   MOD_CTRL,
@@ -109,6 +109,13 @@ function addUserBind(param: UserBindParam): void {
   }
   if (!layer) {
     layer = defaultLayer(cmd);
+    if (layer === 'nav' && bindtype === 'key') {
+      let keycode = KEYS[key];
+      if (keycode && keycode >= KEYS['0'] && keycode <= KEYS.NUMPAD_DIVIDE) {
+        // a nav key, but overlaps edit box keys, put into navext
+        layer = 'navext';
+      }
+    }
   }
   bindBind(bindtype, {
     key,
