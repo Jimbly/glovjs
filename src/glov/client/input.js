@@ -202,7 +202,7 @@ const pointer_lock = require('./pointer_lock.js');
 const settings = require('./settings.js');
 const { soundResume } = require('./sound.js');
 const { spotMouseoverHook } = require('./spot.js');
-const { arrayToSet, empty } = require('glov/common/util.js');
+const { empty } = require('glov/common/util.js');
 const { vec2, v2add, v2copy, v2lengthSq, v2same, v2set, v2scale, v2sub } = require('glov/common/vmath.js');
 
 let pad_to_touch;
@@ -229,29 +229,6 @@ let no_active_touches = true;
 export let touch_mode = local_storage.getJSON('touch_mode', false);
 export let pad_mode = !touch_mode && local_storage.getJSON('pad_mode', false);
 
-let all_textinput = [];
-function initTextInputKeys() {
-  function range(a, b) {
-    for (let ii = a; ii <= b; ++ii) {
-      all_textinput.push(ii);
-    }
-  }
-  range(KEYS.A, KEYS.Z);
-  range(KEYS.NUMPAD0, KEYS.NUMPAD_DIVIDE);
-  range(KEYS.SEMICOLON, KEYS.TILDE);
-  range(KEYS.BRACKET_LEFT, KEYS.QUOTE);
-  all_textinput.push(KEYS.INTLBACKSLASH);
-  all_textinput.push(KEYS.BACKSPACE);
-  all_textinput.push(KEYS.SPACE);
-}
-initTextInputKeys();
-const SUPPRESS_KEYS = {
-  arrows: arrayToSet([KEYS.LEFT, KEYS.UP, KEYS.RIGHT, KEYS.DOWN, KEYS.HOME, KEYS.END].concat(all_textinput)),
-  leftright: arrayToSet([KEYS.LEFT, KEYS.RIGHT, KEYS.HOME, KEYS.END].concat(all_textinput)),
-};
-let suppressed_keys = null; // TODO: should we remove these? still use for edit boxes to prevent binds?
-let suppressed_keys_next = null;
-
 cmd_parse.registerValue('mouse_log', {
   type: cmd_parse.TYPE_INT,
   range: [0, 1],
@@ -269,10 +246,6 @@ export function inputPadMode() {
 
 export function inputEatenMouse() {
   return input_eaten_mouse;
-}
-
-export function inputSuppressKeys(type/*:keyof typeof SUPPRESS_KEYS | null*/) {
-  suppressed_keys_next = SUPPRESS_KEYS[type] || null;
 }
 
 export function inputValidKeyName(key) {
@@ -570,10 +543,6 @@ function onKeyDown(event) {
   // console.log(`${event.code} ${event.keyCode}`);
   onUserInput();
 
-  if (suppressed_keys && suppressed_keys[code]) {
-    // key is completely suppressed (e.g. arrows when edit box is focused)
-    return;
-  }
   // Letting through to our code regardless of no_stop, because we handle things like ESC in INPUT elements
   let ks = key_state_new[code];
   if (!ks) {
@@ -1190,9 +1159,6 @@ export function tickInput() {
     pointerLockExit();
   }
   no_active_touches = empty(touches);
-
-  suppressed_keys = suppressed_keys_next;
-  suppressed_keys_next = null;
 }
 
 function endFrameTickMap(map) {
