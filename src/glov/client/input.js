@@ -138,6 +138,7 @@ export let KEYS = {
   QUOTE: 222,
   INTLBACKSLASH: 226,
 };
+const KEYS_ORIG = KEYS;
 if (typeof Proxy === 'function') {
   // Catch referencing keys that are not in our map
   KEYS = new Proxy(KEYS, {
@@ -186,6 +187,7 @@ export const PAD = {
 };
 
 const { internal: { actionEatAll } } = require('./actions');
+const { bindEatAll } = require('./binds');
 const { is_firefox, is_mac_osx } = require('./browser.js');
 const camera2d = require('./camera2d.js');
 const { cmd_parse } = require('./cmds.js');
@@ -247,7 +249,7 @@ const SUPPRESS_KEYS = {
   arrows: arrayToSet([KEYS.LEFT, KEYS.UP, KEYS.RIGHT, KEYS.DOWN, KEYS.HOME, KEYS.END].concat(all_textinput)),
   leftright: arrayToSet([KEYS.LEFT, KEYS.RIGHT, KEYS.HOME, KEYS.END].concat(all_textinput)),
 };
-let suppressed_keys = null;
+let suppressed_keys = null; // TODO: should we remove these? still use for edit boxes to prevent binds?
 let suppressed_keys_next = null;
 
 cmd_parse.registerValue('mouse_log', {
@@ -271,6 +273,14 @@ export function inputEatenMouse() {
 
 export function inputSuppressKeys(type/*:keyof typeof SUPPRESS_KEYS | null*/) {
   suppressed_keys_next = SUPPRESS_KEYS[type] || null;
+}
+
+export function inputValidKeyName(key) {
+  return Boolean(KEYS_ORIG[key]);
+}
+
+export function inputValidPadName(key) {
+  return Boolean(PAD[key]);
 }
 
 function eventTimestamp(event) {
@@ -1260,6 +1270,7 @@ export function eatAllInput(skip_mouse) {
     input_eaten_mouse = true;
   }
   input_eaten_kb = true;
+  bindEatAll();
   actionEatAll();
 }
 

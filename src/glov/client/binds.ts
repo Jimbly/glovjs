@@ -4,6 +4,11 @@ export const BIND_EVENT_TIME = 1<<2;
 export const BIND_EVENT_DOWNUP = BIND_EVENT_DOWN | BIND_EVENT_UP;
 export const BIND_EVENT_ALL = BIND_EVENT_DOWNUP | BIND_EVENT_TIME;
 
+// Anything on layers at this priority or higher gets executed automatically
+// before ticking, so will be active in modal dialogs, etc.
+// Anything below this gets executed when bindDispatch(0) or similar is called.
+export const BIND_LEVEL_PRETICK = 100;
+
 import assert from 'assert';
 import { Rec, TSMap } from 'glov/common/types';
 import { empty } from 'glov/common/util';
@@ -26,6 +31,8 @@ import {
 import { EventCallback } from './ui';
 
 const { max } = Math;
+
+export type BindType = 'key' | 'controller';
 
 export type ValidKey = keyof typeof KEYS;
 export type ValidPad = keyof typeof PAD;
@@ -66,7 +73,7 @@ export function bindLayerRegister(layer_name: string, priority: number): void {
   layersUpdateActive();
 }
 bindLayerRegister('default', 10);
-bindLayerRegister('nav', 100); // anything above this is active even in modal dialogs, etc
+bindLayerRegister('nav', 110); // anything above this is active even in modal dialogs, etc
 
 export function bindLayerSet(layer_name: string, active: boolean): void {
   assert(layers[layer_name]);
@@ -146,13 +153,61 @@ export function bindPad(opt: BindOpt<ValidPad>): void {
   bindGeneric(entry, opt);
 }
 
+// Slightly less type-safe generic interface
+export function bindBind(bindtype: BindType, opt: BindOpt<ValidKey | ValidPad>): void {
+  if (bindtype === 'key') {
+    bindKB(opt as BindOpt<ValidKey>);
+  } else {
+    bindPad(opt as BindOpt<ValidPad>);
+  }
+}
+
+export function bindUnbind(bindtype: BindType, opt: Partial<BindOpt<ValidKey | ValidPad>>): string[] {
+  assert(opt.key); // required parameter
+  assert(opt.modifiers !== undefined); // required parameter
+  let base_list: Rec<string, BindList>;
+  if (bindtype === 'key') {
+    base_list = kb_binds;
+  } else {
+    base_list = pad_binds;
+  }
+  let entry = base_list[opt.key];
+  if (!entry) {
+    return [];
+  }
+  let list = entry.list_by_mod[opt.modifiers];
+  if (!list) {
+    return [];
+  }
+  let ret: string[] = [];
+  list = list.filter(function (bind) {
+    if (opt.layer && bind.layer !== opt.layer) {
+      return true;
+    }
+    if (opt.cmd && bind.cmd !== opt.cmd) {
+      return true;
+    }
+    ret.push(`${bind.layer !== 'default' ? `${bind.layer}.` : ''}${bind.cmd}`);
+    return false;
+  });
+  if (!list.length) {
+    delete entry.list_by_mod[opt.modifiers];
+  }
+  if (empty(entry.list_by_mod)) {
+    delete base_list[opt.key];
+  }
+  return ret;
+}
+
 const bind_set = [{
+  bindtype: 'key' as const,
   list: kb_binds,
   downEdge: keyDownEdge,
   downEdgeLastMod: keyDownLastMod,
   down: keyDown,
   upEdge: keyUpEdge,
 }, {
+  bindtype: 'controller' as const,
   list: pad_binds,
   downEdge: function (code: number, opts?: { peek?: boolean }) {
     return padButtonDownEdge(code, ANY, opts);
@@ -175,9 +230,47 @@ export function bindInEventCB(cmd: string, in_event_cb: EventCallback): void {
 }
 
 
+export type BindExport = Bind & {
+  key: ValidPad | ValidKey;
+  modifiers: number;
+  bindtype: 'key' | 'controller';
+};
+export function bindExport(): BindExport[] {
+  let ret: BindExport[] = [];
+  bind_set.forEach(function (set) {
+    const { bindtype, list } = set;
+    for (let key in list) {
+      let key2 = key as keyof typeof list;
+      let bindlist = list[key2]!;
+      for (let mod in bindlist.list_by_mod) {
+        let modifiers = Number(mod);
+        let sublist = bindlist.list_by_mod[mod]!;
+        for (let ii = 0; ii < sublist.length; ++ii) {
+          let bind = sublist[ii];
+          ret.push({
+            bindtype,
+            key: key2,
+            cmd: bind.cmd,
+            modifiers,
+            events: bind.events,
+            layer: bind.layer,
+          });
+        }
+      }
+    }
+  });
+  return ret;
+}
+
 // We're peeking all checks because we have default binds on all of the keys
 // that apps maybe currently querying with the input API
 const PEEK = { peek: true };
+
+type QueuedCmd = {
+  level: number;
+  cmd: string;
+};
+let cmd_queue: QueuedCmd[] = [];
 
 function handleUp(bindlist: BindList): void {
   assert(bindlist.down.length);
@@ -188,7 +281,12 @@ function handleUp(bindlist: BindList): void {
       let bind = list[ii];
       if (bind.layer === down_state.layer) {
         if (bind.events & BIND_EVENT_UP) {
-          cmd_parse.handle(undefined, `${bind.cmd} up`);
+          cmd_queue.push({
+            // up events must always be delivered if the down was delivered
+            // TODO: maybe only bump the level if we know the down was delivered?
+            level: Infinity,
+            cmd: `${bind.cmd} up`,
+          });
         }
       }
     }
@@ -214,7 +312,10 @@ function handleDown(bindlist: BindList, mod_list: number[]): void {
       }
       execute_layer = bind.layer;
       if (bind.events & BIND_EVENT_DOWN) {
-        cmd_parse.handle(undefined, `${bind.cmd} down`);
+        cmd_queue.push({
+          level: layers[bind.layer]!.priority,
+          cmd: `${bind.cmd} down`,
+        });
       }
     }
     if (!execute_layer) {
@@ -266,9 +367,32 @@ function modListFromMod(mod: number): number[] {
   return mod_list;
 }
 
+export function defaultHandle(cmd: string): void {
+  cmd_parse.handle(undefined, cmd);
+}
+
+export function bindDispatch(opt?: {
+  level?: number;
+  handler?: (cmd: string) => void;
+}): void {
+  opt = opt || {};
+  let level = opt.level ?? 0;
+  let handler = opt.handler || defaultHandle;
+  cmd_queue = cmd_queue.filter(function (entry) {
+    if (entry.level >= level) {
+      handler(entry.cmd);
+      return false;
+    }
+    return true;
+  });
+}
+
+export function bindEatAll(): void {
+  cmd_queue.length = 0;
+}
+
 export function bindsCheck(): void {
-  // TODO: allow overriding cmd_parse.handle with chatUI.cmdParse for binding to
-  //   network actions and access level checks?
+  cmd_queue.length = 0;
 
   let base_mod = (keyDown(KEYS.SHIFT) ? MOD_SHIFT : 0) |
     (keyDown(KEYS.CTRL) ? MOD_CTRL : 0) |
@@ -326,7 +450,10 @@ export function bindsCheck(): void {
               let bind = list[ii];
               if (bind.layer === down_state.layer) {
                 if (bind.events & BIND_EVENT_TIME) {
-                  cmd_parse.handle(undefined, `${bind.cmd} time ${down_time}`);
+                  cmd_queue.push({
+                    level: layers[bind.layer]!.priority,
+                    cmd: `${bind.cmd} time ${down_time}`,
+                  });
                 }
               }
             }
@@ -344,4 +471,8 @@ export function bindsCheck(): void {
   if (!empty(in_event_cbs)) {
     in_event_cbs = {};
   }
+
+  bindDispatch({
+    level: BIND_LEVEL_PRETICK,
+  });
 }

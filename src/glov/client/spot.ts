@@ -228,7 +228,6 @@ import {
   dragOver,
   inputClick,
   inputEatenMouse,
-  inputSuppressKeys,
   inputTouchMode,
   keyDown,
   keyDownEdge,
@@ -385,13 +384,31 @@ export function spotSetNavtype(type: SpotNavtypeEnum): void {
 }
 // spotSetNavtype(SPOT_NAVTYPE_EXTENDED); no: must be past startup
 
+let spot_nav_enabled = {
+  [SPOT_NAV_LEFT]: true,
+  [SPOT_NAV_UP]: true,
+  [SPOT_NAV_RIGHT]: true,
+  [SPOT_NAV_DOWN]: true,
+  [SPOT_NAV_PREV]: true,
+  [SPOT_NAV_NEXT]: true,
+};
+function resetNavKeys(): void {
+  spot_nav_enabled[SPOT_NAV_LEFT] = true;
+  spot_nav_enabled[SPOT_NAV_RIGHT] = true;
+  spot_nav_enabled[SPOT_NAV_UP] = true;
+  spot_nav_enabled[SPOT_NAV_DOWN] = true;
+}
+let suppress_kb_nav_this_frame = false;
+
 export function spotSuppressKBNav(left_right: boolean, up_down: boolean): void {
-  assert(left_right);
+  suppress_kb_nav_this_frame = true;
+  if (left_right) {
+    spot_nav_enabled[SPOT_NAV_LEFT] = false;
+    spot_nav_enabled[SPOT_NAV_RIGHT] = false;
+  }
   if (up_down) {
-    inputSuppressKeys('arrows');
-  } else {
-    // just left/right arrows, but still all text input keys
-    inputSuppressKeys('leftright');
+    spot_nav_enabled[SPOT_NAV_UP] = false;
+    spot_nav_enabled[SPOT_NAV_DOWN] = false;
   }
 }
 
@@ -867,6 +884,10 @@ export function spotEndOfFrame(): void {
   frame_spots = [];
   frame_autofocus_spots = {};
   async_activate_key = null;
+  if (!suppress_kb_nav_this_frame) {
+    resetNavKeys();
+  }
+  suppress_kb_nav_this_frame = false;
 }
 
 function frameSpotsPush(param: SpotListElem): void {
@@ -979,7 +1000,7 @@ function keyCheck(nav_dir: SpotNavEnum): boolean {
   if (suppress_pad) {
     return false;
   }
-  return Boolean(actionEdge(spot_nav_actions[nav_dir]));
+  return spot_nav_enabled[nav_dir] && Boolean(actionEdge(spot_nav_actions[nav_dir]));
 }
 
 type SpotParamWithOut = SpotParam & {

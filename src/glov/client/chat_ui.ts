@@ -33,6 +33,7 @@ import {
   vec4,
 } from 'glov/common/vmath';
 import { asyncParallel } from 'glov-async';
+import { bindDispatch } from './binds';
 import * as camera2d from './camera2d';
 import { getAbilityChat } from './client_config';
 import { cmdAutoComplete } from './cmd_auto_complete';
@@ -1431,6 +1432,7 @@ class ChatUI {
       !was_focused ?
       1 : // must be numerical, used to index fade values
       0;
+
     let hide_text_input = isMenuUp() || hide_light;
     if (!hide_text_input && was_focused && input.touch_mode) {
       // expand chat when focused on touch devices
@@ -1820,6 +1822,12 @@ class ChatUI {
       // Gained focus undo pointerlock
       input.pointerLockExit();
     }
+
+    // TODO: should this be in runLate?
+    bindDispatch({
+      level: 0, // run all binds that were not yet dispatched
+      handler: this.cmdParseLogged.bind(this),
+    });
 
     if (!anything_visible && (isMenuUp() || hide_light)) {
       return;

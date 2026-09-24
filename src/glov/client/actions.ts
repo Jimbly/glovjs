@@ -109,6 +109,10 @@ export function actionRegister(action_key: ActionKey): void {
   });
 }
 
+export function actionExists(key: string): key is ActionKey {
+  return Boolean(action_state[key as ActionKey]);
+}
+
 export function actionBindKB(key: keyof typeof KEYS, action_key: ActionKey, modifiers?: number, layer?: string): void {
   bindKB({
     key,

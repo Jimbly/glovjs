@@ -4,7 +4,9 @@ import * as local_storage from 'glov/client/local_storage';
 local_storage.setStoragePrefix('glovjs-multiplayer'); // Before requiring anything else that might load from this
 
 import assert from 'assert';
+import { actionDown } from 'glov/client/actions';
 import { autoAtlas } from 'glov/client/autoatlas';
+import { bindUIStartup } from 'glov/client/bind_ui';
 import { chatUICreate } from 'glov/client/chat_ui';
 import { cmd_parse } from 'glov/client/cmds';
 import * as engine from 'glov/client/engine';
@@ -112,6 +114,8 @@ export function main(): void {
   // alternatively, set DefaultUserWorker.prototype.rich_presence = false on the server.
   socialInit();
 
+  bindUIStartup();
+
   const test_shader = shaderCreate('shaders/test.fp');
 
   // const font = engine.font;
@@ -126,10 +130,6 @@ export function main(): void {
   });
 
   const color_gray = vec4(0.5, 0.5, 0.5, 1);
-
-  // Cache KEYS
-  const KEYS = input.KEYS;
-  const PAD = input.PAD;
 
   const sprite_size = 64;
   const sprite_origin = vec2(0.5, 0.5);
@@ -182,11 +182,11 @@ export function main(): void {
     }
 
     let dx = 0;
-    dx -= input.keyDown(KEYS.LEFT) + input.keyDown(KEYS.A) + input.padButtonDown(PAD.LEFT);
-    dx += input.keyDown(KEYS.RIGHT) + input.keyDown(KEYS.D) + input.padButtonDown(PAD.RIGHT);
+    dx -= actionDown('left');
+    dx += actionDown('right');
     let dy = 0;
-    dy -= input.keyDown(KEYS.UP) + input.keyDown(KEYS.W) + input.padButtonDown(PAD.UP);
-    dy += input.keyDown(KEYS.DOWN) + input.keyDown(KEYS.S) + input.padButtonDown(PAD.DOWN);
+    dy -= actionDown('up');
+    dy += actionDown('down');
     if (dx < 0) {
       animation.setState('idle_left');
     } else if (dx > 0) {
@@ -304,7 +304,7 @@ export function main(): void {
 
     chat_ui.runLate();
 
-    if (input.keyDownEdge(KEYS.ESC) || input.padButtonDownEdge(PAD.B)) {
+    if (actionDown('cancel')) {
       pad_controls_sprite = !pad_controls_sprite;
     }
   }
