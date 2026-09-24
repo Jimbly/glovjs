@@ -35,13 +35,9 @@ type UserBindParam = {
   modifiers: number;
   layer: string|undefined;
   cmd: string;
-} & ({
-  bindtype: 'key';
-  key: ValidKey;
-} | {
-  bindtype: 'controller';
-  key: ValidPad;
-});
+  bindtype: BindType;
+  key: ValidKey |ValidPad;
+};
 
 let persist_binds = false;
 
@@ -96,7 +92,6 @@ function defaultLayer(cmd: string): string {
 function addUserBind(param: UserBindParam): void {
   const { bindtype, key, modifiers, cmd } = param;
   let { layer } = param;
-  // TODO: automatically un-bind conflicts
   if (persist_binds) {
     user_binds.binds = user_binds.binds || [];
     let str = bindToString(param);
@@ -110,7 +105,7 @@ function addUserBind(param: UserBindParam): void {
   if (!layer) {
     layer = defaultLayer(cmd);
     if (layer === 'nav' && bindtype === 'key') {
-      let keycode = KEYS[key];
+      let keycode = KEYS[key as ValidKey];
       if (keycode && keycode >= KEYS['0'] && keycode <= KEYS.NUMPAD_DIVIDE) {
         // a nav key, but overlaps edit box keys, put into navext
         layer = 'navext';
@@ -126,6 +121,43 @@ function addUserBind(param: UserBindParam): void {
   });
 }
 
+function unbindSub(opt: {
+  bindtype: BindType;
+  key: ValidKey | ValidPad;
+  modifiers: number;
+  layer?: string;
+  cmd?: string;
+}): string | string[] {
+  let results = bindUnbind(opt.bindtype, opt);
+
+  if (persist_binds) {
+    let diff = false;
+    for (let ii = 0; ii < results.length; ++ii) {
+      let cmd2 = results[ii];
+      let full_bind = bindToString({
+        ...opt,
+        cmd: cmd2,
+      });
+      if (user_binds.binds) {
+        let idx = user_binds.binds.indexOf(full_bind);
+        if (idx !== -1) {
+          user_binds.binds.splice(idx, 1);
+          diff = true;
+        }
+      }
+      if (base_binds.includes(full_bind)) {
+        user_binds.unbinds = user_binds.unbinds || [];
+        user_binds.unbinds.push(full_bind);
+        diff = true;
+      }
+    }
+    if (diff) {
+      localStorageSetJSON<UserBinds>('binds', user_binds);
+    }
+  }
+
+  return results;
+}
 
 const bind_param_regex = /^(?:([^ .]+)\.)?(.+)?$/i;
 const bind_key_regex = /^((?:(?:Shift|Ctrl|Alt)\+)+)?(Key|Controller)([a-z0-9]+)$/i;
@@ -168,43 +200,13 @@ function unbindFromString(param: string): string | string[] {
     validkey = key as ValidPad; // TypeScript TODO: inputValidKeyName should handle this coercion
   }
 
-  let results = bindUnbind(bindtype, {
+  return unbindSub({
+    bindtype,
     key: validkey,
     modifiers,
     layer,
     cmd,
   });
-
-  if (persist_binds) {
-    let diff = false;
-    for (let ii = 0; ii < results.length; ++ii) {
-      let cmd2 = results[ii];
-      let full_bind = bindToString({
-        modifiers,
-        bindtype,
-        key: validkey,
-        layer,
-        cmd: cmd2,
-      });
-      if (user_binds.binds) {
-        let idx = user_binds.binds.indexOf(full_bind);
-        if (idx !== -1) {
-          user_binds.binds.splice(idx, 1);
-          diff = true;
-        }
-      }
-      if (base_binds.includes(full_bind)) {
-        user_binds.unbinds = user_binds.unbinds || [];
-        user_binds.unbinds.push(full_bind);
-        diff = true;
-      }
-    }
-    if (diff) {
-      localStorageSetJSON<UserBinds>('binds', user_binds);
-    }
-  }
-
-  return results;
 }
 
 const split_regex = /^([^ ]+) (.+)$/;
@@ -229,31 +231,32 @@ function addBindFromString(param: string): string | null {
 
   let modifiers = modNamesToNumber(modnames);
 
+  let validkey: ValidKey | ValidPad;
   if (bindtype === 'key') {
     if (!inputValidKeyName(key)) {
       return `Unknown key "${key}"`;
     }
-    let validkey = key as ValidKey; // TypeScript TODO: inputValidKeyName should handle this coercion
-    addUserBind({
-      bindtype,
-      modifiers,
-      key: validkey,
-      layer,
-      cmd,
-    });
+    validkey = key as ValidKey; // TypeScript TODO: inputValidKeyName should handle this coercion
   } else {
     if (!inputValidPadName(key)) {
       return `Unknown controller button "${key}"`;
     }
-    let validkey = key as ValidPad; // TypeScript TODO: inputValidKeyName should handle this coercion
-    addUserBind({
-      bindtype,
-      modifiers,
-      key: validkey,
-      layer,
-      cmd,
-    });
+    validkey = key as ValidPad; // TypeScript TODO: inputValidKeyName should handle this coercion
   }
+  unbindSub({
+    bindtype,
+    modifiers,
+    key: validkey,
+    layer,
+    // no cmd, unbind any matching key on this layer
+  });
+  addUserBind({
+    bindtype,
+    modifiers,
+    key: validkey,
+    layer,
+    cmd,
+  });
   return null;
 }
 const BIND_USAGE = 'Usage: /bind [Mod+]KeyX|ControllerX [layer.]command';
