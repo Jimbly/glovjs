@@ -174,30 +174,29 @@ function actionStartup(): void {
   actionRegister('cancel');
 
   // basic nav set - active even when an edit box has keyboard focus
-  actionBindPad('UP', 'up');
-  actionBindPad('DOWN', 'down');
-  actionBindPad('LEFT', 'left');
-  actionBindPad('RIGHT', 'right');
-  actionBindPad('ANALOG_UP', 'up');
-  actionBindPad('ANALOG_LEFT', 'left');
-  actionBindPad('ANALOG_DOWN', 'down');
-  actionBindPad('ANALOG_RIGHT', 'right');
-  actionBindPad('LEFT_BUMPER', 'prev');
-  actionBindPad('RIGHT_BUMPER', 'next');
-  actionBindKB('TAB', 'next');
-  actionBindKB('TAB', 'prev', MOD_SHIFT);
+  actionBindPad('UP', 'up', 'nav');
+  actionBindPad('DOWN', 'down', 'nav');
+  actionBindPad('LEFT', 'left', 'nav');
+  actionBindPad('RIGHT', 'right', 'nav');
+  actionBindPad('ANALOG_UP', 'up', 'nav');
+  actionBindPad('ANALOG_LEFT', 'left', 'nav');
+  actionBindPad('ANALOG_DOWN', 'down', 'nav');
+  actionBindPad('ANALOG_RIGHT', 'right', 'nav');
+  actionBindPad('LEFT_BUMPER', 'prev', 'nav');
+  actionBindPad('RIGHT_BUMPER', 'next', 'nav');
+  actionBindKB('TAB', 'next', 0, 'nav');
+  actionBindKB('TAB', 'prev', MOD_SHIFT, 'nav');
   if (platformGetID() === 'electron') {
-    actionBindKB('TAB', 'prev', MOD_CTRL);
+    actionBindKB('TAB', 'prev', MOD_CTRL, 'nav');
   }
   // note: these input events, not actions/binds, are disabled if widget is stealing keyboard input
-  actionBindKB('UP', 'up');
-  actionBindKB('DOWN', 'down');
-  actionBindKB('LEFT', 'left');
-  actionBindKB('RIGHT', 'right');
+  actionBindKB('UP', 'up', 0, 'nav');
+  actionBindKB('DOWN', 'down', 0, 'nav');
+  actionBindKB('LEFT', 'left', 0, 'nav');
+  actionBindKB('RIGHT', 'right', 0, 'nav');
 
   // extended nav set - active based on app's needs
-  // TODO: move these to an extended bind set
-  bindLayerRegister('navext', 20);
+  bindLayerRegister('navext', 200);
   actionBindKB('W', 'up', 0, 'navext');
   actionBindKB('A', 'left', 0, 'navext');
   actionBindKB('S', 'down', 0, 'navext');
@@ -209,18 +208,18 @@ function actionStartup(): void {
   actionBindKB('NUMPAD6', 'right', 0, 'navext');
 
   // general binds
-  actionBindKB('SPACE', 'accept');
-  actionBindKB('ENTER', 'accept');
-  actionBindPad('SELECT', 'accept');
+  actionBindKB('SPACE', 'accept', 0, 'nav');
+  actionBindKB('ENTER', 'accept', 0, 'nav');
+  actionBindPad('SELECT', 'accept', 'nav');
 
-  actionBindKB('ESC', 'cancel');
-  actionBindKB('BACKSPACE', 'cancel');
-  actionBindPad('CANCEL', 'cancel');
+  actionBindKB('ESC', 'cancel', 0, 'nav');
+  actionBindKB('BACKSPACE', 'cancel', 0, 'nav');
+  actionBindPad('CANCEL', 'cancel', 'nav');
 
   // recommended extras:
-  // actionBindKB('E', 'accept');
-  // actionBindKB('Q', 'cancel');
-  // actionBindPad('X', 'accept');
-  // actionBindPad('Y', 'cancel');
-  // actionBindPad('BACK', 'cancel');
+  // actionBindKB('E', 'accept', 0, 'nav');
+  // actionBindKB('Q', 'cancel', 0, 'nav');
+  // actionBindPad('X', 'accept', 'nav');
+  // actionBindPad('Y', 'cancel', 'nav');
+  // actionBindPad('BACK', 'cancel', 'nav');
 }

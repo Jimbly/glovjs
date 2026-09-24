@@ -25,6 +25,8 @@ import {
 } from './input';
 import { EventCallback } from './ui';
 
+const { max } = Math;
+
 export type ValidKey = keyof typeof KEYS;
 export type ValidPad = keyof typeof PAD;
 export type BindEvents =
@@ -36,20 +38,47 @@ export type BindEvents =
 
 let layers: TSMap<{
   active: boolean;
+  active_user: boolean;
+  trickle: boolean;
   priority: number;
 }> = {};
+function layersUpdateActive(): void {
+  let min_priority = -Infinity;
+  for (let layer_name in layers) {
+    let layer = layers[layer_name]!;
+    if (!layer.trickle) {
+      min_priority = max(min_priority, layer.priority);
+    }
+  }
+  for (let layer_name in layers) {
+    let layer = layers[layer_name]!;
+    layer.active = layer.active_user && layer.priority >= min_priority;
+  }
+}
 export function bindLayerRegister(layer_name: string, priority: number): void {
   assert(!layers[layer_name]);
   layers[layer_name] = {
     active: true,
+    active_user: true,
+    trickle: true,
     priority,
   };
+  layersUpdateActive();
 }
 bindLayerRegister('default', 10);
+bindLayerRegister('nav', 100); // anything above this is active even in modal dialogs, etc
 
 export function bindLayerSet(layer_name: string, active: boolean): void {
   assert(layers[layer_name]);
-  layers[layer_name].active = active;
+  layers[layer_name].active_user = active;
+  layersUpdateActive();
+}
+
+// if trickle is disabled, all layers with lower priority are disabled
+export function bindLayerTrickle(layer_name: string, trickle: boolean): void {
+  assert(layers[layer_name]);
+  layers[layer_name].trickle = trickle;
+  layersUpdateActive();
 }
 
 
