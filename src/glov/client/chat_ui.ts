@@ -33,7 +33,7 @@ import {
   vec4,
 } from 'glov/common/vmath';
 import { asyncParallel } from 'glov-async';
-import { bindDispatch } from './binds';
+import { BIND_EVENT_DOWN, bindDispatch, bindKB } from './binds';
 import * as camera2d from './camera2d';
 import { getAbilityChat } from './client_config';
 import { cmdAutoComplete } from './cmd_auto_complete';
@@ -1206,15 +1206,11 @@ class ChatUI {
   did_run_late = false;
   runLate(): void {
     this.did_run_late = true;
-    if (getAbilityChat() && input.keyDownEdge(input.KEYS.RETURN)) {
-      this.focus();
-    }
-    if (input.keyDownEdge(input.KEYS.SLASH) ||
-      input.keyDownEdge(input.KEYS.NUMPAD_DIVIDE)
-    ) {
-      this.focus();
-      this.edit_text_entry.setText('/');
-    }
+
+    bindDispatch({
+      level: 0, // run all binds that were not yet dispatched
+      handler: this.cmdParse.bind(this),
+    });
   }
 
   addChatError(err: unknown): void {
@@ -1823,12 +1819,6 @@ class ChatUI {
       input.pointerLockExit();
     }
 
-    // TODO: should this be in runLate?
-    bindDispatch({
-      level: 0, // run all binds that were not yet dispatched
-      handler: this.cmdParse.bind(this),
-    });
-
     if (!anything_visible && (isMenuUp() || hide_light)) {
       return;
     }
@@ -1985,6 +1975,22 @@ class ChatUI {
       set: (v: number) => (this.volume_out = v),
       store: true,
     });
+
+    cmd_parse.register({
+      cmd: 'enter_chat',
+      help: 'Focuses chat with optional initial contents',
+      prefix_usage_with_help: true,
+      usage: 'Usage: /enter_chat [msg]',
+      func: (param: string, resp_func: CmdRespFunc) => {
+        if (!param && !getAbilityChat()) {
+          return;
+        }
+        this.focus();
+        if (param) {
+          this.edit_text_entry.setText(param);
+        }
+      }
+    });
   }
 }
 export type { ChatUI };
@@ -2085,6 +2091,21 @@ export function chatUICreate(params: ChatUIParam): ChatUI {
       pak.writeAnsiString(desired_client_id);
       pak.send(resp_func);
     }
+  });
+
+  bindKB({
+    key: 'ENTER',
+    cmd: 'enter_chat',
+    events: BIND_EVENT_DOWN,
+    action: 'cmd',
+    modifiers: 0,
+  });
+  bindKB({
+    key: 'SLASH',
+    cmd: 'enter_chat /',
+    events: BIND_EVENT_DOWN,
+    action: 'cmd',
+    modifiers: 0,
   });
 
   return chat_ui;
