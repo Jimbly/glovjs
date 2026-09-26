@@ -792,8 +792,6 @@ export function main(): void {
       spotSuppressPad();
     }
 
-    bindDispatch();
-
     let status: string | null = null;
     let status_others: TSMap<string> | null = null;
     if (flagGet('ui_test')) {

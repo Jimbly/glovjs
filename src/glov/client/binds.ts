@@ -1,10 +1,6 @@
-export const BIND_EVENT_DOWN = 1<<0;
-export const BIND_EVENT_UP = 1<<1;
-export const BIND_EVENT_TIME = 1<<2;
-export const BIND_EVENT_WITH_PARAMS = 1<<3;
-export const BIND_EVENT_DOWNUP = BIND_EVENT_DOWN | BIND_EVENT_UP | BIND_EVENT_WITH_PARAMS;
-export const BIND_EVENT_ALL = BIND_EVENT_DOWNUP | BIND_EVENT_TIME | BIND_EVENT_WITH_PARAMS;
-
+export const internal = {
+  bindsTopOfFrame, // eslint-disable-line @typescript-eslint/no-use-before-define
+};
 export const BIND_FLAG_NOTEXT = 1<<0;
 export const BIND_FLAG_NOKB = 1<<1;
 
@@ -17,7 +13,6 @@ export const BIND_LEVEL_PRETICK = 100;
 
 import assert from 'assert';
 import { Rec, TSMap } from 'glov/common/types';
-import { empty } from 'glov/common/util';
 import verify from 'glov/common/verify';
 import { cmd_parse } from './cmds';
 import {
@@ -28,9 +23,6 @@ import {
   keyDownLastMod,
   KEYS,
   keyUpEdge,
-  MOD_ALT,
-  MOD_CTRL,
-  MOD_SHIFT,
   PAD,
   padButtonDown,
   padButtonDownEdge,
@@ -45,11 +37,6 @@ export type BindAction = 'action' | 'cmd';
 
 export type ValidKey = keyof typeof KEYS;
 export type ValidPad = keyof typeof PAD;
-export type BindEvents =
-  // in theory, any bitmask allowed, but probably only these two are useful
-  typeof BIND_EVENT_DOWN |
-  typeof BIND_EVENT_DOWNUP |
-  typeof BIND_EVENT_ALL;
 
 
 let layers: TSMap<{
@@ -100,30 +87,25 @@ export function bindLayerTrickle(layer_name: string, trickle: boolean): void {
 
 type Bind = {
   cmd: string;
-  events: BindEvents;
   layer: string;
   modifiers: number;
   action: BindAction;
   bindtype: BindType;
   code: number;
 };
-type DownState = {
-  mod: number; // The active set of modifiers when the down event fired
-  layer: string; // The layer on which the down event fired (no time/up events on other layers will fire)
-};
 type BindList = {
   code: number;
-  list_by_mod: Rec<number, Bind[]>;
-  down: DownState[]; // If a bind responded to the down event, under what circumstances, one for each down event
+  binds: Bind[];
 };
-let kb_binds: Rec<ValidKey, BindList> = {};
-let pad_binds: Rec<ValidPad, BindList> = {};
+let all_binds: Record<BindType, Rec<ValidKey|ValidPad, BindList>> = {
+  key: {},
+  controller: {},
+};
 let binds_by_cmd: Rec<string, Bind[]> = Object.create(null);
 
 export type BindOpt<T> = {
   key: T;
   cmd: string;
-  events: BindEvents;
   action: BindAction;
   modifiers?: number;
   // layer behavior:
@@ -141,36 +123,34 @@ function cmpLayerPriority(a: Bind, b: Bind): number {
 
 export function bindGeneric(entry: BindList, bindtype: BindType, opt: BindOpt<unknown>): void {
   let modifiers = opt.modifiers || 0;
-  let arr = entry.list_by_mod[modifiers] = entry.list_by_mod[modifiers] || [];
   let layer = opt.layer || 'default';
   assert(layers[layer]);
   let bind: Bind = {
     cmd: opt.cmd,
     action: opt.action,
-    events: opt.events,
     modifiers,
     layer,
     bindtype,
     code: entry.code,
   };
-  arr.push(bind);
-  arr.sort(cmpLayerPriority);
+  entry.binds.push(bind);
+  entry.binds.sort(cmpLayerPriority);
   binds_by_cmd[bind.cmd] = binds_by_cmd[bind.cmd] || [];
   binds_by_cmd[bind.cmd]!.push(bind);
 }
 
 export function bindKB(opt: BindOpt<ValidKey>): void {
-  let entry = kb_binds[opt.key];
+  let entry = all_binds.key[opt.key];
   if (!entry) {
-    entry = kb_binds[opt.key] = { code: KEYS[opt.key], list_by_mod: {}, down: [] };
+    entry = all_binds.key[opt.key] = { code: KEYS[opt.key], binds: [] };
   }
   bindGeneric(entry, 'key', opt);
 }
 
 export function bindPad(opt: BindOpt<ValidPad>): void {
-  let entry = pad_binds[opt.key];
+  let entry = all_binds.controller[opt.key];
   if (!entry) {
-    entry = pad_binds[opt.key] = { code: PAD[opt.key], list_by_mod: {}, down: [] };
+    entry = all_binds.controller[opt.key] = { code: PAD[opt.key], binds: [] };
   }
   bindGeneric(entry, 'controller', opt);
 }
@@ -187,22 +167,16 @@ export function bindBind(bindtype: BindType, opt: BindOpt<ValidKey | ValidPad>):
 export function bindUnbind(bindtype: BindType, opt: Partial<BindOpt<ValidKey | ValidPad>>): string[] {
   assert(opt.key); // required parameter
   assert(opt.modifiers !== undefined); // required parameter
-  let base_list: Rec<string, BindList>;
-  if (bindtype === 'key') {
-    base_list = kb_binds;
-  } else {
-    base_list = pad_binds;
-  }
+  let base_list = all_binds[bindtype];
   let entry = base_list[opt.key];
   if (!entry) {
     return [];
   }
-  let list = entry.list_by_mod[opt.modifiers];
-  if (!list) {
-    return [];
-  }
   let ret: string[] = [];
-  list = list.filter(function (bind) {
+  entry.binds = entry.binds.filter(function (bind) {
+    if (bind.modifiers !== opt.modifiers) {
+      return true;
+    }
     if (opt.layer && bind.layer !== opt.layer) {
       return true;
     }
@@ -220,10 +194,7 @@ export function bindUnbind(bindtype: BindType, opt: Partial<BindOpt<ValidKey | V
     ret.push(`${bind.layer !== 'default' ? `${bind.layer}.` : ''}${bind.cmd}`);
     return false;
   });
-  if (!list.length) {
-    delete entry.list_by_mod[opt.modifiers];
-  }
-  if (empty(entry.list_by_mod)) {
+  if (!entry.binds.length) {
     delete base_list[opt.key];
   }
   return ret;
@@ -231,14 +202,12 @@ export function bindUnbind(bindtype: BindType, opt: Partial<BindOpt<ValidKey | V
 
 const bind_set = [{
   bindtype: 'key' as const,
-  list: kb_binds,
   downEdge: keyDownEdge,
   downEdgeLastMod: keyDownLastMod,
   down: keyDown,
   upEdge: keyUpEdge,
 }, {
   bindtype: 'controller' as const,
-  list: pad_binds,
   downEdge: function (code: number, opts?: { peek?: boolean; mod?: number }) {
     return padButtonDownEdge(code, ANY, opts);
   },
@@ -253,38 +222,22 @@ const bind_set = [{
   },
 }];
 
-let in_event_cbs: TSMap<EventCallback> = {};
-
-export function bindInEventCB(cmd: string, in_event_cb: EventCallback): void {
-  in_event_cbs[cmd] = in_event_cb;
-}
-
-
 export type BindExport = Omit<Bind, 'code'> & {
   key: ValidPad | ValidKey;
 };
 export function bindExport(): BindExport[] {
   let ret: BindExport[] = [];
   bind_set.forEach(function (set) {
-    const { bindtype, list } = set;
+    let list = all_binds[set.bindtype];
     for (let key in list) {
       let key2 = key as keyof typeof list;
       let bindlist = list[key2]!;
-      for (let mod in bindlist.list_by_mod) {
-        let modifiers = Number(mod);
-        let sublist = bindlist.list_by_mod[mod]!;
-        for (let ii = 0; ii < sublist.length; ++ii) {
-          let bind = sublist[ii];
-          ret.push({
-            bindtype,
-            key: key2,
-            cmd: bind.cmd,
-            modifiers,
-            events: bind.events,
-            layer: bind.layer,
-            action: bind.action,
-          });
-        }
+      for (let ii = 0; ii < bindlist.binds.length; ++ii) {
+        let bind = bindlist.binds[ii];
+        ret.push({
+          ...bind,
+          key: key2,
+        });
       }
     }
   });
@@ -377,129 +330,8 @@ export function bindDown(action: string): number {
   return ret;
 }
 
-// We're peeking all checks because we have default binds on all of the keys
-// that apps maybe currently querying with the input API
-const PEEK = { peek: true };
-
-type QueuedCmd = {
-  level: number;
-  cmd: string;
-};
-let cmd_queue: QueuedCmd[] = [];
-
-function handleUp(bindlist: BindList): void {
-  assert(bindlist.down.length);
-  let down_state = bindlist.down.shift()!;
-  let list = bindlist.list_by_mod[down_state.mod];
-  if (list) {
-    for (let ii = 0; ii < list.length; ++ii) {
-      let bind = list[ii];
-      if (bind.layer === down_state.layer) {
-        if (bind.events & BIND_EVENT_UP) {
-          cmd_queue.push({
-            // up events must always be delivered if the down was delivered
-            // TODO: maybe only bump the level if we know the down was delivered?
-            level: Infinity,
-            cmd: (bind.events & BIND_EVENT_WITH_PARAMS) ? `${bind.cmd} up` : bind.cmd,
-          });
-        }
-      }
-    }
-  }
-}
-
-function handleDown(bindlist: BindList, mod_list: number[]): void {
-  let handled = false;
-  for (let kk = 0; kk < mod_list.length; ++kk) {
-    let mod = mod_list[kk];
-    let list = bindlist.list_by_mod[mod];
-    if (!list) {
-      continue;
-    }
-    let execute_layer: string | undefined;
-    for (let ii = 0; ii < list.length; ++ii) {
-      let bind = list[ii];
-      if (execute_layer && bind.layer !== execute_layer) {
-        break;
-      }
-      if (!layers[bind.layer]!.active) {
-        continue;
-      }
-      execute_layer = bind.layer;
-      if (bind.events & BIND_EVENT_DOWN) {
-        cmd_queue.push({
-          level: layers[bind.layer]!.priority,
-          cmd: (bind.events & BIND_EVENT_WITH_PARAMS) ? `${bind.cmd} down` : bind.cmd,
-        });
-      }
-    }
-    if (!execute_layer) {
-      // didn't actually find an active bind (must have been a disabled layer), keep searching
-      continue;
-    }
-    bindlist.down.push({
-      mod,
-      layer: execute_layer,
-    });
-    handled = true;
-    // if we, e.g., hit Shift+W, do not continue and fire unmodified W
-    break;
-  }
-  if (!handled) {
-    // no bind matched (e.g. there was only a bind for Shift+W)
-    // still record the down state so we don't accidentally release the wrong one
-    bindlist.down.push({
-      mod: 0,
-      layer: '.none',
-    });
-  }
-}
-
-const MODIFIERS = [
-  MOD_SHIFT,
-  MOD_CTRL,
-  MOD_ALT,
-] as const;
-let mod_list_cache: Rec<number, number[]> = {};
-function modListFromMod(mod: number): number[] {
-  let entry = mod_list_cache[mod];
-  if (entry) {
-    return entry;
-  }
-
-  let mod_list = [0];
-  for (let ii = 0; ii < MODIFIERS.length; ++ii) {
-    // TODO: we can pull the modifiers off of the actual event instead for better reliability
-    if (mod & MODIFIERS[ii]) {
-      let len = mod_list.length;
-      for (let jj = 0; jj < len; ++jj) {
-        mod_list.push(mod_list[jj] | MODIFIERS[ii]);
-      }
-    }
-  }
-  mod_list.reverse();
-  mod_list_cache[mod] = mod_list;
-  return mod_list;
-}
-
 export function defaultHandle(cmd: string): void {
   cmd_parse.handle(undefined, cmd);
-}
-
-export function bindDispatchOld(opt?: {
-  level?: number;
-  handler?: (cmd: string) => void;
-}): void {
-  opt = opt || {};
-  let level = opt.level ?? 0;
-  let handler = opt.handler || defaultHandle;
-  cmd_queue = cmd_queue.filter(function (entry) {
-    if (entry.level >= level) {
-      handler(entry.cmd);
-      return false;
-    }
-    return true;
-  });
 }
 
 export function bindDispatch(opt?: {
@@ -512,18 +344,16 @@ export function bindDispatch(opt?: {
 
   for (let jj = 0; jj < bind_set.length; ++jj) {
     let set = bind_set[jj];
-    for (let key in set.list) {
-      let bindlist = set.list[key as keyof typeof set.list]!;
-      for (let mod in bindlist.list_by_mod) {
-        let sublist = bindlist.list_by_mod[mod]!;
-        for (let ii = 0; ii < sublist.length; ++ii) {
-          let bind = sublist[ii];
-          if (bind.action === 'cmd' && layers[bind.layer]!.priority >= level) {
-            if (set.downEdge(bindlist.code, {
-              mod: bind.modifiers,
-            })) {
-              handler(bind.cmd);
-            }
+    let list = all_binds[set.bindtype];
+    for (let key in list) {
+      let bindlist = list[key as keyof typeof list]!;
+      for (let ii = 0; ii < bindlist.binds.length; ++ii) {
+        let bind = bindlist.binds[ii];
+        if (bind.action === 'cmd' && layers[bind.layer]!.priority >= level) {
+          if (set.downEdge(bindlist.code, {
+            mod: bind.modifiers,
+          })) {
+            handler(bind.cmd);
           }
         }
       }
@@ -531,98 +361,8 @@ export function bindDispatch(opt?: {
   }
 }
 
-export function bindEatAll(): void {
-  cmd_queue.length = 0;
-}
-
-export function bindsCheck(): void {
-  if (1) {
-    bindDispatch({
-      level: BIND_LEVEL_PRETICK,
-    });
-    return;
-  }
-  cmd_queue.length = 0;
-
-  let base_mod = (keyDown(KEYS.SHIFT) ? MOD_SHIFT : 0) |
-    (keyDown(KEYS.CTRL) ? MOD_CTRL : 0) |
-    (keyDown(KEYS.ALT) ? MOD_ALT : 0);
-  let base_mod_list = modListFromMod(base_mod);
-  for (let jj = 0; jj < bind_set.length; ++jj) {
-    let set = bind_set[jj];
-    for (let key in set.list) {
-      let bindlist = set.list[key as keyof typeof set.list]!;
-
-      // check if any of the binds for the current mod need an in_event_cb
-      let in_event_cb: EventCallback | undefined;
-      for (let kk = 0; kk < base_mod_list.length; ++kk) {
-        let mod = base_mod_list[kk];
-        let list = bindlist.list_by_mod[mod];
-        if (list) {
-          for (let ii = 0; ii < list.length; ++ii) {
-            let bind = list[ii];
-            if (in_event_cbs[bind.cmd]) {
-              if (layers[bind.layer]!.active) {
-                in_event_cb = in_event_cbs[bind.cmd];
-              }
-            }
-          }
-        }
-      }
-      let param = in_event_cb ? {
-        peek: true,
-        in_event_cb,
-      } : PEEK;
-
-      let up_edge = set.upEdge(bindlist.code, param);
-      let down_edge = set.downEdge(bindlist.code, param);
-      let down_mod = down_edge ? set.downEdgeLastMod() : 0;
-      let mod_list = modListFromMod(down_mod);
-
-      // if required, first release any held down events from previous frames
-      while (up_edge && bindlist.down.length) {
-        --up_edge;
-        handleUp(bindlist);
-      }
-
-      while (down_edge) {
-        --down_edge;
-        handleDown(bindlist, mod_list);
-      }
-
-      if (bindlist.down.length) {
-        let down_state = bindlist.down[bindlist.down.length - 1];
-        let down_time = set.down(bindlist.code);
-        if (down_time) {
-          let list = bindlist.list_by_mod[down_state.mod];
-          if (list) {
-            for (let ii = 0; ii < list.length; ++ii) {
-              let bind = list[ii];
-              if (bind.layer === down_state.layer) {
-                if (bind.events & BIND_EVENT_TIME) {
-                  cmd_queue.push({
-                    level: layers[bind.layer]!.priority,
-                    cmd: (bind.events & BIND_EVENT_WITH_PARAMS) ? `${bind.cmd} time ${down_time}` : bind.cmd,
-                  });
-                }
-              }
-            }
-          }
-        }
-      }
-
-      // if required, release any downs that were generated this frame
-      while (up_edge && bindlist.down.length) {
-        --up_edge;
-        handleUp(bindlist);
-      }
-    }
-  }
-  if (!empty(in_event_cbs)) {
-    in_event_cbs = {};
-  }
-
-  bindDispatchOld({
+function bindsTopOfFrame(): void {
+  bindDispatch({
     level: BIND_LEVEL_PRETICK,
   });
 }

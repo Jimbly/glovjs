@@ -7,16 +7,15 @@ export const internal = {
 import assert from 'assert';
 import { CmdRespFunc } from 'glov/common/cmd_parse';
 import {
-  BIND_EVENT_ALL,
   bindDown,
   bindDownEdge,
-  bindInEventCB,
   bindKB,
   bindLayerRegister,
   bindPad,
 } from './binds';
 import { platformGetID } from './client_config';
 import { cmd_parse } from './cmds';
+import { getFrameDtHr } from './engine';
 import {
   KEYS,
   MOD_CTRL,
@@ -56,15 +55,12 @@ export type ActionKey = keyof ActionRegistry;
 
 type ActionState = {
   down: number;
-  down_time: number;
   down_edge: number;
 };
 let action_state = Object.create(null) as Record<ActionKey, ActionState>;
 
-// Can be called for external events trigger actions (e.g. on-screen controls),
+// Used for external events to trigger actions (e.g. on-screen controls),
 //   though e.g. cmd_parse.handle('myaction 0') also works
-// note: for simulated events, only artificial minimum (non-0) down_time will be returned,
-//   need more logic otherwise to track this
 export function actionTriggerEdge(action_key: ActionKey, is_down: boolean): void {
   let action = action_state[action_key];
   assert(action);
@@ -82,16 +78,17 @@ function actionCmd(action_key: ActionKey, value: string, resp_func: CmdRespFunc)
     actionTriggerEdge(action_key, true);
     actionTriggerEdge(action_key, false);
   } else {
-    let params = value.split(' ');
-    if (params[0] === 'down') {
-      actionTriggerEdge(action_key, true);
-    } else if (params[0] === 'up') {
-      actionTriggerEdge(action_key, false);
-    } else if (params[0] === 'time' && isFinite(Number(params[1]))) {
-      let action = action_state[action_key];
-      action.down_time = max(action.down_time, Number(params[1]));
+    let action = action_state[action_key];
+    if (value === '0') {
+      if (action.down) {
+        actionTriggerEdge(action_key, false);
+      }
+    } else if (value === '1') {
+      if (!action.down) {
+        actionTriggerEdge(action_key, true);
+      }
     } else {
-      return resp_func(`Usage: /${action_key} down|up|time [milliseconds]`);
+      return resp_func(`Usage: /${action_key} 0|1`);
     }
   }
   resp_func();
@@ -102,7 +99,6 @@ export function actionRegister(action_key: ActionKey): void {
   action_state[action_key] = {
     down: 0,
     down_edge: 0,
-    down_time: 0,
   };
   cmd_parse.register({
     cmd: action_key,
@@ -120,7 +116,6 @@ export function actionBindKB(key: keyof typeof KEYS, action_key: ActionKey, modi
     key,
     cmd: action_key,
     action: 'action',
-    events: BIND_EVENT_ALL,
     modifiers,
     layer,
   });
@@ -130,16 +125,17 @@ export function actionBindPad(pad: keyof typeof PAD, action_key: ActionKey, laye
     key: pad,
     cmd: action_key,
     action: 'action',
-    events: BIND_EVENT_ALL,
     layer,
   });
 }
 
 function actionTopOfFrame(): void {
+  // TODO: this whole thing is mostly only needed for actionTriggerEvent()
+  //   (on-screen controls) support, should this live in binds or input instead?
+  //   It's also, arguably, useful for `/bind = up 1` kinds of things
   for (let key in action_state) {
     let action = action_state[key as ActionKey];
     action.down_edge = 0;
-    action.down_time = 0;
   }
 }
 
@@ -154,30 +150,24 @@ export type ActionOpts = {
 };
 
 export function actionEdge(action_key: ActionKey, opts?: ActionOpts | null): number {
-  if (1) {
-    return bindDownEdge(action_key, opts);
-  }
-  // donotcheckin
+  let ret = bindDownEdge(action_key, opts);
   let state = action_state[action_key];
   assert(state);
-  let ret = state.down_edge;
+  ret += state.down_edge;
   if (!(opts && opts.peek)) {
     state.down_edge = 0;
-  }
-  if (opts && opts.in_event_cb) {
-    bindInEventCB(action_key, opts.in_event_cb);
   }
   return ret;
 }
 
 export function actionDown(action_key: ActionKey): number {
-  if (1) {
-    return bindDown(action_key);
-  }
-  // donotcheckin
+  let ret = bindDown(action_key);
   let state = action_state[action_key];
   assert(state);
-  return state.down_time;
+  if (state.down) {
+    ret = getFrameDtHr();
+  }
+  return ret;
 }
 
 function actionStartup(): void {

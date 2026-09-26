@@ -4,7 +4,7 @@ import * as local_storage from 'glov/client/local_storage';
 local_storage.setStoragePrefix('glovjs-multiplayer'); // Before requiring anything else that might load from this
 
 import assert from 'assert';
-import { actionDown } from 'glov/client/actions';
+import { actionDown, ActionKey, actionTriggerEdge } from 'glov/client/actions';
 import { autoAtlas } from 'glov/client/autoatlas';
 import { bindUIStartup } from 'glov/client/bind_ui';
 import { chatUICreate } from 'glov/client/chat_ui';
@@ -24,18 +24,20 @@ import 'glov/client/report'; // for command testing
 import { shaderCreate } from 'glov/client/shaders';
 import { socialInit } from 'glov/client/social';
 import { soundLoad } from 'glov/client/sound';
-import { spotSuppressPad } from 'glov/client/spot';
+import { SPOT_STATE_DOWN, spotSuppressPad } from 'glov/client/spot';
 import { spriteAnimationCreate } from 'glov/client/sprite_animation';
 import { Sprite, spriteCreate } from 'glov/client/sprites';
 import * as ui from 'glov/client/ui';
 import {
+  buttonLastSpotRet,
+  buttonText,
   uiHandlingNav,
   uiTextHeight,
 } from 'glov/client/ui';
 import { getURLPageBase } from 'glov/client/urlhash';
 import type { CmdRespFunc } from 'glov/common/cmd_parse';
 import type { Packet } from 'glov/common/packet';
-import type { DataObject } from 'glov/common/types';
+import type { DataObject, Rec } from 'glov/common/types';
 import { toNumber } from 'glov/common/util';
 
 import { ROVec3, v2sub, vec2, vec3, vec4 } from 'glov/common/vmath';
@@ -203,6 +205,62 @@ export function main(): void {
     pos_manager.updateMyPos(new Float64Array([test_character.x, test_character.y, test_character.rot]), 'idle');
   }
 
+  let onscreen_w = 40;
+  type OnScreenControlData = {
+    x: number;
+    y: number;
+    text: string;
+    last_state: boolean;
+  };
+  let onscreen_controls: Rec<ActionKey, OnScreenControlData> = {
+    left: {
+      x: 0,
+      y: onscreen_w,
+      text: '←',
+      last_state: false,
+    },
+    up: {
+      x: onscreen_w,
+      y: 0,
+      text: '↑',
+      last_state: false,
+    },
+    right: {
+      x: onscreen_w * 2,
+      y: onscreen_w,
+      text: '→',
+      last_state: false,
+    },
+    down: {
+      x: onscreen_w,
+      y: onscreen_w * 2,
+      text: '↓',
+      last_state: false,
+    },
+  };
+
+  function onScreenControls(): void {
+    let x = 80;
+    let key: ActionKey;
+    for (key in onscreen_controls) {
+      let state = onscreen_controls[key]!;
+      buttonText({
+        ...state,
+        x: x + state.x,
+        y: x + state.y,
+        w: onscreen_w,
+        h: onscreen_w,
+        sound_button: null,
+        sound_rollover: null,
+      });
+      let new_state = buttonLastSpotRet().spot_state === SPOT_STATE_DOWN;
+      if (state.last_state !== new_state) {
+        actionTriggerEdge(key, new_state);
+        state.last_state = new_state;
+      }
+    }
+  }
+
   function getRoom(): void {
     if (!test_room) {
       test_room = netSubs().getChannel('multiplayer.test', true);
@@ -252,6 +310,7 @@ export function main(): void {
         pad_controls_sprite = true;
         was_active = true;
       }
+      onScreenControls();
       playerMotion(dt);
 
       sprites.game_bg.draw({

@@ -33,7 +33,7 @@ import {
   vec4,
 } from 'glov/common/vmath';
 import { asyncParallel } from 'glov-async';
-import { BIND_EVENT_DOWN, bindDispatch, bindKB } from './binds';
+import { bindDispatch, bindKB } from './binds';
 import * as camera2d from './camera2d';
 import { getAbilityChat } from './client_config';
 import { cmdAutoComplete } from './cmd_auto_complete';
@@ -2096,14 +2096,12 @@ export function chatUICreate(params: ChatUIParam): ChatUI {
   bindKB({
     key: 'ENTER',
     cmd: 'enter_chat',
-    events: BIND_EVENT_DOWN,
     action: 'cmd',
     modifiers: 0,
   });
   bindKB({
     key: 'SLASH',
     cmd: 'enter_chat /',
-    events: BIND_EVENT_DOWN,
     action: 'cmd',
     modifiers: 0,
   });

@@ -19,7 +19,7 @@ const {
     actionTopOfFrame,
   },
 } = require('./actions');
-const { bindsCheck } = require('./binds');
+const { internal: { bindsTopOfFrame }, bindDispatch } = require('./binds');
 const {
   is_android,
   is_ios,
@@ -397,6 +397,11 @@ export function getFrameIndex() {
 export let frame_dt = 0;
 export function getFrameDt() {
   return frame_dt;
+}
+
+let frame_dt_hr = 0;
+export function getFrameDtHr() {
+  return frame_dt_hr;
 }
 
 export let hrtime = 0;
@@ -1051,6 +1056,7 @@ function tick(timestamp) {
   // }
 
   let dt_raw = hrtime - last_tick_hr;
+  frame_dt_hr = min(max(dt_raw, 0.01), 250);
   last_tick_hr = hrtime;
   let last_raw_tick_index_use = last_raw_tick_index;
   last_raw_tick_times[last_raw_tick_index_use] = dt_raw;
@@ -1176,7 +1182,7 @@ function tick(timestamp) {
   soundTick(dt);
   input.tickInput();
   actionTopOfFrame();
-  bindsCheck();
+  bindsTopOfFrame();
   uiTick(dt);
 
   if (need_repos) {
@@ -1214,6 +1220,7 @@ function tick(timestamp) {
   }
 
   profilerStopStart('bottom');
+  bindDispatch();
   spotEndInput();
   // *after* app_tick, so newly added/killed particles can be queued into the draw list
   for (let ii = 0; ii < app_post_tick_functions.length; ++ii) {

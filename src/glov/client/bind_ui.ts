@@ -4,8 +4,6 @@ import { Optional, TSMap } from 'glov/common/types';
 import { capitalize, identity, plural } from 'glov/common/util';
 import { actionExists } from './actions';
 import {
-  BIND_EVENT_ALL,
-  BIND_EVENT_DOWN,
   bindBind,
   BindExport,
   bindExport,
@@ -92,10 +90,6 @@ function defaultLayer(cmd: string): string {
 function addUserBind(param: UserBindParam): void {
   const { bindtype, key, modifiers, cmd } = param;
   let { layer } = param;
-  let events = BIND_EVENT_DOWN;
-  if (actionExists(cmd)) {
-    events = BIND_EVENT_ALL;
-  }
   if (!layer) {
     layer = defaultLayer(cmd);
     if (layer === 'nav' && bindtype === 'key') {
@@ -122,7 +116,6 @@ function addUserBind(param: UserBindParam): void {
     key,
     cmd,
     modifiers,
-    events,
     action: actionExists(cmd) ? 'action' : 'cmd',
     layer,
   });
