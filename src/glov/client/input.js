@@ -1477,7 +1477,7 @@ let last_mod;
 export function keyDownLastMod() {
   return last_mod;
 }
-export function keyDown(keycode) {
+export function keyDown(keycode, opts) {
   if (keycode === KEYS.CTRL) {
     ctrl_checked = true;
   }
@@ -1497,6 +1497,11 @@ export function keyDown(keycode) {
   let ks = key_state_new[keycode];
   if (!ks) {
     return 0;
+  }
+  if (opts && typeof opts.mod === 'number') {
+    if ((ks.down_mod & opts.mod) !== opts.mod) {
+      return 0;
+    }
   }
   last_mod = ks.down_mod;
   if (ks.state === DOWN) {
@@ -1518,6 +1523,11 @@ export function keyDownEdge(keycode, opts) {
   let ks = key_state_new[keycode];
   if (!ks) {
     return 0;
+  }
+  if (opts && typeof opts.mod === 'number') {
+    if ((ks.down_mod & opts.mod) !== opts.mod) {
+      return 0;
+    }
   }
   last_mod = ks.down_mod;
   let r = ks.down_edge;
@@ -1551,6 +1561,11 @@ export function keyUpEdge(keycode, opts) {
   let ks = key_state_new[keycode];
   if (!ks) {
     return 0;
+  }
+  if (opts && typeof opts.mod === 'number') {
+    if ((ks.down_mod & opts.mod) !== opts.mod) {
+      return 0;
+    }
   }
   let r = ks.up_edge;
   if (!opts || !opts.peek) {
