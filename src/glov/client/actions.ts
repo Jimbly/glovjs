@@ -8,6 +8,8 @@ import assert from 'assert';
 import { CmdRespFunc } from 'glov/common/cmd_parse';
 import {
   BIND_EVENT_ALL,
+  bindDown,
+  bindDownEdge,
   bindInEventCB,
   bindKB,
   bindLayerRegister,
@@ -117,6 +119,7 @@ export function actionBindKB(key: keyof typeof KEYS, action_key: ActionKey, modi
   bindKB({
     key,
     cmd: action_key,
+    action: 'action',
     events: BIND_EVENT_ALL,
     modifiers,
     layer,
@@ -126,6 +129,7 @@ export function actionBindPad(pad: keyof typeof PAD, action_key: ActionKey, laye
   bindPad({
     key: pad,
     cmd: action_key,
+    action: 'action',
     events: BIND_EVENT_ALL,
     layer,
   });
@@ -146,9 +150,14 @@ function actionEatAll(): void {
 export type ActionOpts = {
   in_event_cb?: EventCallback | null; // for clicks and key presses
   peek?: boolean;
+  flags?: number; // BIND_FLAG_NOKB, etc
 };
 
 export function actionEdge(action_key: ActionKey, opts?: ActionOpts | null): number {
+  if (1) {
+    return bindDownEdge(action_key, opts);
+  }
+  // donotcheckin
   let state = action_state[action_key];
   assert(state);
   let ret = state.down_edge;
@@ -162,6 +171,10 @@ export function actionEdge(action_key: ActionKey, opts?: ActionOpts | null): num
 }
 
 export function actionDown(action_key: ActionKey): number {
+  if (1) {
+    return bindDown(action_key);
+  }
+  // donotcheckin
   let state = action_state[action_key];
   assert(state);
   return state.down_time;
@@ -200,7 +213,7 @@ function actionStartup(): void {
   actionBindKB('RIGHT', 'right', 0, 'nav');
 
   // extended nav set - active based on app's needs
-  bindLayerRegister('navext', 200);
+  bindLayerRegister('navext', 60);
   actionBindKB('W', 'up', 0, 'navext');
   actionBindKB('A', 'left', 0, 'navext');
   actionBindKB('S', 'down', 0, 'navext');

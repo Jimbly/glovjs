@@ -5,17 +5,24 @@ export const BIND_EVENT_WITH_PARAMS = 1<<3;
 export const BIND_EVENT_DOWNUP = BIND_EVENT_DOWN | BIND_EVENT_UP | BIND_EVENT_WITH_PARAMS;
 export const BIND_EVENT_ALL = BIND_EVENT_DOWNUP | BIND_EVENT_TIME | BIND_EVENT_WITH_PARAMS;
 
+export const BIND_FLAG_NOTEXT = 1<<0;
+export const BIND_FLAG_NOKB = 1<<1;
+
 // Anything on layers at this priority or higher gets executed automatically
 // before ticking, so will be active in modal dialogs, etc.
 // Anything below this gets executed when bindDispatch(0) or similar is called.
+// This only apples to 'cmd'-type binds; action-type follow normal immediate mode
+// norms.
 export const BIND_LEVEL_PRETICK = 100;
 
 import assert from 'assert';
 import { Rec, TSMap } from 'glov/common/types';
 import { empty } from 'glov/common/util';
+import verify from 'glov/common/verify';
 import { cmd_parse } from './cmds';
 import {
   ANY,
+  inputKeyIsText,
   keyDown,
   keyDownEdge,
   keyDownLastMod,
@@ -34,6 +41,7 @@ import { EventCallback } from './ui';
 const { max } = Math;
 
 export type BindType = 'key' | 'controller';
+export type BindAction = 'action' | 'cmd';
 
 export type ValidKey = keyof typeof KEYS;
 export type ValidPad = keyof typeof PAD;
@@ -74,7 +82,7 @@ export function bindLayerRegister(layer_name: string, priority: number): void {
   layersUpdateActive();
 }
 bindLayerRegister('default', 10);
-bindLayerRegister('nav', 110); // anything above this is active even in modal dialogs, etc
+bindLayerRegister('nav', 50);
 
 export function bindLayerSet(layer_name: string, active: boolean): void {
   assert(layers[layer_name]);
@@ -94,6 +102,10 @@ type Bind = {
   cmd: string;
   events: BindEvents;
   layer: string;
+  modifiers: number;
+  action: BindAction;
+  bindtype: BindType;
+  code: number;
 };
 type DownState = {
   mod: number; // The active set of modifiers when the down event fired
@@ -106,11 +118,13 @@ type BindList = {
 };
 let kb_binds: Rec<ValidKey, BindList> = {};
 let pad_binds: Rec<ValidPad, BindList> = {};
+let binds_by_cmd: Rec<string, Bind[]> = Object.create(null);
 
 export type BindOpt<T> = {
   key: T;
   cmd: string;
   events: BindEvents;
+  action: BindAction;
   modifiers?: number;
   // layer behavior:
   //   layers can be enabled/disabled
@@ -125,17 +139,24 @@ function cmpLayerPriority(a: Bind, b: Bind): number {
   return layers[b.layer]!.priority - layers[a.layer]!.priority;
 }
 
-export function bindGeneric(entry: BindList, opt: BindOpt<unknown>): void {
-  let mod = opt.modifiers || 0;
-  let arr = entry.list_by_mod[mod] = entry.list_by_mod[mod] || [];
+export function bindGeneric(entry: BindList, bindtype: BindType, opt: BindOpt<unknown>): void {
+  let modifiers = opt.modifiers || 0;
+  let arr = entry.list_by_mod[modifiers] = entry.list_by_mod[modifiers] || [];
   let layer = opt.layer || 'default';
   assert(layers[layer]);
-  arr.push({
+  let bind: Bind = {
     cmd: opt.cmd,
+    action: opt.action,
     events: opt.events,
+    modifiers,
     layer,
-  });
+    bindtype,
+    code: entry.code,
+  };
+  arr.push(bind);
   arr.sort(cmpLayerPriority);
+  binds_by_cmd[bind.cmd] = binds_by_cmd[bind.cmd] || [];
+  binds_by_cmd[bind.cmd]!.push(bind);
 }
 
 export function bindKB(opt: BindOpt<ValidKey>): void {
@@ -143,7 +164,7 @@ export function bindKB(opt: BindOpt<ValidKey>): void {
   if (!entry) {
     entry = kb_binds[opt.key] = { code: KEYS[opt.key], list_by_mod: {}, down: [] };
   }
-  bindGeneric(entry, opt);
+  bindGeneric(entry, 'key', opt);
 }
 
 export function bindPad(opt: BindOpt<ValidPad>): void {
@@ -151,7 +172,7 @@ export function bindPad(opt: BindOpt<ValidPad>): void {
   if (!entry) {
     entry = pad_binds[opt.key] = { code: PAD[opt.key], list_by_mod: {}, down: [] };
   }
-  bindGeneric(entry, opt);
+  bindGeneric(entry, 'controller', opt);
 }
 
 // Slightly less type-safe generic interface
@@ -188,6 +209,14 @@ export function bindUnbind(bindtype: BindType, opt: Partial<BindOpt<ValidKey | V
     if (opt.cmd && bind.cmd !== opt.cmd) {
       return true;
     }
+    let arr = binds_by_cmd[bind.cmd];
+    assert(arr);
+    let idx = arr.indexOf(bind);
+    assert(idx !== -1);
+    arr.splice(idx, 1);
+    if (!arr.length) {
+      delete binds_by_cmd[bind.cmd];
+    }
     ret.push(`${bind.layer !== 'default' ? `${bind.layer}.` : ''}${bind.cmd}`);
     return false;
   });
@@ -210,7 +239,7 @@ const bind_set = [{
 }, {
   bindtype: 'controller' as const,
   list: pad_binds,
-  downEdge: function (code: number, opts?: { peek?: boolean }) {
+  downEdge: function (code: number, opts?: { peek?: boolean; mod?: number }) {
     return padButtonDownEdge(code, ANY, opts);
   },
   downEdgeLastMod: function () {
@@ -231,10 +260,8 @@ export function bindInEventCB(cmd: string, in_event_cb: EventCallback): void {
 }
 
 
-export type BindExport = Bind & {
+export type BindExport = Omit<Bind, 'code'> & {
   key: ValidPad | ValidKey;
-  modifiers: number;
-  bindtype: 'key' | 'controller';
 };
 export function bindExport(): BindExport[] {
   let ret: BindExport[] = [];
@@ -255,11 +282,98 @@ export function bindExport(): BindExport[] {
             modifiers,
             events: bind.events,
             layer: bind.layer,
+            action: bind.action,
           });
         }
       }
     }
   });
+  return ret;
+}
+
+export type ActionOpts = {
+  in_event_cb?: EventCallback | null; // for clicks and key presses
+  peek?: boolean;
+  flags?: number; // BIND_FLAG_NOKB, etc
+};
+
+type KeyCheckOpts = { // TypeScript: move this to input.ts once converted
+  mod?: number;
+  in_event_cb?: EventCallback | null; // for clicks and key presses
+  peek?: boolean;
+};
+export function bindDownEdge(action: string, opts?: ActionOpts | null): number {
+  let arr = binds_by_cmd[action];
+  if (!arr) {
+    return 0;
+  }
+  let ret = 0;
+  for (let ii = 0; ii < arr.length; ++ii) {
+    let bind = arr[ii];
+    if (!layers[bind.layer]!.active) {
+      continue;
+    }
+    verify(bind.action === 'action'); // probably doesn't make sense to query for cmd-type binds?
+    if (bind.bindtype === 'key') {
+      if (opts && opts.flags) {
+        if (opts.flags & BIND_FLAG_NOKB) {
+          continue;
+        }
+        if (opts.flags & BIND_FLAG_NOTEXT) {
+          if (inputKeyIsText(bind.code)) {
+            continue;
+          }
+        }
+      }
+      let eff_opts: KeyCheckOpts | null | undefined;
+      if (bind.modifiers) {
+        if (opts) {
+          eff_opts = {
+            ...opts,
+            mod: bind.modifiers,
+          };
+        } else {
+          eff_opts = {
+            mod: bind.modifiers,
+          };
+        }
+      } else {
+        eff_opts = opts;
+      }
+      ret += keyDownEdge(bind.code, eff_opts);
+    } else {
+      ret += padButtonDownEdge(bind.code, ANY, opts);
+    }
+  }
+  return ret;
+}
+// export function bindUpEdge(action: string, opts?: ActionOpts | null): number {
+//   // TODO, maybe
+// }
+export function bindDown(action: string): number {
+  let arr = binds_by_cmd[action];
+  if (!arr) {
+    return 0;
+  }
+  let ret = 0;
+  for (let ii = 0; ii < arr.length; ++ii) {
+    let bind = arr[ii];
+    if (!layers[bind.layer]!.active) {
+      continue;
+    }
+    verify(bind.action === 'action'); // probably doesn't make sense to query for cmd-type binds?
+    if (bind.bindtype === 'key') {
+      let eff_opts: KeyCheckOpts | null | undefined;
+      if (bind.modifiers) {
+        eff_opts = {
+          mod: bind.modifiers,
+        };
+      }
+      ret = max(ret, keyDown(bind.code, eff_opts));
+    } else {
+      ret = max(ret, padButtonDown(bind.code, ANY));
+    }
+  }
   return ret;
 }
 
@@ -372,7 +486,7 @@ export function defaultHandle(cmd: string): void {
   cmd_parse.handle(undefined, cmd);
 }
 
-export function bindDispatch(opt?: {
+export function bindDispatchOld(opt?: {
   level?: number;
   handler?: (cmd: string) => void;
 }): void {
@@ -388,11 +502,46 @@ export function bindDispatch(opt?: {
   });
 }
 
+export function bindDispatch(opt?: {
+  level?: number;
+  handler?: (cmd: string) => void;
+}): void {
+  opt = opt || {};
+  let level = opt.level ?? 0;
+  let handler = opt.handler || defaultHandle;
+
+  for (let jj = 0; jj < bind_set.length; ++jj) {
+    let set = bind_set[jj];
+    for (let key in set.list) {
+      let bindlist = set.list[key as keyof typeof set.list]!;
+      for (let mod in bindlist.list_by_mod) {
+        let sublist = bindlist.list_by_mod[mod]!;
+        for (let ii = 0; ii < sublist.length; ++ii) {
+          let bind = sublist[ii];
+          if (bind.action === 'cmd' && layers[bind.layer]!.priority >= level) {
+            if (set.downEdge(bindlist.code, {
+              mod: bind.modifiers,
+            })) {
+              handler(bind.cmd);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 export function bindEatAll(): void {
   cmd_queue.length = 0;
 }
 
 export function bindsCheck(): void {
+  if (1) {
+    bindDispatch({
+      level: BIND_LEVEL_PRETICK,
+    });
+    return;
+  }
   cmd_queue.length = 0;
 
   let base_mod = (keyDown(KEYS.SHIFT) ? MOD_SHIFT : 0) |
@@ -473,7 +622,7 @@ export function bindsCheck(): void {
     in_event_cbs = {};
   }
 
-  bindDispatch({
+  bindDispatchOld({
     level: BIND_LEVEL_PRETICK,
   });
 }

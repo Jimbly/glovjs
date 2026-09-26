@@ -214,7 +214,7 @@ const { abs, max } = Math;
 import verify from 'glov/common/verify';
 import { Vec2, Vec4 } from 'glov/common/vmath.js';
 import { actionEdge, ActionKey } from './actions';
-import { bindLayerSet } from './binds';
+import { BIND_FLAG_NOKB, BIND_FLAG_NOTEXT, bindLayerSet } from './binds';
 import * as camera2d from './camera2d.js';
 import { platformParameterGet } from './client_config';
 import * as engine from './engine.js';
@@ -384,32 +384,29 @@ export function spotSetNavtype(type: SpotNavtypeEnum): void {
 }
 // spotSetNavtype(SPOT_NAVTYPE_EXTENDED); no: must be past startup
 
-let spot_nav_enabled = {
-  [SPOT_NAV_LEFT]: true,
-  [SPOT_NAV_UP]: true,
-  [SPOT_NAV_RIGHT]: true,
-  [SPOT_NAV_DOWN]: true,
-  [SPOT_NAV_PREV]: true,
-  [SPOT_NAV_NEXT]: true,
+let spot_nav_flags = {
+  [SPOT_NAV_LEFT]: 0,
+  [SPOT_NAV_UP]: 0,
+  [SPOT_NAV_RIGHT]: 0,
+  [SPOT_NAV_DOWN]: 0,
+  [SPOT_NAV_PREV]: 0,
+  [SPOT_NAV_NEXT]: 0,
 };
 function resetNavKeys(): void {
-  spot_nav_enabled[SPOT_NAV_LEFT] = true;
-  spot_nav_enabled[SPOT_NAV_RIGHT] = true;
-  spot_nav_enabled[SPOT_NAV_UP] = true;
-  spot_nav_enabled[SPOT_NAV_DOWN] = true;
+  spot_nav_flags[SPOT_NAV_LEFT] = 0;
+  spot_nav_flags[SPOT_NAV_RIGHT] = 0;
+  spot_nav_flags[SPOT_NAV_UP] = 0;
+  spot_nav_flags[SPOT_NAV_DOWN] = 0;
 }
 let suppress_kb_nav_this_frame = false;
 
 export function spotSuppressKBNav(left_right: boolean, up_down: boolean): void {
   suppress_kb_nav_this_frame = true;
-  if (left_right) {
-    spot_nav_enabled[SPOT_NAV_LEFT] = false;
-    spot_nav_enabled[SPOT_NAV_RIGHT] = false;
-  }
-  if (up_down) {
-    spot_nav_enabled[SPOT_NAV_UP] = false;
-    spot_nav_enabled[SPOT_NAV_DOWN] = false;
-  }
+  // regardless of flags, suppressing text input
+  spot_nav_flags[SPOT_NAV_LEFT] = left_right ? BIND_FLAG_NOKB : BIND_FLAG_NOTEXT;
+  spot_nav_flags[SPOT_NAV_RIGHT] = left_right ? BIND_FLAG_NOKB : BIND_FLAG_NOTEXT;
+  spot_nav_flags[SPOT_NAV_UP] = up_down ? BIND_FLAG_NOKB : BIND_FLAG_NOTEXT;
+  spot_nav_flags[SPOT_NAV_DOWN] = up_down ? BIND_FLAG_NOKB : BIND_FLAG_NOTEXT;
 }
 
 
@@ -1000,7 +997,7 @@ function keyCheck(nav_dir: SpotNavEnum): boolean {
   if (suppress_pad) {
     return false;
   }
-  return spot_nav_enabled[nav_dir] && Boolean(actionEdge(spot_nav_actions[nav_dir]));
+  return Boolean(actionEdge(spot_nav_actions[nav_dir], { flags: spot_nav_flags[nav_dir] }));
 }
 
 type SpotParamWithOut = SpotParam & {

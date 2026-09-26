@@ -114,8 +114,6 @@ export function main(): void {
   // alternatively, set DefaultUserWorker.prototype.rich_presence = false on the server.
   socialInit();
 
-  bindUIStartup();
-
   const test_shader = shaderCreate('shaders/test.fp');
 
   // const font = engine.font;
@@ -128,6 +126,8 @@ export function main(): void {
     url_base: getURLPageBase(),
     user_context_cb: ({ user_id }: { user_id: string }) => ui.provideUserString('User ID', user_id),
   });
+
+  bindUIStartup(); // after chat_ui creation
 
   const color_gray = vec4(0.5, 0.5, 0.5, 1);
 

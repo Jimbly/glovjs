@@ -6,6 +6,7 @@ local_storage.setStoragePrefix('glovjs-playground'); // Before requiring anythin
 import assert from 'assert';
 import { actionDown, actionEdge } from 'glov/client/actions';
 import { autoAtlas } from 'glov/client/autoatlas';
+import { bindDispatch } from 'glov/client/binds';
 import { platformParameterGet, platformSetRichPresence } from 'glov/client/client_config';
 import { editBox } from 'glov/client/edit_box';
 import * as engine from 'glov/client/engine';
@@ -790,6 +791,8 @@ export function main(): void {
     if (pad_controls_sprite) {
       spotSuppressPad();
     }
+
+    bindDispatch();
 
     let status: string | null = null;
     let status_others: TSMap<string> | null = null;

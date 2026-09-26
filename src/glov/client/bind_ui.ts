@@ -123,6 +123,7 @@ function addUserBind(param: UserBindParam): void {
     cmd,
     modifiers,
     events,
+    action: actionExists(cmd) ? 'action' : 'cmd',
     layer,
   });
 }
