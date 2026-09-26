@@ -202,7 +202,7 @@ const pointer_lock = require('./pointer_lock.js');
 const settings = require('./settings.js');
 const { soundResume } = require('./sound.js');
 const { spotMouseoverHook } = require('./spot.js');
-const { empty } = require('glov/common/util.js');
+const { arrayToSet, empty } = require('glov/common/util.js');
 const { vec2, v2add, v2copy, v2lengthSq, v2same, v2set, v2scale, v2sub } = require('glov/common/vmath.js');
 
 let pad_to_touch;
@@ -254,6 +254,29 @@ export function inputValidKeyName(key) {
 
 export function inputValidPadName(key) {
   return Boolean(PAD[key]);
+}
+
+let text_keys;
+function initTextInputKeys() {
+  let all_textinput = [];
+  function range(a, b) {
+    for (let ii = a; ii <= b; ++ii) {
+      all_textinput.push(ii);
+    }
+  }
+  range(KEYS.A, KEYS.Z);
+  range(KEYS.NUMPAD0, KEYS.NUMPAD_DIVIDE);
+  range(KEYS.SEMICOLON, KEYS.TILDE);
+  range(KEYS.BRACKET_LEFT, KEYS.QUOTE);
+  all_textinput.push(KEYS.INTLBACKSLASH);
+  all_textinput.push(KEYS.BACKSPACE);
+  all_textinput.push(KEYS.SPACE);
+  text_keys = arrayToSet(all_textinput);
+}
+initTextInputKeys();
+
+export function inputKeyIsText(key) {
+  return text_keys[key];
 }
 
 function eventTimestamp(event) {
