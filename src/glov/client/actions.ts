@@ -57,7 +57,7 @@ type ActionState = {
   down_time: number;
   down_edge: number;
 };
-let action_state = {} as Record<ActionKey, ActionState>;
+let action_state = Object.create(null) as Record<ActionKey, ActionState>;
 
 // Can be called for external events trigger actions (e.g. on-screen controls),
 //   though e.g. cmd_parse.handle('myaction 0') also works
