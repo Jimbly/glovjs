@@ -175,7 +175,40 @@ function unbindSub(opt: {
 }
 
 const bind_param_regex = /^(?:([^ .]+)\.)?(.+)?$/i;
-const bind_key_regex = /^((?:(?:Shift|Ctrl|Alt)\+)+)?(Key|Controller)([a-z0-9]+)$/i;
+const bind_key_regex = /^((?:(?:Shift|Ctrl|Alt)\+)+)?(Key|Controller)?([a-z0-9]+)$/i;
+function parseBindKey(str: string): string | {
+  modnames: string | undefined;
+  bindtype: BindType;
+  key: string;
+} {
+  let m = str.match(bind_key_regex);
+  if (!m) {
+    return 'Error parsing 1st argument';
+  }
+  let modnames = m[1] as string | undefined;
+  let key_or_controller = m[2];
+  let key = m[3].toUpperCase();
+  let bindtype: BindType;
+  if (key_or_controller) {
+    bindtype = key_or_controller.toLowerCase() as BindType;
+  } else {
+    if (inputValidKeyName(key)) {
+      if (inputValidPadName(key)) {
+        return `Ambiguous parameter, please use use Key${key} or Controller${key}.`;
+      }
+      bindtype = 'key';
+    } else if (inputValidPadName(key)) {
+      bindtype = 'controller';
+    } else {
+      return `"${key}" is not recognized as a valid controller button nor key.`;
+    }
+  }
+  return {
+    modnames,
+    bindtype,
+    key,
+  };
+}
 
 const split_opt_regex = /^([^ ]+)(?: (.+))?$/;
 function unbindFromString(param: string): string | string[] {
@@ -183,13 +216,11 @@ function unbindFromString(param: string): string | string[] {
   if (!m1) {
     return 'Error parsing arguments';
   }
-  let m2 = m1[1].match(bind_key_regex);
-  if (!m2) {
-    return 'Error parsing 1st argument';
+  let m2 = parseBindKey(m1[1]);
+  if (typeof m2 === 'string') {
+    return m2;
   }
-  let modnames = m2[1] as string | undefined;
-  let bindtype = m2[2].toLowerCase() as BindType;
-  let key = m2[3].toUpperCase();
+  let { modnames, bindtype, key } = m2;
   let layer: string | undefined;
   let cmd: string | undefined;
   if (m1[2]) {
@@ -230,17 +261,15 @@ function addBindFromString(param: string, auto_unbind: boolean): string | null {
   if (!m1) {
     return 'Expected 2 arguments';
   }
-  let m2 = m1[1].match(bind_key_regex);
-  if (!m2) {
-    return 'Error parsing 1st argument';
+  let m2 = parseBindKey(m1[1]);
+  if (typeof m2 === 'string') {
+    return m2;
   }
   let m3 = m1[2].match(bind_param_regex);
   if (!m3) {
     return 'Error parsing 2nd argument';
   }
-  let modnames = m2[1] as string | undefined;
-  let bindtype = m2[2].toLowerCase() as BindType;
-  let key = m2[3].toUpperCase();
+  let { modnames, bindtype, key } = m2;
   let layer = m3[1] as string | undefined;
   let cmd = m3[2] as string;
 
