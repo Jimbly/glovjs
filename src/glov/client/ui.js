@@ -530,7 +530,7 @@ function uiStartup(param) {
   // }
 
   button_keys = {
-    ok: { actions: ['ok'], low_actions: ['ok_low'] },
+    ok: { actions: ['ok'], low_actions: ['cancel'] },
     cancel: { actions: ['cancel'] },
   };
   button_keys.yes = { actions: ['ok', 'yes'] };

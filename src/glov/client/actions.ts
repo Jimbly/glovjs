@@ -55,7 +55,6 @@ export interface ActionRegistry {
   ok: 0;
   yes: 0;
   no: 0;
-  ok_low: 0; // low-priority OK, queried only after accept/cancel/yes/no etc, so can overlap
 }
 
 export type ActionKey = keyof ActionRegistry;
@@ -209,7 +208,6 @@ function actionStartup(): void {
   actionRegister('accept', { prevent_down_trickle: true });
   actionRegister('cancel', { prevent_down_trickle: true });
   actionRegister('ok', { prevent_down_trickle: true });
-  actionRegister('ok_low', { prevent_down_trickle: true });
   actionRegister('yes', { prevent_down_trickle: true });
   actionRegister('no', { prevent_down_trickle: true });
 
@@ -260,7 +258,6 @@ function actionStartup(): void {
   actionBindKB('O', 'ok', 0, 'nav');
   actionBindKB('Y', 'yes', 0, 'nav');
   actionBindKB('N', 'no', 0, 'nav');
-  actionBindKB('ESC', 'ok_low', 0, 'nav');
 
   // recommended extras:
   // actionBindKB('E', 'accept', 0, 'nav');
