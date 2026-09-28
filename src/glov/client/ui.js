@@ -48,7 +48,13 @@ const { effectsQueue } = effects;
 const glov_engine = require('./engine.js');
 const glov_font = require('./font.js');
 const { ALIGN, fontSetDefaultSize, fontStyle, fontStyleColored } = glov_font;
-const glov_input = require('./input.js');
+const {
+  eatAllInput,
+  inputClick,
+  mouseOver,
+  pointerLocked,
+  pointerLockExit,
+} = require('./input');
 const { linkTick, linkObscureRect } = require('./link.js');
 const { getStringFromLocalizable } = require('./localization.js');
 const { markdownAuto } = require('./markdown');
@@ -983,7 +989,7 @@ export function panel(param) {
   let color = param.color || color_panel;
   drawBox(param, param.sprite || sprites.panel, param.pixel_scale || panel_pixel_scale, color);
   if (param.eat_clicks) {
-    glov_input.mouseOver(param);
+    mouseOver(param);
     linkObscureRect(param); // should this just happen for all non-peeking mouseOver() calls?
   }
 }
@@ -1795,7 +1801,7 @@ function modalDialogRun() {
         }
       }
     }
-    if (click_anywhere && ii === 0 && glov_input.click()) {
+    if (click_anywhere && ii === 0 && inputClick()) {
       ++pressed;
     }
     if (pressed) {
@@ -1858,11 +1864,11 @@ function modalDialogRun() {
     color: panel_color,
   });
 
-  if (glov_input.pointerLocked() && exit_lock) {
-    glov_input.pointerLockExit();
+  if (pointerLocked() && exit_lock) {
+    pointerLockExit();
   }
 
-  glov_input.eatAllInput();
+  eatAllInput();
   if (fullscreen_mode) {
     camera2d.pop();
   }
@@ -2026,7 +2032,7 @@ function uiTick(dt) {
 function uiEndFrame() {
   spotEndOfFrame();
 
-  if (glov_input.click({
+  if (inputClick({
     x: -Infinity, y: -Infinity,
     w: Infinity, h: Infinity,
   })) {
@@ -2053,7 +2059,7 @@ export function menuUp(param) {
     merge(menu_fade_params, param);
   }
   menu_up = true;
-  glov_input.eatAllInput();
+  eatAllInput();
 }
 
 export function copyTextToClipboard(text) {
