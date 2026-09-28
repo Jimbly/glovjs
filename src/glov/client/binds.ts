@@ -307,10 +307,13 @@ export function bindDownEdge(action: string, opts?: ActionOpts | null): number {
 // export function bindUpEdge(action: string, opts?: ActionOpts | null): number {
 //   // TODO, maybe
 // }
-export type ActionDownOpts = {
+export type BindDownOpts = {
   peek?: boolean; // only affects whether or not we peek on the implicit bindDownEdge call
+  // if prevent_down_trickle is true, then we never return a truthy `down`unless
+  //   the `downEdge` event happened for this event
+  prevent_down_trickle?: boolean;
 };
-export function bindDown(action: string, opts?: ActionDownOpts | null): number {
+export function bindDown(action: string, opts?: BindDownOpts | null): number {
   let arr = binds_by_cmd[action];
   if (!arr) {
     return 0;
@@ -322,15 +325,17 @@ export function bindDown(action: string, opts?: ActionDownOpts | null): number {
       continue;
     }
     verify(bind.action === 'action'); // probably doesn't make sense to query for cmd-type binds?
-    if (bind.down_frame === cur_frame) {
-      // this action consumed the edge earlier this frame, we're good
-      // - arguably this could consume the down_time if not `peek`, but that's not how keyDonw() currently works
-    } else if (bind.down_frame === cur_frame - 1) {
-      // we're good
-    } else {
-      // not currently known as down, was there a down edge?
-      if (!bindDownEdge(action, opts)) {
-        continue;
+    if (opts && opts.prevent_down_trickle) {
+      if (bind.down_frame === cur_frame) {
+        // this action consumed the edge earlier this frame, we're good
+        // - arguably this could consume the down_time if not `peek`, but that's not how keyDown() currently works
+      } else if (bind.down_frame === cur_frame - 1) {
+        // we're good
+      } else {
+        // not currently known as down, was there a down edge?
+        if (!bindDownEdge(action, opts)) {
+          continue;
+        }
       }
     }
     let ret;

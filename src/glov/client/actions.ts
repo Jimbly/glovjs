@@ -7,9 +7,9 @@ export const internal = {
 import assert from 'assert';
 import { CmdRespFunc } from 'glov/common/cmd_parse';
 import {
-  ActionDownOpts,
   bindDown,
   bindDownEdge,
+  BindDownOpts,
   bindKB,
   bindLayerRegister,
   bindPad,
@@ -63,6 +63,7 @@ export type ActionKey = keyof ActionRegistry;
 type ActionState = {
   down: number;
   down_edge: number;
+  prevent_down_trickle: boolean;
 };
 let action_state = Object.create(null) as Record<ActionKey, ActionState>;
 
@@ -101,11 +102,17 @@ function actionCmd(action_key: ActionKey, value: string, resp_func: CmdRespFunc)
   resp_func();
 }
 
-export function actionRegister(action_key: ActionKey): void {
+export type ActionRegisterParam = {
+  // if prevent_down_trickle is true, then we never return a truthy `down`unless
+  //   the `downEdge` event happened for this event
+  prevent_down_trickle?: boolean;
+};
+export function actionRegister(action_key: ActionKey, opts?: ActionRegisterParam): void {
   assert(!action_state[action_key]);
   action_state[action_key] = {
     down: 0,
     down_edge: 0,
+    prevent_down_trickle: Boolean(opts && opts.prevent_down_trickle),
   };
   cmd_parse.register({
     cmd: action_key,
@@ -169,10 +176,23 @@ export function actionEdge(action_key: ActionKey, opts?: ActionOpts | null): num
   return ret;
 }
 
-export function actionDown(action_key: ActionKey, opts?: ActionDownOpts | null): number {
-  let ret = bindDown(action_key, opts);
+const PREVENT_TRICKLE = {
+  prevent_down_trickle: true,
+};
+export function actionDown(action_key: ActionKey, opts?: BindDownOpts | null): number {
   let state = action_state[action_key];
   assert(state);
+  if (state.prevent_down_trickle) {
+    if (opts) {
+      opts = {
+        peek: opts.peek,
+        prevent_down_trickle: true,
+      };
+    } else {
+      opts = PREVENT_TRICKLE;
+    }
+  }
+  let ret = bindDown(action_key, opts);
   if (state.down) {
     ret = getFrameDtHr();
   }
@@ -180,18 +200,18 @@ export function actionDown(action_key: ActionKey, opts?: ActionDownOpts | null):
 }
 
 function actionStartup(): void {
-  actionRegister('up');
-  actionRegister('left');
-  actionRegister('down');
-  actionRegister('right');
-  actionRegister('prev');
-  actionRegister('next');
-  actionRegister('accept');
-  actionRegister('cancel');
-  actionRegister('ok');
-  actionRegister('ok_low');
-  actionRegister('yes');
-  actionRegister('no');
+  actionRegister('up', { prevent_down_trickle: false });
+  actionRegister('left', { prevent_down_trickle: false });
+  actionRegister('down', { prevent_down_trickle: false });
+  actionRegister('right', { prevent_down_trickle: false });
+  actionRegister('prev', { prevent_down_trickle: true });
+  actionRegister('next', { prevent_down_trickle: true });
+  actionRegister('accept', { prevent_down_trickle: true });
+  actionRegister('cancel', { prevent_down_trickle: true });
+  actionRegister('ok', { prevent_down_trickle: true });
+  actionRegister('ok_low', { prevent_down_trickle: true });
+  actionRegister('yes', { prevent_down_trickle: true });
+  actionRegister('no', { prevent_down_trickle: true });
 
   // basic nav set - active even when an edit box has keyboard focus
   actionBindPad('UP', 'up', 'nav');
