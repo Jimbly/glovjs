@@ -352,31 +352,34 @@ function eventTimestamp(event) {
   return engine.hrtime;
 }
 
-function TouchData(pos, touch, button, event) {
-  this.delta = vec2();
-  this.total = 0;
-  this.cur_pos = pos.slice(0);
-  this.start_pos = pos.slice(0);
-  this.touch = touch;
-  this.button = button;
-  this.start_time = Date.now();
-  this.dispatched = false;
-  this.dispatched_drag = false;
-  this.dispatched_drag_over = false;
-  this.was_double_click = false;
-  this.up_edge = 0;
-  this.down_edge = 0;
-  this.state = DOWN;
-  this.down_time = 0;
-  this.origin_time = eventTimestamp(event);
-}
-TouchData.prototype.down = function (event, is_edge) {
-  if (is_edge) {
-    this.down_edge++;
+class TouchData {
+  delta = vec2();
+  total = 0;
+  start_time = Date.now();
+  dispatched = false;
+  dispatched_drag = false;
+  dispatched_drag_over = false;
+  was_double_click = false;
+  up_edge = 0;
+  down_edge = 0;
+  state = DOWN;
+  down_time = 0;
+  constructor(pos, touch, button, event) {
+    this.cur_pos = pos.slice(0);
+    this.start_pos = pos.slice(0);
+    this.touch = touch;
+    this.button = button;
+    this.origin_time = eventTimestamp(event);
   }
-  this.state = DOWN;
-  this.origin_time = eventTimestamp(event);
-};
+
+  down(event, is_edge) {
+    if (is_edge) {
+      this.down_edge++;
+    }
+    this.state = DOWN;
+    this.origin_time = eventTimestamp(event);
+  }
+}
 
 const MIN_EVENT_TIME_DELTA = 0.01; // fractions of a millisecond
 function timeDelta(event, origin_time) {
@@ -385,20 +388,21 @@ function timeDelta(event, origin_time) {
   return max(et - origin_time, MIN_EVENT_TIME_DELTA);
 }
 
-function KeyData() {
-  this.down_edge = 0;
-  // this.down_start = 0;
-  this.origin_time = 0;
-  this.down_time = 0;
-  this.up_edge = 0;
-  this.state = UP;
-  this.down_mod = 0;
+class KeyData {
+  down_edge = 0;
+  // down_start = 0;
+  origin_time = 0;
+  down_time = 0;
+  up_edge = 0;
+  state = UP;
+  down_mod = 0;
+
+  keyUp(event) {
+    ++this.up_edge;
+    this.down_time += timeDelta(event, this.origin_time);
+    this.state = UP;
+  }
 }
-KeyData.prototype.keyUp = function (event) {
-  ++this.up_edge;
-  this.down_time += timeDelta(event, this.origin_time);
-  this.state = UP;
-};
 
 function setMouseToMid() {
   v2set(mouse_pos, engine.width*0.5/camera2d.domToCanvasRatio(), engine.height*0.5/camera2d.domToCanvasRatio());
