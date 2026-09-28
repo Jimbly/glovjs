@@ -265,4 +265,14 @@ function actionStartup(): void {
   // actionBindPad('X', 'accept', 'nav');
   // actionBindPad('Y', 'cancel', 'nav');
   // actionBindPad('BACK', 'cancel', 'nav');
+
+  if (0) {
+    // convenient set for checking if any hardcoded arrows/wasd/enter/space/etc is used
+    actionBindKB('I', 'up', 0, 'navext');
+    actionBindKB('J', 'left', 0, 'navext');
+    actionBindKB('K', 'down', 0, 'navext');
+    actionBindKB('L', 'right', 0, 'navext');
+    actionBindKB('U', 'accept', 0, 'nav');
+    actionBindKB('O', 'cancel', 0, 'nav');
+  }
 }

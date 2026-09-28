@@ -272,7 +272,6 @@ export class GlovMenuItem {
     this.prompt_string = Boolean(params.prompt_string);
     this.no_sound = Boolean(params.no_sound);
     this.slider = Boolean(params.slider);
-    this.no_controller_exit = Boolean(params.no_controller_exit);
     this.plus_minus = Boolean(params.plus_minus);
     this.disabled = Boolean(params.disabled);
     this.centered = Boolean(params.centered);

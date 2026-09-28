@@ -208,7 +208,7 @@ class GlovSimpleMenu {
     let selected=-1;
     if (exit_index !== -1 && (
       keyDownEdge(KEYS.ESC) ||
-      !items[exit_index].no_controller_exit && padButtonDownEdge(PAD.CANCEL)
+      padButtonDownEdge(PAD.CANCEL)
     )) {
       this.execItem(exit_index, 1);
       selected = exit_index;

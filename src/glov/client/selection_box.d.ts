@@ -23,7 +23,6 @@ export interface MenuItem {
   prompt_string?: boolean;
   no_sound?: boolean;
   slider?: boolean;
-  no_controller_exit?: boolean;
   plus_minus?: boolean;
   disabled?: boolean;
   centered?: boolean;
