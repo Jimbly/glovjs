@@ -7,6 +7,7 @@ export const internal = {
 import assert from 'assert';
 import { CmdRespFunc } from 'glov/common/cmd_parse';
 import {
+  ActionDownOpts,
   bindDown,
   bindDownEdge,
   bindKB,
@@ -168,8 +169,8 @@ export function actionEdge(action_key: ActionKey, opts?: ActionOpts | null): num
   return ret;
 }
 
-export function actionDown(action_key: ActionKey): number {
-  let ret = bindDown(action_key);
+export function actionDown(action_key: ActionKey, opts?: ActionDownOpts | null): number {
+  let ret = bindDown(action_key, opts);
   let state = action_state[action_key];
   assert(state);
   if (state.down) {

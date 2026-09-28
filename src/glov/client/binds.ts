@@ -15,6 +15,7 @@ import assert from 'assert';
 import { Rec, TSMap } from 'glov/common/types';
 import verify from 'glov/common/verify';
 import { cmd_parse } from './cmds';
+import { getFrameIndex } from './engine';
 import {
   ANY,
   inputKeyIsText,
@@ -92,6 +93,7 @@ type Bind = {
   action: BindAction;
   bindtype: BindType;
   code: number;
+  down_frame: number; // set to the current frame if we saw a down edge; only return truthy for down if matching
 };
 type BindList = {
   code: number;
@@ -132,6 +134,7 @@ export function bindGeneric(entry: BindList, bindtype: BindType, opt: BindOpt<un
     layer,
     bindtype,
     code: entry.code,
+    down_frame: -1,
   };
   entry.binds.push(bind);
   entry.binds.sort(cmpLayerPriority);
@@ -255,17 +258,19 @@ type KeyCheckOpts = { // TypeScript: move this to input.ts once converted
   in_event_cb?: EventCallback | null; // for clicks and key presses
   peek?: boolean;
 };
+let cur_frame = -1;
 export function bindDownEdge(action: string, opts?: ActionOpts | null): number {
   let arr = binds_by_cmd[action];
   if (!arr) {
     return 0;
   }
-  let ret = 0;
+  let finalret = 0;
   for (let ii = 0; ii < arr.length; ++ii) {
     let bind = arr[ii];
     if (!layers[bind.layer]!.active) {
       continue;
     }
+    let ret = 0;
     verify(bind.action === 'action'); // probably doesn't make sense to query for cmd-type binds?
     if (bind.bindtype === 'key') {
       if (opts && opts.flags) {
@@ -297,37 +302,61 @@ export function bindDownEdge(action: string, opts?: ActionOpts | null): number {
     } else {
       ret += padButtonDownEdge(bind.code, ANY, opts);
     }
+    if (ret) {
+      finalret += ret;
+      bind.down_frame = cur_frame;
+    }
   }
-  return ret;
+  return finalret;
 }
 // export function bindUpEdge(action: string, opts?: ActionOpts | null): number {
 //   // TODO, maybe
 // }
-export function bindDown(action: string): number {
+export type ActionDownOpts = {
+  peek?: boolean; // only affects whether or not we peek on the implicit bindDownEdge call
+};
+export function bindDown(action: string, opts?: ActionDownOpts | null): number {
   let arr = binds_by_cmd[action];
   if (!arr) {
     return 0;
   }
-  let ret = 0;
+  let finalret = 0;
   for (let ii = 0; ii < arr.length; ++ii) {
     let bind = arr[ii];
     if (!layers[bind.layer]!.active) {
       continue;
     }
     verify(bind.action === 'action'); // probably doesn't make sense to query for cmd-type binds?
+    if (bind.down_frame === cur_frame) {
+      // this action consumed the edge earlier this frame, we're good
+      // - arguably this could consume the down_time if not `peek`, but that's not how keyDonw() currently works
+    } else if (bind.down_frame === cur_frame - 1) {
+      // we're good
+    } else {
+      // not currently known as down, was there a down edge?
+      if (!bindDownEdge(action, opts)) {
+        continue;
+      }
+    }
+    let ret;
     if (bind.bindtype === 'key') {
-      let eff_opts: KeyCheckOpts | null | undefined;
+      let eff_opts: KeyCheckOpts | null | undefined = opts;
       if (bind.modifiers) {
         eff_opts = {
           mod: bind.modifiers,
+          peek: opts ? opts.peek : undefined,
         };
       }
-      ret = max(ret, keyDown(bind.code, eff_opts));
+      ret = keyDown(bind.code, eff_opts);
     } else {
-      ret = max(ret, padButtonDown(bind.code, ANY));
+      ret = padButtonDown(bind.code, ANY, opts);
+    }
+    if (ret) {
+      finalret = max(finalret, ret);
+      bind.down_frame = cur_frame;
     }
   }
-  return ret;
+  return finalret;
 }
 
 export function defaultHandle(cmd: string): void {
@@ -362,6 +391,7 @@ export function bindDispatch(opt?: {
 }
 
 function bindsTopOfFrame(): void {
+  cur_frame = getFrameIndex();
   bindDispatch({
     level: BIND_LEVEL_PRETICK,
   });
