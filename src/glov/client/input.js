@@ -18,9 +18,10 @@ let map_analog_to_dpad = true;
 
 let mouse_log = false;
 
-export const click = mouseUpEdge; // eslint-disable-line @typescript-eslint/no-use-before-define
-export const inputClick = mouseUpEdge; // eslint-disable-line @typescript-eslint/no-use-before-define
-export const inputDrag = drag; // eslint-disable-line @typescript-eslint/no-use-before-define
+// legacy APIs
+export const click = inputClick; // eslint-disable-line @typescript-eslint/no-use-before-define
+export const mouseUpEdge = inputClick; // eslint-disable-line @typescript-eslint/no-use-before-define
+export const drag = inputDrag; // eslint-disable-line @typescript-eslint/no-use-before-define
 
 const { deprecate } = require('glov/common/util.js');
 deprecate(exports, 'mouseDown', 'mouseDownAnywhere, mouseDownMidClick, mouseDownOverBounds');
@@ -191,10 +192,18 @@ const { is_firefox, is_mac_osx } = require('./browser.js');
 const camera2d = require('./camera2d.js');
 const { cmd_parse } = require('./cmds.js');
 const engine = require('./engine.js');
-const { renderNeeded } = require('./engine.js');
+const {
+  getFrameDt,
+  getFrameIndex,
+  releaseCanvas,
+  renderNeeded,
+} = require('./engine');
 const in_event = require('./in_event.js');
 const { qwertyKeyCodeFromEvent } = require('./keycode');
-const local_storage = require('./local_storage.js');
+const {
+  localStorageGetJSON,
+  localStorageSetJSON,
+} = require('./local_storage');
 const { abs, max, min, sqrt } = Math;
 const { normalizeWheel } = require('./normalize_mousewheel.js');
 const pointer_lock = require('./pointer_lock.js');
@@ -202,7 +211,16 @@ const settings = require('./settings.js');
 const { soundResume } = require('./sound.js');
 const { spotMouseoverHook } = require('./spot.js');
 const { arrayToSet, empty } = require('glov/common/util.js');
-const { vec2, v2add, v2copy, v2lengthSq, v2same, v2set, v2scale, v2sub } = require('glov/common/vmath.js');
+const {
+  vec2,
+  v2add,
+  v2copy,
+  v2lengthSq,
+  v2same,
+  v2set,
+  v2scale,
+  v2sub,
+} = require('glov/common/vmath.js');
 
 let pad_to_touch;
 
@@ -225,8 +243,8 @@ let input_eaten_mouse = false;
 let touches = {}; // `m${button}` or touch_id -> TouchData
 let no_active_touches = true;
 
-export let touch_mode = local_storage.getJSON('touch_mode', false);
-export let pad_mode = !touch_mode && local_storage.getJSON('pad_mode', false);
+export let touch_mode = localStorageGetJSON('touch_mode', false);
+export let pad_mode = !touch_mode && localStorageGetJSON('pad_mode', false);
 
 cmd_parse.registerValue('mouse_log', {
   type: cmd_parse.TYPE_INT,
@@ -373,7 +391,7 @@ function onPointerLockEnter() {
   if (touch_mode) {
     return;
   }
-  pointerlock_frame = engine.frame_index;
+  pointerlock_frame = getFrameIndex();
   let touch_data = touches[pointerlock_touch_id];
   setMouseToMid();
   if (touch_data) {
@@ -386,7 +404,7 @@ function onPointerLockEnter() {
   movement_questionable_frames = MOVEMENT_QUESTIONABLE_FRAMES;
 }
 export function pointerLockJustEntered(num_frames) {
-  return engine.frame_index <= pointerlock_frame + (num_frames || 1);
+  return getFrameIndex() <= pointerlock_frame + (num_frames || 1);
 }
 export function pointerLockExit() {
   let touch_data = touches[pointerlock_touch_id];
@@ -414,7 +432,7 @@ function eventlog(event) {
     }
     pairs.push(`${k}:${v.id || v}`);
   }
-  console.log(`${engine.frame_index} ${event.type} ${pointerLocked()?'ptrlck':'unlckd'} ${pairs.join(',')}`);
+  console.log(`${getFrameIndex()} ${event.type} ${pointerLocked()?'ptrlck':'unlckd'} ${pairs.join(',')}`);
 }
 
 let allow_all_events = false;
@@ -513,7 +531,7 @@ function beforeUnload(e) {
     // Chrome requires returnValue to be set
     e.returnValue = unload_msg || 'Are you sure you want to quit?';
   } else {
-    engine.releaseCanvas();
+    releaseCanvas();
   }
 }
 function protectUnload(enable) {
@@ -626,11 +644,11 @@ function onMouseMove(event, no_stop, no_dom_if_leaving) {
     event.preventDefault();
     event.stopPropagation();
     if (touch_mode) {
-      local_storage.setJSON('touch_mode', false);
+      localStorageSetJSON('touch_mode', false);
       touch_mode = false;
     }
     if (pad_mode) {
-      local_storage.setJSON('pad_mode', false);
+      localStorageSetJSON('pad_mode', false);
       pad_mode = false;
     }
   }
@@ -805,7 +823,7 @@ function onTouchChange(event) {
   // instead, but this works well enough.
   onUserInput();
   if (pad_mode) {
-    local_storage.setJSON('pad_mode', false);
+    localStorageSetJSON('pad_mode', false);
     pad_mode = false;
   }
   if (event.cancelable !== false) {
@@ -920,7 +938,7 @@ function onTouchChange(event) {
       } else {
         // switch to touch mode if we're not already
         if (!touch_mode) {
-          local_storage.setJSON('touch_mode', true);
+          localStorageSetJSON('touch_mode', true);
           touch_mode = true;
         }
       }
@@ -1028,11 +1046,11 @@ function updatePadState(gpd, ps, b, padcode) {
     ps[padcode] = DOWN_EDGE;
     onUserInput();
     if (touch_mode) {
-      local_storage.setJSON('touch_mode', false);
+      localStorageSetJSON('touch_mode', false);
       touch_mode = false;
     }
     if (!pad_mode) {
-      local_storage.setJSON('pad_mode', true);
+      localStorageSetJSON('pad_mode', true);
       pad_mode = true;
     }
     if (padcode === pad_to_touch) {
@@ -1125,7 +1143,7 @@ function gamepadUpdate() {
           if (n <= 1 && pad_to_touch !== undefined) {
             let touch_data = touches[`g${gpd.id}`];
             if (touch_data) {
-              v2scale(temp_delta, pair, engine.frame_dt);
+              v2scale(temp_delta, pair, getFrameDt());
               v2add(touch_data.delta, touch_data.delta, temp_delta);
               touch_data.total += abs(temp_delta[0]) + abs(temp_delta[1]);
               setMouseToMid();
@@ -1242,7 +1260,7 @@ export function endFrame(skip_mouse) {
         touch_data.dispatched = false;
         touch_data.dispatched_drag = false;
         touch_data.dispatched_drag_over = false;
-        if (touch_data.drag_payload_frame === engine.frame_index - 2) {
+        if (touch_data.drag_payload_frame === getFrameIndex() - 2) {
           // Clear this after an entire frame of not being set (usually, things
           // on the next frame will need to get the payload that was set later
           // in the previous frame)
@@ -1459,7 +1477,7 @@ export function mouseDownMidClick(param) {
   if (input_eaten_mouse || no_active_touches) {
     return false;
   }
-  // Same logic as mouseUpEdge()
+  // Same logic as inputClick()
   param = param || {};
   let pos_param = mousePosParam(param);
   let button = pos_param.button;
@@ -1630,7 +1648,7 @@ export function padGetAxes(out, stickindex, padindex) {
 
 function padButtonDownInternal(gpd, ps, padcode, peek) {
   if (ps[padcode]) {
-    return engine.frame_dt;
+    return getFrameDt();
   }
   return 0;
 }
@@ -1710,7 +1728,7 @@ let start_pos = vec2();
 let cur_pos = vec2();
 let delta = vec2();
 
-export function mouseUpEdge(param) {
+export function inputClick(param) {
   param = param || {};
   if (input_eaten_mouse || !param.in_event_cb && no_active_touches) {
     return null;
@@ -1825,13 +1843,13 @@ export function mouseConsumeClicks(param) {
       touch_data.down_edge = 0;
       // Set start pos so that it will not pass checkPos
       touch_data.start_pos[0] = touch_data.start_pos[1] = Infinity;
-      // Set .total so that mouseUpEdge will not detect it as a click
+      // Set .total so that inputClick will not detect it as a click
       touch_data.total = Infinity;
     }
   }
 }
 
-export function drag(param) {
+export function inputDrag(param) {
   if (input_eaten_mouse || no_active_touches) {
     return null;
   }
@@ -1868,7 +1886,7 @@ export function drag(param) {
       }
       if (param.payload) {
         touch_data.drag_payload = param.payload;
-        touch_data.drag_payload_frame = engine.frame_index;
+        touch_data.drag_payload_frame = getFrameIndex();
       }
       camera2d.domToVirtual(start_pos, touch_data.start_pos);
       camera2d.domToVirtual(cur_pos, touch_data.cur_pos);
