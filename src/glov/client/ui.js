@@ -1828,10 +1828,10 @@ function modalDialogRun() {
     for (let ii = 0; ii < keys.length; ++ii) {
       let key = keys[ii];
       let eff_button_keys = button_keys[key.toLowerCase()];
-      if (eff_button_keys && eff_button_keys.low_key) {
+      if (eff_button_keys && eff_button_keys.low_actions) {
         let cur_button = buttons[key];
-        for (let jj = 0; jj < eff_button_keys.low_key.length; ++jj) {
-          if (actionEdge(eff_button_keys.actions[jj],
+        for (let jj = 0; jj < eff_button_keys.low_actions.length; ++jj) {
+          if (actionEdge(eff_button_keys.low_actions[jj],
             cur_button.in_event_cb ? { in_event_cb: cur_button.in_event_cb } : undefined) ||
             eff_button_keys.low_actions[jj] === tick_action
           ) {
