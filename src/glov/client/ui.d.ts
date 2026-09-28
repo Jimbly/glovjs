@@ -6,6 +6,7 @@ import {
   VoidFunc,
 } from 'glov/common/types';
 import { ROVec4 } from 'glov/common/vmath';
+import { ActionKey } from './actions';
 import { EditBoxOptsAll } from './edit_box';
 import { ALIGN, Font, FontStyle, Text } from './font';
 import { Box } from './geom_types';
@@ -313,8 +314,8 @@ export type ModalDialogTickCallbackParams = {
   readonly font_height: number;
   readonly fullscreen_mode: boolean;
 };
-// Returns a hotkey, e.g. KEYS.Y, to activate one of the buttons
-export type ModalDialogTickCallback = (param: ModalDialogTickCallbackParams) => number | void;
+// Returns a hotaction, e.g. 'ok', to activate one of the buttons
+export type ModalDialogTickCallback = (param: ModalDialogTickCallbackParams) => ActionKey | void;
 export type ModalDialogButtons<CB=VoidFunc> = TSMap<ModalDialogButton<CB>>;
 export interface ModalDialogParamBase<CB> {
   title?: Text;

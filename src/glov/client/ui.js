@@ -39,6 +39,7 @@ export const sprites = {};
 
 /* eslint-disable import/order */
 const assert = require('assert');
+const { actionEdge } = require('./actions');
 const { autoAtlas } = require('./autoatlas');
 const camera2d = require('./camera2d.js');
 const { editBoxCreate, editBoxTick } = require('./edit_box.js');
@@ -89,7 +90,7 @@ const {
   uiStyleModify,
   uiStyleTopOfFrame,
 } = require('./uistyle.js');
-const { clamp, clone, defaults, deprecate, lerp, merge, sign } = require('glov/common/util.js');
+const { clamp, defaults, deprecate, lerp, merge, sign } = require('glov/common/util.js');
 const { mat43, m43identity, m43mul } = require('./mat43.js');
 const { vec2, vec4, v4copy, v3scale, unit_vec } = require('glov/common/vmath.js');
 
@@ -105,8 +106,6 @@ deprecate(exports, 'color_button', 'uiSetButtonColorSet()');
 
 
 const MODAL_DARKEN = 0.75;
-let KEYS;
-let PAD;
 
 let ui_style_current;
 
@@ -492,8 +491,6 @@ const base_ui_sprites = {
 function uiStartup(param) {
   font = param.font;
   title_font = param.title_font || font;
-  KEYS = glov_input.KEYS;
-  PAD = glov_input.PAD;
 
   let ui_sprites = {
     ...base_ui_sprites,
@@ -527,13 +524,11 @@ function uiStartup(param) {
   // }
 
   button_keys = {
-    ok: { key: [KEYS.O], pad: [PAD.X], low_key: [KEYS.ESC] },
-    cancel: { key: [KEYS.ESC], pad: [PAD.B, PAD.Y] },
+    ok: { actions: ['ok'], low_actions: ['ok_low'] },
+    cancel: { actions: ['cancel'] },
   };
-  button_keys.yes = clone(button_keys.ok);
-  button_keys.yes.key.push(KEYS.Y);
-  button_keys.no = clone(button_keys.cancel);
-  button_keys.no.key.push(KEYS.N);
+  button_keys.yes = { actions: ['ok', 'yes'] };
+  button_keys.no = { actions: ['cancel', 'no'] };
 
   if (param.line_mode !== undefined) {
     default_line_mode = param.line_mode;
@@ -1768,7 +1763,7 @@ function modalDialogRun() {
 
   let panel_color = modal_dialog.color || null; // tick might clear modalDialog
 
-  let tick_key;
+  let tick_action;
   if (modal_dialog.tick) {
     let avail_width = eff_modal_width - pad * 2;
     if (fullscreen_mode) {
@@ -1781,7 +1776,7 @@ function modalDialogRun() {
       font_height: eff_font_height,
       fullscreen_mode,
     };
-    tick_key = modal_dialog.tick(param);
+    tick_action = modal_dialog.tick(param);
     y = param.y;
   }
 
@@ -1794,14 +1789,10 @@ function modalDialogRun() {
     let eff_button_keys = button_keys[key_lower];
     let pressed = 0;
     if (eff_button_keys) {
-      for (let jj = 0; jj < eff_button_keys.key.length; ++jj) {
-        pressed += glov_input.keyUpEdge(eff_button_keys.key[jj], cur_button.in_event_cb);
-        if (eff_button_keys.key[jj] === tick_key) {
+      for (let jj = 0; jj < eff_button_keys.actions.length; ++jj) {
+        if (eff_button_keys.actions[jj] === tick_action) {
           pressed++;
         }
-      }
-      for (let jj = 0; jj < eff_button_keys.pad.length; ++jj) {
-        pressed += glov_input.padButtonUpEdge(eff_button_keys.pad[jj]);
       }
     }
     if (click_anywhere && ii === 0 && glov_input.click()) {
@@ -1820,20 +1811,24 @@ function modalDialogRun() {
       auto_focus: ii === 0,
       focus_steal: keys.length === 1 && !modal_dialog.tick,
       allow_modal: true,
+      hotactions: eff_button_keys && eff_button_keys.actions || undefined,
     }, cur_button))) {
       did_button = ii;
     }
     x = round(x + pad + eff_button_width);
   }
-  // Also check low-priority keys
+  // Also check low-priority hotactions
   if (did_button === -1) {
     for (let ii = 0; ii < keys.length; ++ii) {
       let key = keys[ii];
       let eff_button_keys = button_keys[key.toLowerCase()];
       if (eff_button_keys && eff_button_keys.low_key) {
+        let cur_button = buttons[key];
         for (let jj = 0; jj < eff_button_keys.low_key.length; ++jj) {
-          if (glov_input.keyUpEdge(eff_button_keys.low_key[jj], buttons[key].in_event_cb) ||
-          eff_button_keys.low_key[jj] === tick_key) {
+          if (actionEdge(eff_button_keys.actions[jj],
+            cur_button.in_event_cb ? { in_event_cb: cur_button.in_event_cb } : undefined) ||
+            eff_button_keys.low_actions[jj] === tick_action
+          ) {
             did_button = ii;
           }
         }
@@ -1916,9 +1911,9 @@ export function modalTextEntry(param) {
     }
     let ret;
     if (eb_ret === eb.SUBMIT && !param.multiline) {
-      ret = KEYS.O; // Do OK, Yes
+      ret = 'ok'; // Do OK, Yes
     } else if (eb_ret === eb.CANCEL) {
-      ret = KEYS.ESC; // Do Cancel, No
+      ret = 'cancel'; // Do Cancel, No
     }
     if (old_tick) {
       ret = old_tick(params) || ret;

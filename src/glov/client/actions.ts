@@ -49,6 +49,12 @@ export interface ActionRegistry {
   next: 0;
   accept: 0;
   cancel: 0;
+
+  // used (primarily) for modal dialogs
+  ok: 0;
+  yes: 0;
+  no: 0;
+  ok_low: 0; // low-priority OK, queried only after accept/cancel/yes/no etc, so can overlap
 }
 
 export type ActionKey = keyof ActionRegistry;
@@ -112,6 +118,7 @@ export function actionExists(key: string): key is ActionKey {
 }
 
 export function actionBindKB(key: keyof typeof KEYS, action_key: ActionKey, modifiers?: number, layer?: string): void {
+  assert(action_state[action_key], `Action "${action_key}" not yet registered`);
   bindKB({
     key,
     cmd: action_key,
@@ -121,6 +128,7 @@ export function actionBindKB(key: keyof typeof KEYS, action_key: ActionKey, modi
   });
 }
 export function actionBindPad(pad: keyof typeof PAD, action_key: ActionKey, layer?: string): void {
+  assert(action_state[action_key], `Action "${action_key}" not yet registered`);
   bindPad({
     key: pad,
     cmd: action_key,
@@ -179,6 +187,10 @@ function actionStartup(): void {
   actionRegister('next');
   actionRegister('accept');
   actionRegister('cancel');
+  actionRegister('ok');
+  actionRegister('ok_low');
+  actionRegister('yes');
+  actionRegister('no');
 
   // basic nav set - active even when an edit box has keyboard focus
   actionBindPad('UP', 'up', 'nav');
@@ -222,6 +234,12 @@ function actionStartup(): void {
   actionBindKB('ESC', 'cancel', 0, 'nav');
   actionBindKB('BACKSPACE', 'cancel', 0, 'nav');
   actionBindPad('CANCEL', 'cancel', 'nav');
+
+  // modal dialogs
+  actionBindKB('O', 'ok', 0, 'nav');
+  actionBindKB('Y', 'yes', 0, 'nav');
+  actionBindKB('N', 'no', 0, 'nav');
+  actionBindKB('ESC', 'ok_low', 0, 'nav');
 
   // recommended extras:
   // actionBindKB('E', 'accept', 0, 'nav');
