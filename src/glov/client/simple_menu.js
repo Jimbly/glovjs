@@ -11,14 +11,12 @@ exports.create = simpleMenuCreate; // eslint-disable-line @typescript-eslint/no-
 const assert = require('assert');
 const { clamp } = require('glov/common/util.js');
 const { vec4 } = require('glov/common/vmath.js');
+const { actionEdge } = require('./actions');
 const camera2d = require('./camera2d.js');
 const engine = require('./engine.js');
 const {
   KEYS,
-  PAD,
   keyDown,
-  keyDownEdge,
-  padButtonDownEdge,
 } = require('./input.js');
 const { selectionBoxCreate } = require('./selection_box.js');
 const { slider, sliderIsFocused } = require('./slider.js');
@@ -206,10 +204,7 @@ class GlovSimpleMenu {
     y += sel_box.run();
 
     let selected=-1;
-    if (exit_index !== -1 && (
-      keyDownEdge(KEYS.ESC) ||
-      padButtonDownEdge(PAD.CANCEL)
-    )) {
+    if (exit_index !== -1 && actionEdge('cancel')) {
       this.execItem(exit_index, 1);
       selected = exit_index;
     }

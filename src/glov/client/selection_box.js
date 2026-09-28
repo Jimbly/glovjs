@@ -8,6 +8,7 @@ import * as assert from 'assert';
 const { max, round, sin } = Math;
 import { clamp, cloneShallow, easeIn, merge } from 'glov/common/util.js';
 import { v4copy, vec4 } from 'glov/common/vmath.js';
+import { actionEdge } from './actions';
 import * as camera2d from './camera2d.js';
 import * as glov_engine from './engine.js';
 import {
@@ -863,9 +864,7 @@ class GlovDropDown extends SelectionBoxBase {
       this.last_selected :
       this.selected;
 
-    if (this.dropdown_visible && (
-      keyDownEdge(KEYS.ESC) || padButtonDownEdge(PAD.B)
-    )) {
+    if (this.dropdown_visible && actionEdge('cancel')) {
       this.selected = eff_selection;
       this.onListSelect();
     }
