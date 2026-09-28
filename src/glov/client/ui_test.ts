@@ -200,7 +200,7 @@ export function run(x: number, y: number, z: number): void {
 
   let pad = 4;
 
-  if (ui.buttonText({ x, y, z, text: 'Modal Dialog', tooltip: 'Shows a modal dialog' })) {
+  if (ui.buttonText({ x, y, z, text: 'Modal Dialog', tooltip: 'Shows a modal dialog', hotkey: input.KEYS.M })) {
     demo_result = '';
     ui.modalDialog({
       title: 'Modal Dialog',
