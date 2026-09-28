@@ -6,7 +6,7 @@ local_storage.setStoragePrefix('glovjs-playground'); // Before requiring anythin
 import assert from 'assert';
 import { actionDown, actionEdge } from 'glov/client/actions';
 import { autoAtlas } from 'glov/client/autoatlas';
-import { bindDispatch } from 'glov/client/binds';
+import { bindUIStartup } from 'glov/client/bind_ui';
 import { platformParameterGet, platformSetRichPresence } from 'glov/client/client_config';
 import { editBox } from 'glov/client/edit_box';
 import * as engine from 'glov/client/engine';
@@ -720,6 +720,8 @@ export function main(): void {
   let font = engine.font;
 
   particlesStartup();
+
+  bindUIStartup();
 
   // const font = engine.font;
 

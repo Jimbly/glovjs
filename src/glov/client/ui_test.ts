@@ -3,6 +3,7 @@
 
 import assert from 'assert';
 import { ROVec4, vec4 } from 'glov/common/vmath';
+import { bindUIRun } from './bind_ui';
 import { collapsagoriesHeader, collapsagoriesStart, collapsagoriesStop } from './collapsagories';
 import { colorPicker } from './color_picker';
 import { EditBox, editBoxCreate } from './edit_box';
@@ -56,6 +57,7 @@ let demo_menu: SimpleMenu;
 let demo_menu_up = false;
 let demo_result: string | undefined;
 let font_style: FontStyle;
+let keybinds_up: boolean = engine.debugDefineIsSet('KEYBINDS');
 
 let inited: string | undefined;
 let edit_box1: EditBox;
@@ -195,6 +197,21 @@ export function run(x: number, y: number, z: number): void {
       demo_menu_up = false;
     }
     ui.menuUp();
+    input.eatAllInput();
+  }
+
+  if (keybinds_up) {
+    let bind_rect = {
+      x, y, z: z + 100,
+      w: engine.game_width - x - x,
+      h: engine.game_height - y - y,
+      pad: 4,
+    };
+    if (bindUIRun(bind_rect)) {
+      keybinds_up = false;
+    }
+    ui.panel(bind_rect);
+    ui.menuUp({ z: bind_rect.z - 1 });
     input.eatAllInput();
   }
 
@@ -520,6 +537,14 @@ nec arborei timentem, ut crimina vidit.
   });
   internal_y += header_h + pad;
 
+  ui.buttonText({ x: 2, y: internal_y, z: z + 1, text: 'Fullscreen',
+    in_event_cb: fscreenActive() ? fscreenExit : fscreenEnter });
+  internal_y += button_height + pad;
+  if (ui.buttonText({ x: 2, y: internal_y, z: z + 1, text: 'Edit Keybinds' })) {
+    keybinds_up = true;
+  }
+  internal_y += button_height + pad;
+
   ui.label({ x: 2, y: internal_y, size: text_height * 0.5, text: 'Small text param size' });
   internal_y += text_height * 0.5;
   ui.label({ x: 2, y: internal_y, style: style_half_height, text: 'Small text param style' });
@@ -540,9 +565,6 @@ nec arborei timentem, ut crimina vidit.
   if (ui.buttonText({ x: 2, y: internal_y, z: z + 1, text: 'Remove Line', key: 'remove_line' })) {
     --test_lines;
   }
-  internal_y += button_height + pad;
-  ui.buttonText({ x: 2, y: internal_y, z: z + 1, text: 'Fullscreen',
-    in_event_cb: fscreenActive() ? fscreenExit : fscreenEnter });
   internal_y += button_height + pad;
 
   let long_msg = 'Lots of long text that needs to be wrapped on this button label that really' +

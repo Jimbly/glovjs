@@ -92,3 +92,12 @@ for (let ii = 0; ii < 12; ++ii) {
 export function qwertyKeyCodeFromEvent(event: KeyboardEvent): number {
   return QWERTY_KEY_CODES[event.code] || event.keyCode;
 }
+
+export function eventCodeFromKeyCode(code: number): string | null {
+  for (let key in QWERTY_KEY_CODES) {
+    if (QWERTY_KEY_CODES[key] === code) {
+      return key;
+    }
+  }
+  return null;
+}

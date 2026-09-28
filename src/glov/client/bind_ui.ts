@@ -1,8 +1,22 @@
+/* globals navigator */
+
+export const DEFAULT_BINDABLE_CMDS: Rec<string, string> = {
+  up: 'Up',
+  left: 'Left',
+  down: 'Down',
+  right: 'Right',
+  accept: 'Accept',
+  cancel: 'Cancel',
+  prev: 'Select Previous',
+  next: 'Select Next',
+};
+
 import assert from 'assert';
 import { CmdRespFunc } from 'glov/common/cmd_parse';
-import { Optional, TSMap } from 'glov/common/types';
+import { Optional, Rec, TSMap } from 'glov/common/types';
 import { capitalize, identity, plural } from 'glov/common/util';
 import { actionExists } from './actions';
+import { autoResetSkippedFrames } from './auto_reset';
 import {
   bindBind,
   BindExport,
@@ -12,7 +26,13 @@ import {
 } from './binds';
 import { cmd_parse } from './cmds';
 import {
+  ALIGN,
+  FontStyle,
+  fontStyleColored,
+} from './font';
+import {
   inputNameNormalize,
+  inputPadMode,
   inputValidKeyName,
   inputValidPadName,
   KEYS,
@@ -24,8 +44,20 @@ import {
   MOD_CTRL,
   MOD_SHIFT,
 } from './input_constants';
+import { eventCodeFromKeyCode } from './keycode';
 import { localStorageGetJSON, localStorageSetJSON } from './local_storage';
-import { copyTextToClipboard } from './ui';
+import { scrollAreaCreate } from './scroll_area';
+import {
+  buttonText,
+  copyTextToClipboard,
+  drawRect,
+  UIBox,
+  uiButtonHeight,
+  uiButtonWidth,
+  uiGetFont,
+} from './ui';
+
+const { max, min, floor } = Math;
 
 type UserBinds = {
   unbinds?: string[];
@@ -333,6 +365,18 @@ cmd_parse.register({
   }
 });
 
+
+function formatBindKey(show_bindtype: boolean, entry: {
+  bindtype: BindType;
+  key: ValidKey | ValidPad;
+  key_name?: string;
+  modifiers: number;
+}): string {
+  return `${modToString(entry.modifiers)}${show_bindtype ? capitalize(entry.bindtype) : ''}` +
+    `${entry.key_name || toCamelCase(String(entry.key))}`;
+}
+
+
 cmd_parse.register({
   cmd: 'bindlist',
   help: 'Lists all current binds',
@@ -346,8 +390,7 @@ cmd_parse.register({
     for (let ii = 0; ii < list.length; ++ii) {
       let entry = list[ii];
       let is_default = base_binds.includes(bindToString(entry));
-      let line = `${modToString(entry.modifiers)}${capitalize(entry.bindtype)}` +
-        `${toCamelCase(String(entry.key))}` +
+      let line = `${formatBindKey(true, entry)}` +
         ` ${entry.layer !== 'default' ? `${entry.layer}.` : ''}${entry.cmd}`;
       (is_default ? ret_default : ret_user).push(line);
     }
@@ -414,4 +457,229 @@ export function bindUIStartup(): void {
   }
 
   persist_binds = true;
+}
+
+type LayoutMapper = {
+  get: (event_code: string) => string | undefined;
+};
+let layout_map: LayoutMapper;
+
+let did_layout_map_init = false;
+function layoutMapInit(): void {
+  if (did_layout_map_init) {
+    return;
+  }
+  did_layout_map_init = true;
+
+  let nav = navigator as unknown as {
+    keyboard: {
+      getLayoutMap: () => Promise<LayoutMapper>;
+    };
+  };
+  if (!nav.keyboard || !nav.keyboard.getLayoutMap) {
+    return;
+  }
+
+  nav.keyboard.getLayoutMap().then(function (lm) {
+    layout_map = lm;
+  }, function (err) {
+    console.warn(`Error getting keyboard layout map: ${err}`);
+  });
+}
+
+function keyLocalName(key: ValidKey): string | undefined {
+  // TODO: lazy populate this from `event.key` for a fallback
+  let key_code = KEYS[key];
+  if (layout_map && key_code) {
+    // convert to event code
+    let event_code = eventCodeFromKeyCode(key_code);
+    if (event_code) {
+      try {
+        let ret = layout_map.get(event_code);
+        if (ret) {
+          return toCamelCase(ret);
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+  }
+}
+
+function bindLocalName(bind: {
+  bindtype: BindType;
+  key: ValidKey | ValidPad;
+  modifiers: number;
+}): string {
+  let key_name;
+  if (bind.bindtype === 'key') {
+    key_name = keyLocalName(bind.key as ValidKey);
+  }
+  return formatBindKey(false, {
+    ...bind,
+    key_name,
+  });
+}
+
+class BindUIState {
+  page: BindType = inputPadMode() ? 'controller' : 'key';
+  scroll_area = scrollAreaCreate();
+  constructor() {
+    layoutMapInit();
+  }
+}
+let bind_ui_state: BindUIState;
+let default_style = fontStyleColored(null, 0x000000ff);
+
+export function bindUIRun(opts: UIBox & {
+  pad: number;
+  bindable_cmds?: Rec<string, string>;
+  label_style?: FontStyle;
+}): boolean {
+  let { x, y, z, w, h, pad, bindable_cmds, label_style } = opts;
+  z = z || Z.UI;
+  bindable_cmds = bindable_cmds || DEFAULT_BINDABLE_CMDS;
+  label_style = label_style || default_style;
+  x += pad;
+  y += pad;
+  let x0 = x;
+  let y0 = y;
+  w -= pad * 2;
+  h -= pad * 2;
+  if (!bind_ui_state || autoResetSkippedFrames('bindui')) {
+    bind_ui_state = new BindUIState();
+  }
+  let button_width = uiButtonWidth();
+  let button_height = uiButtonHeight();
+  let font = uiGetFont();
+  let cur_binds = bindExport();
+  let binds_by_cmd: Rec<string, BindExport[]> = {};
+  for (let ii = 0; ii < cur_binds.length; ++ii) {
+    let bind = cur_binds[ii];
+    binds_by_cmd[bind.cmd] = binds_by_cmd[bind.cmd] || [];
+    binds_by_cmd[bind.cmd]!.push(bind);
+  }
+
+  if (buttonText({
+    x, y, z, w: (w - pad) / 2,
+    // base_style: bind_ui_state.page === 'key' ? 'button_selected' : 'button',
+    disabled: bind_ui_state.page === 'key',
+    text: 'Keyboard',
+  })) {
+    bind_ui_state.page = 'key';
+  }
+  if (buttonText({
+    x: x + (w + pad) / 2, y, z, w: (w - pad) / 2,
+    // base_style: bind_ui_state.page === 'controller' ? 'button_selected' : 'button',
+    disabled: bind_ui_state.page === 'controller',
+    text: 'Controller',
+  })) {
+    bind_ui_state.page = 'controller';
+  }
+  y += button_height + pad/2;
+
+  let scroll_w = w + pad;
+  bind_ui_state.scroll_area.begin({
+    x, y, z, w: scroll_w, h: y0 + h - y - button_height - pad/2,
+    background_color: null,
+  });
+  w = scroll_w - bind_ui_state.scroll_area.barWidth();
+  y = pad/2;
+
+  let row_h = button_height;
+  let label_w = min(button_width, floor(w / 3));
+  let bind_remove_w = row_h;
+  let binds_per_row = 3;
+  let bind_button_w = max(row_h, ((w - pad * (binds_per_row + 1) - label_w) / binds_per_row) - bind_remove_w);
+
+  let idx = 0;
+  for (let cmd in bindable_cmds) {
+    let row_y_start = y;
+    let active_binds = binds_by_cmd[cmd]!;
+    x = 0;
+
+    font.draw({
+      style: label_style,
+      x, y, z, w: label_w, h: row_h,
+      align: ALIGN.HVCENTERFIT,
+      text: bindable_cmds[cmd]!,
+    });
+    x += label_w + pad;
+    let rowcount = 0;
+
+    // display existing binds, button to change, button to clear
+    for (let ii = 0; ii < active_binds.length; ++ii) {
+      let bind = active_binds[ii];
+      if (bind.bindtype !== bind_ui_state.page) {
+        continue;
+      }
+      if (buttonText({
+        x, y, z, w: bind_remove_w, h: row_h,
+        text: 'X',
+        tooltip: `Remove binding of ${formatBindKey(true, bind)} to "${bind.cmd}"`,
+      })) {
+        bindUnbind(bind.bindtype, bind);
+      }
+      x += bind_remove_w;
+      if (buttonText({
+        x, y, z, w: bind_button_w, h: row_h,
+        text: bindLocalName(bind),
+        tooltip: 'Change this binding',
+      })) {
+        // TODO: change
+      }
+      x += bind_button_w + pad;
+      ++rowcount;
+      if (rowcount === binds_per_row) {
+        x = label_w + pad;
+        y += row_h + floor(pad / 2);
+      }
+    }
+
+    if (buttonText({
+      x, y, z, w: bind_remove_w + bind_button_w, h: row_h,
+      text: '+Add new',
+    })) {
+      // TODO: add
+    }
+
+    y += row_h;
+    ++idx;
+    if (idx % 2) {
+      drawRect(0, row_y_start - pad/2, w, y + pad/2, z - 0.5, [0,0,0,0.25]);
+    }
+    y += pad;
+  }
+  bind_ui_state.scroll_area.end(y);
+
+  let ret = false;
+  if (buttonText({
+    x: x0 + w - button_width * 3 - pad * 2,
+    y: y0 + h - button_height,
+    z,
+    disabled: true, // TODO
+    text: 'Revert Changes',
+  })) {
+    // TODO
+  }
+  if (buttonText({
+    x: x0 + w - button_width * 2 - pad,
+    y: y0 + h - button_height,
+    z,
+    disabled: true, // TODO
+    text: 'Reset to Defaults',
+  })) {
+    // TODO
+  }
+  if (buttonText({
+    x: x0 + w - button_width,
+    y: y0 + h - button_height,
+    z,
+    // hotaction: 'cancel', probably not?
+    text: 'Done',
+  })) {
+    ret = true;
+  }
+
+  return ret;
 }
