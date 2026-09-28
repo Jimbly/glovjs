@@ -4,8 +4,7 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 /* global navigator */
 
-/* eslint-disable import/order */
-const assert = require('assert');
+import assert from 'assert';
 
 const UP_EDGE = 0; // only for pads, which use === null as "up"
 const UP = 0; // only for key/mouse
@@ -23,18 +22,40 @@ export const click = inputClick; // eslint-disable-line @typescript-eslint/no-us
 export const mouseUpEdge = inputClick; // eslint-disable-line @typescript-eslint/no-use-before-define
 export const drag = inputDrag; // eslint-disable-line @typescript-eslint/no-use-before-define
 
-const { deprecate } = require('glov/common/util.js');
+import {
+  arrayToSet,
+  deprecate,
+  empty,
+} from 'glov/common/util';
 deprecate(exports, 'mouseDown', 'mouseDownAnywhere, mouseDownMidClick, mouseDownOverBounds');
 
+// eslint-disable-next-line import/order
 import {
   ANY,
+  BUTTON_ANY,
+  BUTTON_LEFT,
+  BUTTON_MIDDLE,
+  BUTTON_POINTERLOCK,
+  BUTTON_RIGHT,
   MOD_ALT,
   MOD_CTRL,
   MOD_SHIFT,
   POINTERLOCK,
 } from './input_constants';
 
-export * from './input_constants';
+// export * from './input_constants' - causes circular dependency failures
+export {
+  ANY,
+  BUTTON_ANY,
+  BUTTON_LEFT,
+  BUTTON_MIDDLE,
+  BUTTON_POINTERLOCK,
+  BUTTON_RIGHT,
+  MOD_ALT,
+  MOD_CTRL,
+  MOD_SHIFT,
+  POINTERLOCK,
+};
 
 export let KEYS = {
   BACKSPACE: 8,
@@ -187,44 +208,45 @@ export const PAD = {
   RSTICK_RIGHT: 27,
 };
 
-const { internal: { actionEatAll } } = require('./actions');
-const { is_firefox, is_mac_osx } = require('./browser.js');
-const camera2d = require('./camera2d.js');
-const { cmd_parse } = require('./cmds.js');
-const engine = require('./engine.js');
-const {
-  getFrameDt,
-  getFrameIndex,
-  releaseCanvas,
-  renderNeeded,
-} = require('./engine');
-const {
-  inEventHandle,
-  inEventOn,
-  inEventTopOfFrame,
-} = require('./in_event');
-const { qwertyKeyCodeFromEvent } = require('./keycode');
-const {
-  localStorageGetJSON,
-  localStorageSetJSON,
-} = require('./local_storage');
-const { abs, max, min, sqrt } = Math;
-const { normalizeWheel } = require('./normalize_mousewheel.js');
-const pointer_lock = require('./pointer_lock.js');
-const settings = require('./settings.js');
-const { soundResume } = require('./sound.js');
-const { spotMouseoverHook } = require('./spot.js');
-const { arrayToSet, empty } = require('glov/common/util.js');
-const {
-  vec2,
+import {
   v2add,
   v2copy,
   v2lengthSq,
   v2same,
-  v2set,
   v2scale,
+  v2set,
   v2sub,
-} = require('glov/common/vmath.js');
+  vec2,
+} from 'glov/common/vmath';
+import { internal as actions_internal } from './actions';
+const { actionEatAll } = actions_internal;
+import { is_firefox, is_mac_osx } from './browser';
+import * as camera2d from './camera2d';
+import { cmd_parse } from './cmds';
+import * as engine from './engine';
+import {
+  getFrameDt,
+  getFrameIndex,
+  releaseCanvas,
+  renderNeeded,
+} from './engine';
+import {
+  inEventHandle,
+  inEventOn,
+  inEventTopOfFrame,
+} from './in_event';
+import { qwertyKeyCodeFromEvent } from './keycode';
+import {
+  localStorageGetJSON,
+  localStorageSetJSON,
+} from './local_storage';
+import { normalizeWheel } from './normalize_mousewheel';
+import * as pointer_lock from './pointer_lock';
+import * as settings from './settings';
+import { soundResume } from './sound';
+import { spotMouseoverHook } from './spot';
+
+const { abs, max, min, sqrt } = Math;
 
 let pad_to_touch;
 
