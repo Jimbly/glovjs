@@ -66,7 +66,7 @@ function modToString(modifiers: number): string {
 
 function bindToString(bind: Omit<BindExport, 'events'> | Optional<UserBindParam, 'layer'>): string {
   return `${modToString(bind.modifiers).toLowerCase()}${bind.bindtype.toLowerCase()}` +
-    `${String(bind.key).toLowerCase()}` +
+    `${toCamelCase(bind.key).toLowerCase()}` +
     ` ${bind.layer && bind.layer !== 'default' ?`${bind.layer}.`:''}${bind.cmd}`;
 }
 
