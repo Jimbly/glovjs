@@ -5,14 +5,14 @@
 // Used to get around restrictions on APIs like pointer lock, fullscreen, or
 // screen orientation.
 
-const assert = require('assert');
+import assert from 'assert';
 
 let cbs = {};
-export function topOfFrame() {
+export function inEventTopOfFrame() {
   cbs = {};
 }
 
-export function on(type, code_or_pos, cb) {
+export function inEventOn(type, code_or_pos, cb) {
   let list = cbs[type] = cbs[type] || [];
   if (typeof code_or_pos === 'number') {
     list[code_or_pos] = cb;
@@ -21,7 +21,7 @@ export function on(type, code_or_pos, cb) {
   }
 }
 
-export function handle(type, event) {
+export function inEventHandle(type, event) {
   let list = cbs[type];
   if (!list) {
     return;

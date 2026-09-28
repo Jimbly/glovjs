@@ -198,7 +198,11 @@ const {
   releaseCanvas,
   renderNeeded,
 } = require('./engine');
-const in_event = require('./in_event.js');
+const {
+  inEventHandle,
+  inEventOn,
+  inEventTopOfFrame,
+} = require('./in_event');
 const { qwertyKeyCodeFromEvent } = require('./keycode');
 const {
   localStorageGetJSON,
@@ -581,7 +585,7 @@ function onKeyUp(event) {
     }
   }
 
-  in_event.handle('keyup', event);
+  inEventHandle('keyup', event);
 }
 
 function onKeyDown(event) {
@@ -615,7 +619,7 @@ function onKeyDown(event) {
     ks.origin_time = eventTimestamp(event);
     // ks.down_start = ks.origin_time;
 
-    in_event.handle('keydown', event);
+    inEventHandle('keydown', event);
   }
 }
 
@@ -741,7 +745,7 @@ function onMouseDown(event) {
   }
   touches[touch_id].down(event, !no_click);
   if (!no_click) {
-    in_event.handle('mousedown', event);
+    inEventHandle('mousedown', event);
   }
   mouse_button_had_edge = true;
   //This solves input bug when game is running as iframe. E.g. Facebook Instant
@@ -789,7 +793,7 @@ function onMouseUp(event) {
   mouse_button_had_edge = true;
   mouse_button_had_up_edge = true;
   if (!no_click) {
-    in_event.handle('mouseup', event);
+    inEventHandle('mouseup', event);
   }
 }
 
@@ -859,7 +863,7 @@ function onTouchChange(event) {
       last_touch = touches[touch.identifier] = new TouchData(touch_pos, true, 0, event);
       last_touch.down(event, true);
       mouse_button_had_edge = true;
-      in_event.handle('mousedown', touch);
+      inEventHandle('mousedown', touch);
     } else {
       ++old_count;
       v2sub(temp_delta, touch_pos, last_touch.cur_pos);
@@ -885,7 +889,7 @@ function onTouchChange(event) {
         ++old_count;
         released_touch = touch;
         released_ids.push(id);
-        in_event.handle('mouseup', { pageX: touch.cur_pos[0], pageY: touch.cur_pos[1] });
+        inEventHandle('mouseup', { pageX: touch.cur_pos[0], pageY: touch.cur_pos[1] });
         registerMouseUpEdge(touch, eventTimestamp(event));
         mouse_button_had_edge = true;
         mouse_button_had_up_edge = true;
@@ -1211,7 +1215,7 @@ export function tickInput() {
 
   mouse_over_captured = false;
   gamepadUpdate();
-  in_event.topOfFrame();
+  inEventTopOfFrame();
   ctrl_checked = false;
   if (touches[pointerlock_touch_id] && !pointerLocked()) {
     pointerLockExit();
@@ -1281,7 +1285,7 @@ export function endFrame(skip_mouse) {
 }
 
 export function tickInputInactive() {
-  in_event.topOfFrame();
+  inEventTopOfFrame();
   ctrl_checked = false;
   endFrame();
 }
@@ -1574,7 +1578,7 @@ export function keyDownEdge(keycode, opts) {
   assert(keycode !== ANY);
 
   if (opts && opts.in_event_cb) {
-    in_event.on('keydown', keycode, opts.in_event_cb);
+    inEventOn('keydown', keycode, opts.in_event_cb);
   }
 
   let ks = key_state_new[keycode];
@@ -1612,7 +1616,7 @@ export function keyUpEdge(keycode, opts) {
   }
 
   if (opts && opts.in_event_cb) {
-    in_event.on('keyup', keycode, opts.in_event_cb);
+    inEventOn('keyup', keycode, opts.in_event_cb);
   }
 
   let ks = key_state_new[keycode];
@@ -1777,7 +1781,7 @@ export function inputClick(param) {
     }
     param.phys.button = typeof param.in_event_button === 'number' ? param.in_event_button : button;
     camera2d.virtualToDomPosParam(param.phys, pos_param);
-    in_event.on('mouseup', param.phys, param.in_event_cb);
+    inEventOn('mouseup', param.phys, param.in_event_cb);
   }
   return null;
 }
@@ -1816,7 +1820,7 @@ export function mouseDownEdge(param) {
     }
     param.phys.button = button;
     camera2d.virtualToDomPosParam(param.phys, pos_param);
-    in_event.on('mousedown', param.phys, param.in_event_cb);
+    inEventOn('mousedown', param.phys, param.in_event_cb);
   }
   return null;
 }
