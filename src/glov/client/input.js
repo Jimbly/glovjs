@@ -247,6 +247,24 @@ export function inputEatenMouse() {
   return input_eaten_mouse;
 }
 
+// From all-caps, no-underscores to actual key name
+function normNamesInit() {
+  let ret = Object.create(null);
+  for (let key in KEYS_ORIG) {
+    ret[key.replace(/_/g, '')] = key;
+  }
+  for (let key in PAD) {
+    ret[key.replace(/_/g, '')] = key;
+  }
+  return ret;
+}
+const NORM_NAMES = normNamesInit();
+
+export function inputNameNormalize(key) {
+  key = key.replace(/_/g, '').toUpperCase();
+  return NORM_NAMES[key] || key;
+}
+
 export function inputValidKeyName(key) {
   return Boolean(KEYS_ORIG[key]);
 }

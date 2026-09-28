@@ -13,7 +13,7 @@ import {
   ValidPad,
 } from './binds';
 import { cmd_parse } from './cmds';
-import { inputValidKeyName, inputValidPadName, KEYS } from './input';
+import { inputNameNormalize, inputValidKeyName, inputValidPadName, KEYS } from './input';
 import {
   MOD_ALT,
   MOD_CTRL,
@@ -38,6 +38,10 @@ type UserBindParam = {
 };
 
 let persist_binds = false;
+
+function toCamelCase(s: string): string {
+  return s.split('_').map((a) => capitalize(a.toLowerCase())).join('');
+}
 
 const MOD_LOOKUP: TSMap<number> = {
   shift: MOD_SHIFT,
@@ -173,7 +177,7 @@ const bind_key_regex = /^((?:(?:Shift|Ctrl|Alt)\+)+)?(Key|Controller)?([a-z0-9]+
 function parseBindKey(str: string): string | {
   modnames: string | undefined;
   bindtype: BindType;
-  key: string;
+  key: ValidKey | ValidPad;
 } {
   let m = str.match(bind_key_regex);
   if (!m) {
@@ -181,18 +185,32 @@ function parseBindKey(str: string): string | {
   }
   let modnames = m[1] as string | undefined;
   let key_or_controller = m[2];
-  let key = m[3].toUpperCase();
+  let key = inputNameNormalize(m[3]);
   let bindtype: BindType;
+  let validkey: ValidKey | ValidPad;
   if (key_or_controller) {
     bindtype = key_or_controller.toLowerCase() as BindType;
+    if (bindtype === 'key') {
+      if (!inputValidKeyName(key)) {
+        return `Unknown key "${key}"`;
+      }
+      validkey = key as ValidKey; // TypeScript TODO: inputValidKeyName should handle this coercion
+    } else {
+      if (!inputValidPadName(key)) {
+        return `Unknown controller button "${key}"`;
+      }
+      validkey = key as ValidPad; // TypeScript TODO: inputValidKeyName should handle this coercion
+    }
   } else {
     if (inputValidKeyName(key)) {
       if (inputValidPadName(key)) {
         return `Ambiguous parameter, please use use Key${key} or Controller${key}.`;
       }
       bindtype = 'key';
+      validkey = key as ValidKey;
     } else if (inputValidPadName(key)) {
       bindtype = 'controller';
+      validkey = key as ValidPad;
     } else {
       return `"${key}" is not recognized as a valid controller button nor key.`;
     }
@@ -200,7 +218,7 @@ function parseBindKey(str: string): string | {
   return {
     modnames,
     bindtype,
-    key,
+    key: validkey,
   };
 }
 
@@ -227,22 +245,9 @@ function unbindFromString(param: string): string | string[] {
   }
   let modifiers = modNamesToNumber(modnames);
 
-  let validkey: ValidKey | ValidPad;
-  if (bindtype === 'key') {
-    if (!inputValidKeyName(key)) {
-      return `Unknown key "${key}"`;
-    }
-    validkey = key as ValidKey; // TypeScript TODO: inputValidKeyName should handle this coercion
-  } else {
-    if (!inputValidPadName(key)) {
-      return `Unknown controller button "${key}"`;
-    }
-    validkey = key as ValidPad; // TypeScript TODO: inputValidKeyName should handle this coercion
-  }
-
   return unbindSub({
     bindtype,
-    key: validkey,
+    key,
     modifiers,
     layer,
     cmd,
@@ -269,23 +274,11 @@ function addBindFromString(param: string, auto_unbind: boolean): string | null {
 
   let modifiers = modNamesToNumber(modnames);
 
-  let validkey: ValidKey | ValidPad;
-  if (bindtype === 'key') {
-    if (!inputValidKeyName(key)) {
-      return `Unknown key "${key}"`;
-    }
-    validkey = key as ValidKey; // TypeScript TODO: inputValidKeyName should handle this coercion
-  } else {
-    if (!inputValidPadName(key)) {
-      return `Unknown controller button "${key}"`;
-    }
-    validkey = key as ValidPad; // TypeScript TODO: inputValidKeyName should handle this coercion
-  }
   if (auto_unbind) {
     unbindSub({
       bindtype,
       modifiers,
-      key: validkey,
+      key,
       layer,
       // no cmd, unbind any matching key on this layer
     });
@@ -293,7 +286,7 @@ function addBindFromString(param: string, auto_unbind: boolean): string | null {
   addUserBind({
     bindtype,
     modifiers,
-    key: validkey,
+    key,
     layer,
     cmd,
   });
@@ -349,7 +342,7 @@ cmd_parse.register({
       let entry = list[ii];
       let is_default = base_binds.includes(bindToString(entry));
       let line = `${modToString(entry.modifiers)}${capitalize(entry.bindtype)}` +
-        `${capitalize(String(entry.key).toLowerCase())}` +
+        `${toCamelCase(String(entry.key))}` +
         ` ${entry.layer !== 'default' ? `${entry.layer}.` : ''}${entry.cmd}`;
       (is_default ? ret_default : ret_user).push(line);
     }
