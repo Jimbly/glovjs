@@ -19,6 +19,7 @@ import { getFrameIndex } from './engine';
 import {
   ANY,
   inputKeyIsText,
+  KeyCheckOpts,
   keyDown,
   keyDownEdge,
   keyDownLastMod,
@@ -28,6 +29,8 @@ import {
   padButtonDown,
   padButtonDownEdge,
   padButtonUpEdge,
+  ValidKey,
+  ValidPad,
 } from './input';
 import { EventCallback } from './ui';
 
@@ -35,9 +38,6 @@ const { max } = Math;
 
 export type BindType = 'key' | 'controller';
 export type BindAction = 'action' | 'cmd';
-
-export type ValidKey = keyof typeof KEYS;
-export type ValidPad = keyof typeof PAD;
 
 
 let layers: TSMap<{
@@ -253,11 +253,6 @@ export type ActionOpts = {
   flags?: number; // BIND_FLAG_NOKB, etc
 };
 
-type KeyCheckOpts = { // TypeScript: move this to input.ts once converted
-  mod?: number;
-  in_event_cb?: EventCallback | null; // for clicks and key presses
-  peek?: boolean;
-};
 let cur_frame = -1;
 export function bindDownEdge(action: string, opts?: ActionOpts | null): number {
   let arr = binds_by_cmd[action];

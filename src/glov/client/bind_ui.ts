@@ -9,11 +9,16 @@ import {
   bindExport,
   BindType,
   bindUnbind,
-  ValidKey,
-  ValidPad,
 } from './binds';
 import { cmd_parse } from './cmds';
-import { inputNameNormalize, inputValidKeyName, inputValidPadName, KEYS } from './input';
+import {
+  inputNameNormalize,
+  inputValidKeyName,
+  inputValidPadName,
+  KEYS,
+  ValidKey,
+  ValidPad,
+} from './input';
 import {
   MOD_ALT,
   MOD_CTRL,

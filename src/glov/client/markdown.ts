@@ -4,6 +4,7 @@ import { clone, has, merge } from 'glov/common/util';
 import verify from 'glov/common/verify';
 import {
   unit_vec,
+  Vec2,
   vec4,
 } from 'glov/common/vmath';
 import * as engine from './engine';
@@ -806,7 +807,7 @@ export function markdownDraw(param: MarkdownDrawCachedParam): void {
     idx1 = bsearch(blocks, viewport.y + viewport.h - y);
   }
 
-  let mouse_pos: [number, number];
+  let mouse_pos: Vec2;
   if (engine.defines.MD) {
     mouse_pos = mousePos();
   }

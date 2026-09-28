@@ -57,6 +57,10 @@ import {
 import type { Box } from './geom_types';
 import * as input from './input';
 import {
+  BUTTON_LEFT,
+  pointerLockEnter,
+} from './input';
+import {
   getStoragePrefix,
   localStorageGetJSON,
   localStorageSetJSON,
@@ -631,7 +635,7 @@ class MDRChatSource implements MDLayoutBlock, MDDrawBlock {
       assert(msg.id);
       assert(msg.display_name);
       let pos_param = {
-        x, y, w: dims.w, h: dims.h, button: 0,
+        x, y, w: dims.w, h: dims.h, button: BUTTON_LEFT,
         z: z + 0.5,
         peek: false,
         color: color_user_rollover,
@@ -1768,7 +1772,7 @@ class ChatUI {
       input.mouseDownEdge({ x: x0, y: y - border, w: outer_w, h: y1 - y + border });
       // But a click should dismiss it (important on fullscreen touch UI!)
       if (input.mouseUpEdge({ x: x0, y: y - border, w: outer_w, h: y1 - y + border,
-        in_event_cb: opts.pointerlock ? input.pointerLockEnter : null })
+        in_event_cb: opts.pointerlock ? pointerLockEnter.bind(null, 'chatui click off') : null })
       ) {
         spotUnfocus();
         is_focused = false;

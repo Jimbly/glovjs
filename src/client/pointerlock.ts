@@ -49,7 +49,7 @@ function statePlay(dt: number): void {
   buttonText({
     x: 10, y: 30,
     text: 'Pointer lock',
-    in_event_cb: pointerLockEnter,
+    in_event_cb: pointerLockEnter.bind(null, 'test button'),
   });
 
   if (pointerLocked()) {

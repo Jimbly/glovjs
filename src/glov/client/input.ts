@@ -2,7 +2,9 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 // Some code from Turbulenz: Copyright (c) 2012-2013 Turbulenz Limited
 // Released under MIT License: https://opensource.org/licenses/MIT
-/* global navigator */
+/* global navigator, BeforeUnloadEvent, Element, Event, EventListener,
+  FocusEvent, HTMLCanvasElement, KeyboardEvent, MouseEvent, Touch, TouchEvent,
+  UIEvent */
 
 import assert from 'assert';
 
@@ -15,13 +17,21 @@ const DOWN_EDGE = 2; // only for pads
 const TOUCH_AS_MOUSE = true;
 let map_analog_to_dpad = true;
 
-let mouse_log = false;
+let mouse_log = 0;
 
 // legacy APIs
 export const click = inputClick; // eslint-disable-line @typescript-eslint/no-use-before-define
 export const mouseUpEdge = inputClick; // eslint-disable-line @typescript-eslint/no-use-before-define
 export const drag = inputDrag; // eslint-disable-line @typescript-eslint/no-use-before-define
 
+export const internal = {
+  inputEndFrame, // eslint-disable-line @typescript-eslint/no-use-before-define
+  inputStartup, // eslint-disable-line @typescript-eslint/no-use-before-define
+  inputTick, // eslint-disable-line @typescript-eslint/no-use-before-define
+  inputTickInactive, // eslint-disable-line @typescript-eslint/no-use-before-define
+};
+
+// eslint-disable-next-line import/order
 import {
   arrayToSet,
   deprecate,
@@ -37,6 +47,7 @@ import {
   BUTTON_MIDDLE,
   BUTTON_POINTERLOCK,
   BUTTON_RIGHT,
+  ButtonIndex,
   MOD_ALT,
   MOD_CTRL,
   MOD_SHIFT,
@@ -56,6 +67,7 @@ export {
   MOD_SHIFT,
   POINTERLOCK,
 };
+export type { ButtonIndex };
 
 export let KEYS = {
   BACKSPACE: 8,
@@ -79,16 +91,16 @@ export let KEYS = {
   INS: 45,
   DEL: 46,
 
-  0: 48,
-  1: 49,
-  2: 50,
-  3: 51,
-  4: 52,
-  5: 53,
-  6: 54,
-  7: 55,
-  8: 56,
-  9: 57,
+  '0': 48,
+  '1': 49,
+  '2': 50,
+  '3': 51,
+  '4': 52,
+  '5': 53,
+  '6': 54,
+  '7': 55,
+  '8': 56,
+  '9': 57,
 
   A: 65,
   B: 66,
@@ -164,8 +176,8 @@ const KEYS_ORIG = KEYS;
 if (typeof Proxy === 'function') {
   // Catch referencing keys that are not in our map
   KEYS = new Proxy(KEYS, {
-    get: function (target, prop) {
-      let ret = target[prop];
+    get: function (target, prop: string) {
+      let ret = (target as TSMap<number>)[prop];
       assert(ret);
       return ret;
     }
@@ -208,6 +220,15 @@ export const PAD = {
   RSTICK_RIGHT: 27,
 };
 
+export type ValidKey = keyof typeof KEYS;
+export type ValidKeyValue = typeof KEYS[ValidKey];
+export type ValidPad = keyof typeof PAD;
+export type ValidPadValue = typeof PAD[ValidPad];
+
+import {
+  Rec,
+  TSMap,
+} from 'glov/common/types';
 import {
   v2add,
   v2copy,
@@ -216,6 +237,7 @@ import {
   v2scale,
   v2set,
   v2sub,
+  Vec2,
   vec2,
 } from 'glov/common/vmath';
 import { internal as actions_internal } from './actions';
@@ -230,6 +252,7 @@ import {
   releaseCanvas,
   renderNeeded,
 } from './engine';
+import { Box } from './geom_types';
 import {
   inEventHandle,
   inEventOn,
@@ -240,33 +263,31 @@ import {
   localStorageGetJSON,
   localStorageSetJSON,
 } from './local_storage';
-import { normalizeWheel } from './normalize_mousewheel';
+import { normalizeWheel, WheelEvent } from './normalize_mousewheel';
 import * as pointer_lock from './pointer_lock';
 import * as settings from './settings';
 import { soundResume } from './sound';
 import { spotMouseoverHook } from './spot';
+import { EventCallback } from './ui';
 
 const { abs, max, min, sqrt } = Math;
 
-let pad_to_touch;
+let pad_to_touch: number | undefined;
 
-let canvas;
-let key_state_new = {};
-let pad_states = []; // One map per gamepad to pad button states
-let gamepad_data = []; // Other tracking data per gamepad
+let canvas: HTMLCanvasElement;
+let key_state_new: Rec<number, KeyData> = {};
 let mouse_pos = vec2(); // in DOM coordinates, not canvas or virtual
 let last_mouse_pos = vec2();
 let mouse_pos_is_touch = false;
 let mouse_over_captured = false;
-let mouse_down = [];
-let wheel_events = [];
+let mouse_down: boolean[] = [];
 let movement_questionable_frames = 0;
 const MOVEMENT_QUESTIONABLE_FRAMES = 2; // Need at least 2
 
 let input_eaten_kb = false;
 let input_eaten_mouse = false;
 
-let touches = {}; // `m${button}` or touch_id -> TouchData
+let touches: TSMap<TouchData> = {}; // `m${button}` or touch_id -> TouchData
 let no_active_touches = true;
 
 export let touch_mode = localStorageGetJSON('touch_mode', false);
@@ -279,20 +300,20 @@ cmd_parse.registerValue('mouse_log', {
   set: (v) => (mouse_log = v),
 });
 
-export function inputTouchMode() {
+export function inputTouchMode(): boolean {
   return touch_mode;
 }
 
-export function inputPadMode() {
+export function inputPadMode(): boolean {
   return pad_mode;
 }
 
-export function inputEatenMouse() {
+export function inputEatenMouse(): boolean {
   return input_eaten_mouse;
 }
 
 // From all-caps, no-underscores to actual key name
-function normNamesInit() {
+function normNamesInit(): TSMap<ValidKey | ValidPad> {
   let ret = Object.create(null);
   for (let key in KEYS_ORIG) {
     ret[key.replace(/_/g, '')] = key;
@@ -304,23 +325,23 @@ function normNamesInit() {
 }
 const NORM_NAMES = normNamesInit();
 
-export function inputNameNormalize(key) {
+export function inputNameNormalize(key: string): string {
   key = key.replace(/_/g, '').toUpperCase();
   return NORM_NAMES[key] || key;
 }
 
-export function inputValidKeyName(key) {
-  return Boolean(KEYS_ORIG[key]);
+export function inputValidKeyName(key: string): key is ValidKey {
+  return Boolean((KEYS_ORIG as TSMap<number>)[key]);
 }
 
-export function inputValidPadName(key) {
-  return Boolean(PAD[key]);
+export function inputValidPadName(key: string): key is ValidPad {
+  return Boolean((PAD as TSMap<number>)[key]);
 }
 
-let text_keys;
-function initTextInputKeys() {
+let text_keys: Rec<number, true>;
+function initTextInputKeys(): void {
   let all_textinput = [];
-  function range(a, b) {
+  function range(a: number, b: number): void {
     for (let ii = a; ii <= b; ++ii) {
       all_textinput.push(ii);
     }
@@ -336,11 +357,28 @@ function initTextInputKeys() {
 }
 initTextInputKeys();
 
-export function inputKeyIsText(key) {
+export function inputKeyIsText(key: number): true | undefined {
   return text_keys[key];
 }
 
-function eventTimestamp(event) {
+type OurInputEvent = UIEvent & {
+  target: Element | null;
+  glov_do_not_cancel?: boolean;
+};
+type OurKeyboardEvent = KeyboardEvent & {
+  target: Element | null;
+  glov_do_not_cancel?: boolean;
+};
+type OurMouseEvent = MouseEvent & {
+  target: Element | null;
+  glov_do_not_cancel?: boolean;
+  mozMovementX?: number;
+  mozMovementY?: number;
+  webkitMovementX?: number;
+  webkitMovementY?: number;
+};
+
+function eventTimestamp(event: Event | null): number {
   if (event && event.timeStamp) {
     // assert((event.timeStamp < 1e12) === (engine.hrtime < 1e12));
     // Must both be high res times, or both not!
@@ -359,20 +397,29 @@ class TouchData {
   dispatched = false;
   dispatched_drag = false;
   dispatched_drag_over = false;
+  long_press_dispatched = false;
   was_double_click = false;
   up_edge = 0;
   down_edge = 0;
   state = DOWN;
   down_time = 0;
-  constructor(pos, touch, button, event) {
-    this.cur_pos = pos.slice(0);
-    this.start_pos = pos.slice(0);
+  release = false;
+  drag_payload_frame?: number;
+  drag_payload?: unknown;
+  origin_time: number;
+  cur_pos: Vec2;
+  start_pos: Vec2;
+  button: ButtonIndex;
+  touch: boolean;
+  constructor(pos: Vec2, touch: boolean, button: ButtonIndex, event: Event | null) {
+    this.cur_pos = pos.slice(0) as Vec2;
+    this.start_pos = pos.slice(0) as Vec2;
     this.touch = touch;
     this.button = button;
     this.origin_time = eventTimestamp(event);
   }
 
-  down(event, is_edge) {
+  down(event: UIEvent | null, is_edge: boolean): void {
     if (is_edge) {
       this.down_edge++;
     }
@@ -382,7 +429,7 @@ class TouchData {
 }
 
 const MIN_EVENT_TIME_DELTA = 0.01; // fractions of a millisecond
-function timeDelta(event, origin_time) {
+function timeDelta(event: Event, origin_time: number): number {
   let et = eventTimestamp(event);
   // timestamps on events are often back in time relative to the last tick time
   return max(et - origin_time, MIN_EVENT_TIME_DELTA);
@@ -397,27 +444,27 @@ class KeyData {
   state = UP;
   down_mod = 0;
 
-  keyUp(event) {
+  keyUp(event: Event): void {
     ++this.up_edge;
     this.down_time += timeDelta(event, this.origin_time);
     this.state = UP;
   }
 }
 
-function setMouseToMid() {
+function setMouseToMid(): void {
   v2set(mouse_pos, engine.width*0.5/camera2d.domToCanvasRatio(), engine.height*0.5/camera2d.domToCanvasRatio());
 }
 
-export function pointerLocked() {
+export function pointerLocked(): boolean {
   return pointer_lock.isLocked();
 }
 let pointerlock_touch_id = `m${POINTERLOCK}`;
 let pointerlock_frame = -1;
 // only works reliably when called from an event handler
-export function pointerLockEnter(when) {
-  pointer_lock.enter(when);
+export function pointerLockEnter(debug_when: string): void {
+  pointer_lock.enter(debug_when);
 }
-function onPointerLockEnter() {
+function onPointerLockEnter(): void {
   if (touch_mode) {
     return;
   }
@@ -433,10 +480,10 @@ function onPointerLockEnter() {
   }
   movement_questionable_frames = MOVEMENT_QUESTIONABLE_FRAMES;
 }
-export function pointerLockJustEntered(num_frames) {
+export function pointerLockJustEntered(num_frames: number): boolean {
   return getFrameIndex() <= pointerlock_frame + (num_frames || 1);
 }
-export function pointerLockExit() {
+export function pointerLockExit(): void {
   let touch_data = touches[pointerlock_touch_id];
   if (touch_data) {
     v2copy(touch_data.cur_pos, mouse_pos);
@@ -447,16 +494,17 @@ export function pointerLockExit() {
   movement_questionable_frames = MOVEMENT_QUESTIONABLE_FRAMES;
 }
 
-let last_event;
-const skip = { isTrusted: 1, sourceCapabilities: 1, path: 1, currentTarget: 1, view: 1 };
-function eventlog(event) {
+let last_event: OurInputEvent;
+const skip: TSMap<1> = { isTrusted: 1, sourceCapabilities: 1, path: 1, currentTarget: 1, view: 1 };
+function eventlog(event: OurInputEvent): void {
   if (event === last_event) {
     return;
   }
   last_event = event;
+  let event_iter = event as unknown as TSMap<TSMap<unknown> & { id: string }>;
   let pairs = [];
-  for (let k in event) {
-    let v = event[k];
+  for (let k in event_iter) {
+    let v = event_iter[k];
     if (!v || typeof v === 'function' || k.toUpperCase() === k || skip[k]) {
       continue;
     }
@@ -466,32 +514,35 @@ function eventlog(event) {
 }
 
 let allow_all_events = false;
-export function inputAllowAllEvents(allow) {
+export function inputAllowAllEvents(allow: boolean): void {
   allow_all_events = allow;
 }
 
-function isInputElement(target) {
+function isInputElement(target: Element | null): boolean | null {
   return target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' ||
     target.tagName === 'LABEL' || target.tagName === 'VIDEO');
 }
 
-function letWheelEventThrough(event) {
+function letWheelEventThrough(event: OurMouseEvent): boolean | null {
   // *not* checking for `noglov`, as links have these, and we want to capture scroll events even if mouse is over links
   return allow_all_events || isInputElement(event.target);
 }
 
-let event_filter = () => false;
+// eslint-disable-next-line func-style
+let event_filter: (event: OurInputEvent) => boolean = function (): boolean {
+  return false;
+};
 
-// `filter` returns true if the event should be allowed to propgate to the DOM,
+// `filter` returns true if the event should be allowed to propagate to the DOM,
 // and (for mouse up/down events) not be sent to the engine
-export function inputSetEventFilter(filter) {
+export function inputSetEventFilter(filter: (event: OurInputEvent) => boolean): void {
   event_filter = filter;
 }
 
-const EVENT_TO_ENGINE = 1<<0; // Note: only mouse-up/down events get filtered, all events otherwise got to-engine
-const EVENT_TO_DOM = 1<<1;
-const EVENT_TO_BOTH = EVENT_TO_ENGINE | EVENT_TO_DOM;
-function letEventThrough(event, no_dom_if_leaving) {
+const EVENT_TO_ENGINE = 1; // Note: only mouse-up/down events get filtered, all events otherwise got to-engine
+const EVENT_TO_DOM = 2;
+const EVENT_TO_BOTH = 3;
+function letEventThrough(event: OurInputEvent, no_dom_if_leaving?: boolean): 1 | 2 | 3 {
   if (!event.target || allow_all_events || event.glov_do_not_cancel) {
     return EVENT_TO_DOM;
   }
@@ -524,7 +575,7 @@ function letEventThrough(event, no_dom_if_leaving) {
   return EVENT_TO_ENGINE;
 }
 
-function ignored(event) {
+function ignored(event: OurInputEvent): void {
   // eventlog(event);
   if (!(letEventThrough(event) & EVENT_TO_DOM)) {
     event.preventDefault();
@@ -534,14 +585,18 @@ function ignored(event) {
 
 let ctrl_checked = false;
 let unload_protected = false;
-let unload_override = null;
+// string messages and displayed (only on old browsers)
+// false does not prevent unload
+// null "silently" blocks unload (actually see default message on new browsers)
+export type UnloadCB = () => (string | null | false);
+let unload_override: UnloadCB | null = null;
 // cb() returns a string to display a message (actual message is ignored), or false
 //   to *not* block unload, or anything else to block the unload with a message
-export function inputOverrideUnload(cb) {
+export function inputOverrideUnload(cb: UnloadCB | null): void {
   assert(!unload_override || !cb);
   unload_override = cb;
 }
-function beforeUnload(e) {
+function beforeUnload(e: BeforeUnloadEvent): void {
   let unload_msg;
   if (unload_override) {
     unload_msg = unload_override();
@@ -564,30 +619,30 @@ function beforeUnload(e) {
     releaseCanvas();
   }
 }
-function protectUnload(enable) {
+function protectUnload(enable: boolean): void {
   unload_protected = enable;
 }
 
 let last_input_time = 0;
-export function inputLastTime() {
+export function inputLastTime(): number {
   return last_input_time;
 }
-function onUserInput() {
+function onUserInput(): void {
   soundResume();
   last_input_time = Date.now();
   renderNeeded();
 }
 
-function releaseAllKeysDown(evt) {
+function releaseAllKeysDown(evt: Event): void {
   for (let code in key_state_new) {
-    let ks = key_state_new[code];
+    let ks = key_state_new[code]!;
     if (ks.state === DOWN) {
       ks.keyUp(evt);
     }
   }
 }
 
-function onKeyUp(event) {
+function onKeyUp(event: OurKeyboardEvent): void {
   renderNeeded();
   protectUnload(event.ctrlKey);
   let code = qwertyKeyCodeFromEvent(event);
@@ -614,7 +669,7 @@ function onKeyUp(event) {
   inEventHandle('keyup', event);
 }
 
-function onKeyDown(event) {
+function onKeyDown(event: OurKeyboardEvent): void {
   protectUnload(event.ctrlKey);
   let code = qwertyKeyCodeFromEvent(event);
   let no_stop = (letEventThrough(event) & EVENT_TO_DOM) ||
@@ -650,7 +705,7 @@ function onKeyDown(event) {
 }
 
 let mouse_move_x = 0;
-export function debugGetMouseMoveX() {
+export function debugGetMouseMoveX(): number {
   let ret = mouse_move_x;
   mouse_move_x = 0;
   return ret;
@@ -665,7 +720,7 @@ let last_abs_move_time = 0;
 let last_move_x = 0;
 let last_move_y = 0;
 let seen_mousemove = false;
-function onMouseMove(event, no_stop, no_dom_if_leaving) {
+function onMouseMove(event: OurMouseEvent, no_stop?: boolean, no_dom_if_leaving?: boolean): void {
   seen_mousemove = true;
   renderNeeded();
   /// eventlog(event);
@@ -753,7 +808,7 @@ function onMouseMove(event, no_stop, no_dom_if_leaving) {
   }
 }
 
-function onMouseDown(event) {
+function onMouseDown(event: OurMouseEvent): void {
   if (mouse_log) {
     eventlog(event);
   }
@@ -761,7 +816,7 @@ function onMouseDown(event) {
   onUserInput();
   let no_click = !(letEventThrough(event, true) & EVENT_TO_ENGINE);
 
-  let button = event.button;
+  let button = event.button as ButtonIndex;
   mouse_down[button] = true;
   let touch_id = `m${button}`;
   if (touches[touch_id]) {
@@ -787,7 +842,7 @@ let last_up_edges = [{
   timestamp: 0,
   pos: vec2(),
 }];
-function registerMouseUpEdge(touch_data, timestamp) {
+function registerMouseUpEdge(touch_data: TouchData, timestamp: number): void {
   touch_data.up_edge++;
   let t = last_up_edges[0];
   last_up_edges[0] = last_up_edges[1];
@@ -796,7 +851,7 @@ function registerMouseUpEdge(touch_data, timestamp) {
   t.timestamp = timestamp;
 }
 
-function onMouseUp(event) {
+function onMouseUp(event: OurMouseEvent): void {
   if (mouse_log) {
     eventlog(event);
   }
@@ -823,13 +878,19 @@ function onMouseUp(event) {
   }
 }
 
-function onWheel(event) {
+type WheelEventData = {
+  pos: Vec2;
+  delta: number;
+  dispatched: boolean;
+};
+let wheel_events: WheelEventData[] = [];
+function onWheel(event: OurMouseEvent): void {
   renderNeeded();
   let saved = mouse_moved; // don't trigger mouseMoved()
   onMouseMove(event, true);
   // onUserInput(); - Browser doesn't count mousewheel as user input :(
   mouse_moved = saved;
-  let normalized = normalizeWheel(event);
+  let normalized = normalizeWheel(event as unknown as WheelEvent);
   wheel_events.push({
     // Note: must use `mouse_pos`, not `event.pageX`, if we're pointer locked, the position is updated
     pos: [mouse_pos[0], mouse_pos[1]],
@@ -846,7 +907,7 @@ function onWheel(event) {
 let last_touch_pos = vec2();
 let touch_pos = vec2();
 let released_touch_id = 0;
-function onTouchChange(event) {
+function onTouchChange(event: TouchEvent): void {
   // eventlog(event);
   // Using .pageX/Y here because on iOS when a text entry is selected, it scrolls
   // our canvas offscreen.  Should maybe have the canvas resize and use clientX
@@ -860,11 +921,11 @@ function onTouchChange(event) {
     event.preventDefault();
   }
   let ct = event.touches;
-  let seen = {};
+  let seen: TSMap<true> = {};
 
   let new_count = ct.length;
   let old_count = 0;
-  let first_valid_touch;
+  let first_valid_touch: Touch | undefined;
   // Look for press and movement
   for (let ii = 0; ii < ct.length; ++ii) {
     let touch = ct[ii];
@@ -906,11 +967,11 @@ function onTouchChange(event) {
     }
   }
   // Look for release, if releasing exactly one final touch
-  let released_touch;
+  let released_touch: undefined | TouchData;
   let released_ids = [];
   for (let id in touches) {
     if (!seen[id]) {
-      let touch = touches[id];
+      let touch = touches[id]!;
       if (touch.touch && touch.state === DOWN) {
         ++old_count;
         released_touch = touch;
@@ -937,9 +998,11 @@ function onTouchChange(event) {
   if (TOUCH_AS_MOUSE) {
     if (old_count === 1 && new_count === 0) {
       delete mouse_down[0];
+      assert(released_touch);
       v2copy(mouse_pos, released_touch.cur_pos);
       mouse_pos_is_touch = true;
     } else if (new_count === 1) {
+      assert(first_valid_touch);
       if (!old_count) {
         mouse_down[0] = true;
       }
@@ -977,14 +1040,14 @@ function onTouchChange(event) {
   }
 }
 
-function onBlurOrFocus(evt) {
+function onBlurOrFocus(evt: FocusEvent): void {
   renderNeeded();
   protectUnload(false);
   releaseAllKeysDown(evt);
 }
 
-let ANALOG_MAP = {};
-function genAnalogMap() {
+let ANALOG_MAP: Rec<number, number[]> = {};
+function genAnalogMap(): void {
   if (map_analog_to_dpad) {
     ANALOG_MAP[PAD.LEFT] = [PAD.LSTICK_LEFT, PAD.RSTICK_LEFT];
     ANALOG_MAP[PAD.RIGHT] = [PAD.LSTICK_RIGHT, PAD.RSTICK_RIGHT];
@@ -993,15 +1056,23 @@ function genAnalogMap() {
   }
 }
 
-let passive_param = false;
-export function handleTouches(elem) {
-  elem.addEventListener('touchstart', onTouchChange, passive_param);
-  elem.addEventListener('touchmove', onTouchChange, passive_param);
-  elem.addEventListener('touchend', onTouchChange, passive_param);
-  elem.addEventListener('touchcancel', onTouchChange, passive_param);
+let passive_param: false | { passive: false } = false;
+export function handleTouches(elem: Element): void {
+  elem.addEventListener('touchstart', onTouchChange as EventListener, passive_param);
+  elem.addEventListener('touchmove', onTouchChange as EventListener, passive_param);
+  elem.addEventListener('touchend', onTouchChange as EventListener, passive_param);
+  elem.addEventListener('touchcancel', onTouchChange as EventListener, passive_param);
 }
 
-export function startup(_canvas, params) {
+function dummyListener(evt: Event): void {
+  // nothing
+}
+
+export type InputStartupParams = {
+  map_analog_to_dpad?: boolean;
+  pad_to_touch?: number;
+};
+function inputStartup(_canvas: HTMLCanvasElement, params: InputStartupParams): void {
   canvas = _canvas;
   pointer_lock.startup(canvas, onPointerLockEnter);
   if (params.map_analog_to_dpad !== undefined) {
@@ -1017,28 +1088,28 @@ export function startup(_canvas, params) {
         return false;
       }
     });
-    window.addEventListener('test', null, opts);
-    window.removeEventListener('test', null, opts);
+    window.addEventListener('test', dummyListener, opts);
+    window.removeEventListener('test', dummyListener, opts);
   } catch (e) {
     passive_param = false;
   }
 
-  window.addEventListener('keydown', onKeyDown, false);
-  window.addEventListener('keyup', onKeyUp, false);
+  window.addEventListener('keydown', onKeyDown as EventListener, false);
+  window.addEventListener('keyup', onKeyUp as EventListener, false);
 
-  window.addEventListener('click', ignored, false);
-  //window.addEventListener('click', eventlog, false);
-  window.addEventListener('contextmenu', ignored, false);
-  window.addEventListener('mousemove', function (event) {
-    onMouseMove(event);
+  window.addEventListener('click', ignored as EventListener, false);
+  //window.addEventListener('click', eventlog as EventListener, false);
+  window.addEventListener('contextmenu', ignored as EventListener, false);
+  window.addEventListener('mousemove', function (event: Event) {
+    onMouseMove(event as OurMouseEvent);
   }, false);
-  window.addEventListener('mousedown', onMouseDown, false);
-  window.addEventListener('mouseup', onMouseUp, false);
+  window.addEventListener('mousedown', onMouseDown as EventListener, false);
+  window.addEventListener('mouseup', onMouseUp as EventListener, false);
   if (window.WheelEvent) {
-    window.addEventListener('wheel', onWheel, passive_param);
+    window.addEventListener('wheel', onWheel as EventListener, passive_param);
   } else {
-    window.addEventListener('DOMMouseScroll', onWheel, false);
-    window.addEventListener('mousewheel', onWheel, false);
+    window.addEventListener('DOMMouseScroll', onWheel as EventListener, false);
+    window.addEventListener('mousewheel', onWheel as EventListener, false);
   }
 
   window.addEventListener('blur', onBlurOrFocus, false);
@@ -1055,7 +1126,16 @@ const DEADZONE_SQ = DEADZONE * DEADZONE;
 const NUM_STICKS = 2;
 const PAD_THRESHOLD = 0.35; // for turning analog motion into digital events
 
-function getGamepadData(idx) {
+type GamepadData = {
+  id: number;
+  timestamp: number;
+  sticks: Vec2[];
+};
+type PadState = Rec<number, number>;
+let pad_states: PadState[] = []; // One map per gamepad to pad button states
+let gamepad_data: GamepadData[] = []; // Other tracking data per gamepad
+
+function getGamepadData(idx: number): GamepadData {
   let gpd = gamepad_data[idx];
   if (!gpd) {
     gpd = gamepad_data[idx] = {
@@ -1071,8 +1151,8 @@ function getGamepadData(idx) {
   return gpd;
 }
 
-function updatePadState(gpd, ps, b, padcode) {
-  if (b && !ps[padcode]) {
+function updatePadState(gpd: GamepadData, ps: PadState, is_down: boolean, padcode: number): void {
+  if (is_down && !ps[padcode]) {
     ps[padcode] = DOWN_EDGE;
     onUserInput();
     if (touch_mode) {
@@ -1093,7 +1173,7 @@ function updatePadState(gpd, ps, b, padcode) {
       }
       touches[touch_id].down(null, true);
     }
-  } else if (!b && ps[padcode]) {
+  } else if (!is_down && ps[padcode]) {
     ps[padcode] = UP_EDGE;
     if (padcode === pad_to_touch) {
       let touch_id = `g${gpd.id}`;
@@ -1109,13 +1189,28 @@ function updatePadState(gpd, ps, b, padcode) {
   }
 }
 
-function gamepadUpdate() {
+type GetGamepadsFn = () => GetGamepadsRet;
+type GamepadQueryButtonData = number | { value: number };
+type GamepadQueryData = {
+  timestamp: number;
+  buttons: GamepadQueryButtonData[];
+  axes: number[];
+};
+type GetGamepadsRet = (GamepadQueryData | null)[];
+type NavigatorFallback = {
+  gamepads?: GetGamepadsRet;
+  webkitGamepads?: GetGamepadsRet;
+  getGamepads?: GetGamepadsFn;
+  webkitGetGamepads?: GetGamepadsFn;
+};
+function gamepadUpdate(): void {
   let gamepads;
   try {
-    gamepads = (navigator.gamepads ||
-      navigator.webkitGamepads ||
-      (navigator.getGamepads && navigator.getGamepads()) ||
-      (navigator.webkitGetGamepads && navigator.webkitGetGamepads()));
+    let nav = navigator as NavigatorFallback;
+    gamepads = (nav.gamepads ||
+      nav.webkitGamepads ||
+      (nav.getGamepads && nav.getGamepads()) ||
+      (nav.webkitGetGamepads && nav.webkitGetGamepads()));
   } catch (e) {
     // Firefox blocks gamepad access sometimes, just ignore it we can't access it
   }
@@ -1140,8 +1235,8 @@ function gamepadUpdate() {
           if (typeof value === 'object') {
             value = value.value;
           }
-          value = value > 0.5;
-          updatePadState(gpd, ps, value, n);
+          let is_down = value > 0.5;
+          updatePadState(gpd, ps, is_down, n);
         }
       }
 
@@ -1197,7 +1292,7 @@ function gamepadUpdate() {
   }
 }
 
-export function fakeTouchEvent(is_down) {
+export function fakeTouchEvent(is_down: boolean): void {
   const touch_id = 'faketouch';
   let touch_data = touches[touch_id];
   if (touch_data && !is_down) {
@@ -1212,8 +1307,8 @@ export function fakeTouchEvent(is_down) {
   }
 }
 
-export function tickInput() {
-  // browser frame has occurred since the call to endFrame(),
+function inputTick(): void {
+  // browser frame has occurred since the call to inputEndFrame(),
   // we should now have `touches` and `key_state` populated with edge events
   if (movement_questionable_frames) {
     --movement_questionable_frames;
@@ -1222,7 +1317,7 @@ export function tickInput() {
   // update timing of key down states
   let hrtime = engine.hrtime;
   for (let code in key_state_new) {
-    let ks = key_state_new[code];
+    let ks = key_state_new[code]!;
     if (ks.state === DOWN) {
       ks.down_time += max(hrtime - ks.origin_time, MIN_EVENT_TIME_DELTA);
       // assert(hrtime >= ks.origin_time); - should be true, but often isn't
@@ -1231,7 +1326,7 @@ export function tickInput() {
   }
 
   for (let touch_id in touches) {
-    let touch_data = touches[touch_id];
+    let touch_data = touches[touch_id]!;
     if (touch_data.state === DOWN) {
       touch_data.down_time += max(hrtime - touch_data.origin_time, MIN_EVENT_TIME_DELTA);
       // assert(hrtime >= touch_data.origin_time); - should be true, but often isn't
@@ -1249,7 +1344,7 @@ export function tickInput() {
   no_active_touches = empty(touches);
 }
 
-function endFrameTickMap(map) {
+function endFrameTickMap(map: TSMap<number>): void {
   Object.keys(map).forEach((keycode) => {
     switch (map[keycode]) {
       case DOWN_EDGE:
@@ -1262,11 +1357,11 @@ function endFrameTickMap(map) {
     }
   });
 }
-export function endFrame(skip_mouse) {
+function inputEndFrame(skip_mouse?: boolean): void {
   for (let code in key_state_new) {
-    let ks = key_state_new[code];
+    let ks = key_state_new[code]!;
     if (ks.state === UP) {
-      key_state_new[code] = null;
+      key_state_new[code] = null!;
       delete key_state_new[code];
     } else {
       ks.up_edge = 0;
@@ -1278,12 +1373,12 @@ export function endFrame(skip_mouse) {
   pad_states.forEach(endFrameTickMap);
   if (!skip_mouse) {
     for (let touch_id in touches) {
-      let touch_data = touches[touch_id];
+      let touch_data = touches[touch_id]!;
       if (touch_data.state === UP) {
         // Manually null out touches[touch_id] - some Chrome optimizer bug causes
         // callers to later get this old value (instead of the newly added on with
         // the same ID) unless we null it out (then they seem to get the new one).
-        touches[touch_id] = null;
+        touches[touch_id] = null!;
         delete touches[touch_id];
       } else {
         touch_data.delta[0] = touch_data.delta[1] = 0;
@@ -1310,15 +1405,15 @@ export function endFrame(skip_mouse) {
   input_eaten_kb = false;
 }
 
-export function tickInputInactive() {
+function inputTickInactive(): void {
   inEventTopOfFrame();
   ctrl_checked = false;
-  endFrame();
+  inputEndFrame();
 }
 
-export function eatAllInput(skip_mouse) {
+export function eatAllInput(skip_mouse?: boolean): void {
   // destroy touches, remove all down and up edges
-  endFrame(skip_mouse);
+  inputEndFrame(skip_mouse);
   if (!skip_mouse) {
     mouse_over_captured = true;
     input_eaten_mouse = true;
@@ -1327,19 +1422,19 @@ export function eatAllInput(skip_mouse) {
   actionEatAll();
 }
 
-export function eatAllKeyboardInput() {
+export function eatAllKeyboardInput(): void {
   eatAllInput(true);
 }
 
 // Eats all regular keyboard input, leaving special things like alt/tab/esc/F1 alone,
 // but suppressing all hotkeys / in_event_cbs until the actual edit box
-export function inputEatForEditBoxEarly() {
-  for (let code in key_state_new) {
-    code = Number(code);
+export function inputEatForEditBoxEarly(): void {
+  for (let code_str in key_state_new) {
+    let code = Number(code_str);
     if (code >= KEYS.SPACE && code <= KEYS.NUMPAD_DIVIDE) {
-      let ks = key_state_new[code];
+      let ks = key_state_new[code]!;
       if (ks.state === UP) {
-        key_state_new[code] = null;
+        key_state_new[code] = null!;
         delete key_state_new[code];
       } else {
         ks.up_edge = 0;
@@ -1351,39 +1446,48 @@ export function inputEatForEditBoxEarly() {
   input_eaten_kb = true;
 }
 
-export function inputEatForEditBoxLate() {
+export function inputEatForEditBoxLate(): void {
   input_eaten_kb = false;
 }
 
 // returns position mapped to current camera view
-export function mousePos(dst) {
+export function mousePos(dst?: Vec2): Vec2 {
   dst = dst || vec2();
   camera2d.domToVirtual(dst, mouse_pos);
   return dst;
 }
 
-export function mouseDomPos() {
+export function mouseDomPos(): Vec2 {
   return mouse_pos;
 }
 
-export function mouseMoved() {
+export function mouseMoved(): boolean {
   return mouse_moved;
 }
 
-export function mouseButtonHadEdge() {
+export function mouseButtonHadEdge(): boolean {
   return mouse_button_had_edge;
 }
 
-export function mouseButtonHadUpEdge() {
+export function mouseButtonHadUpEdge(): boolean {
   return mouse_button_had_up_edge;
 }
 
-const full_screen_pos_param = {};
-function mousePosParamUnique(param) {
+const full_screen_pos_param: PosParamUnique = {};
+
+type PosParam = Box & {
+  button: ButtonIndex;
+};
+type PosParamUnique = Partial<PosParam & {
+  mouse_pos_param: PosParam;
+}>;
+type PPosParam = Partial<PosParam> | undefined;
+
+function mousePosParamUnique(param?: PosParamUnique): PosParam {
   param = param || full_screen_pos_param;
   let pos_param = param.mouse_pos_param;
   if (!pos_param) {
-    pos_param = param.mouse_pos_param = {};
+    pos_param = param.mouse_pos_param = {} as PosParam;
   }
   pos_param.x = param.x === undefined ? camera2d.x0Real() : param.x;
   pos_param.y = param.y === undefined ? camera2d.y0Real() : param.y;
@@ -1393,8 +1497,14 @@ function mousePosParamUnique(param) {
   return pos_param;
 }
 
-let pos_param_temp = {};
-function mousePosParam(param) {
+let pos_param_temp: PosParam = {
+  x: 0,
+  y: 0,
+  w: 0,
+  h: 0,
+  button: 0,
+};
+function mousePosParam(param?: PPosParam): PosParam {
   param = param || {};
   pos_param_temp.x = param.x === undefined ? camera2d.x0Real() : param.x;
   pos_param_temp.y = param.y === undefined ? camera2d.y0Real() : param.y;
@@ -1405,7 +1515,7 @@ function mousePosParam(param) {
 }
 
 let check_pos = vec2();
-function checkPos(pos, param) {
+function checkPos(pos: Vec2, param: PosParam): boolean {
   if (!camera2d.domToVirtual(check_pos, pos)) {
     return false;
   }
@@ -1413,14 +1523,14 @@ function checkPos(pos, param) {
     check_pos[1] >= param.y && (param.h === Infinity || check_pos[1] < param.y + param.h);
 }
 
-function wasDoubleClick(pos_param) {
+function wasDoubleClick(pos_param: PosParam): boolean {
   if (engine.hrtime - last_up_edges[0].timestamp > settings.double_click_time) {
     return false;
   }
   return checkPos(last_up_edges[0].pos, pos_param);
 }
 
-export function mouseWheel(param) {
+export function mouseWheel(param: PPosParam): number {
   if (input_eaten_mouse || !wheel_events.length) {
     return 0;
   }
@@ -1440,11 +1550,21 @@ export function mouseWheel(param) {
   return ret;
 }
 
-export function mouseOverCaptured() {
+export function mouseOverCaptured(): void {
   mouse_over_captured = true;
 }
 
-export function mouseOver(param) {
+export type MouseOverParam = {
+  peek?: boolean; // does not consume clicks nor the mouseover event
+  peek_touch?: boolean; // does not consume touch events
+  peek_over?: boolean; // does not consume the mouseover event
+  eat_clicks?: boolean;
+  spot_debug_ignore?: boolean;
+  allow_pointerlock?: boolean;
+  drag_target?: boolean;
+};
+
+export function mouseOver(param?: Partial<PosParam> & MouseOverParam): boolean {
   profilerStartFunc();
   param = param || {};
   let pos_param = mousePosParamUnique(param);
@@ -1457,7 +1577,7 @@ export function mouseOver(param) {
   // eat mouse up/down/drag events
   if (!param.peek && !param.peek_touch) {
     for (let id in touches) {
-      let touch = touches[id];
+      let touch = touches[id]!;
       if (checkPos(touch.cur_pos, pos_param)) {
         if (touch.down_edge) {
           touch.down_edge = 0;
@@ -1483,7 +1603,7 @@ export function mouseOver(param) {
   return ret;
 }
 
-export function mouseDownAnywhere(button) {
+export function mouseDownAnywhere(button?: ButtonIndex): boolean {
   if (input_eaten_mouse) {
     return false;
   }
@@ -1492,7 +1612,7 @@ export function mouseDownAnywhere(button) {
   }
 
   for (let touch_id in touches) {
-    let touch_data = touches[touch_id];
+    let touch_data = touches[touch_id]!;
     if (touch_data.state !== DOWN ||
       !(button === ANY || button === touch_data.button)
     ) {
@@ -1503,7 +1623,13 @@ export function mouseDownAnywhere(button) {
   return false;
 }
 
-export function mouseDownMidClick(param) {
+export type MouseClickParam = Partial<PosParam> & {
+  peek?: boolean;
+  max_dist?: number;
+  in_event_cb?: EventCallback | null;
+  in_event_button?: ButtonIndex;
+};
+export function mouseDownMidClick(param?: MouseClickParam): boolean {
   if (input_eaten_mouse || no_active_touches) {
     return false;
   }
@@ -1514,7 +1640,7 @@ export function mouseDownMidClick(param) {
   let max_click_dist = param.max_dist || 50; // TODO: relative to camera distance?
 
   for (let touch_id in touches) {
-    let touch_data = touches[touch_id];
+    let touch_data = touches[touch_id]!;
     if (touch_data.state !== DOWN ||
       !(button === ANY || button === touch_data.button) ||
       touch_data.total > max_click_dist
@@ -1529,7 +1655,7 @@ export function mouseDownMidClick(param) {
   return false;
 }
 
-export function mouseDownOverBounds(param) {
+export function mouseDownOverBounds(param: PPosParam): boolean {
   if (input_eaten_mouse || no_active_touches) {
     return false;
   }
@@ -1538,7 +1664,7 @@ export function mouseDownOverBounds(param) {
   let button = pos_param.button;
 
   for (let touch_id in touches) {
-    let touch_data = touches[touch_id];
+    let touch_data = touches[touch_id]!;
     if (touch_data.state !== DOWN ||
       !(button === ANY || button === touch_data.button)
     ) {
@@ -1552,19 +1678,24 @@ export function mouseDownOverBounds(param) {
   return false;
 }
 
-export function mousePosIsTouch() {
+export function mousePosIsTouch(): boolean {
   return mouse_pos_is_touch;
 }
 
-export function numTouches() {
+export function numTouches(): number {
   return Object.keys(touches).length;
 }
 
-let last_mod;
-export function keyDownLastMod() {
+let last_mod = 0;
+export function keyDownLastMod(): number {
   return last_mod;
 }
-export function keyDown(keycode, opts) {
+export type KeyCheckOpts = {
+  mod?: number;
+  in_event_cb?: EventCallback | null; // for clicks and key presses
+  peek?: boolean;
+};
+export function keyDown(keycode: ValidKeyValue, opts?: KeyCheckOpts | null): number {
   if (keycode === KEYS.CTRL) {
     ctrl_checked = true;
   }
@@ -1575,7 +1706,7 @@ export function keyDown(keycode, opts) {
   if (keycode === ANY) {
     let r = 0;
     for (let keycode2 in key_state_new) {
-      let ks = key_state_new[keycode2];
+      let ks = key_state_new[keycode2]!;
       r += ks.down_time;
     }
     return r;
@@ -1596,7 +1727,7 @@ export function keyDown(keycode, opts) {
   }
   return ks.down_time;
 }
-export function keyDownEdge(keycode, opts) {
+export function keyDownEdge(keycode: ValidKeyValue, opts?: KeyCheckOpts | null): number {
   if (input_eaten_kb) {
     return 0;
   }
@@ -1623,7 +1754,7 @@ export function keyDownEdge(keycode, opts) {
   }
   return r;
 }
-export function keyUpEdge(keycode, opts) {
+export function keyUpEdge(keycode: ValidKeyValue, opts?: KeyCheckOpts | null): number {
   if (input_eaten_kb) {
     return 0;
   }
@@ -1632,7 +1763,7 @@ export function keyUpEdge(keycode, opts) {
     assert(!opts || !opts.in_event_cb);
     let r = 0;
     for (let keycode2 in key_state_new) {
-      let ks = key_state_new[keycode2];
+      let ks = key_state_new[keycode2]!;
       r += ks.up_edge;
       if (!opts || !opts.peek) {
         ks.up_edge = 0;
@@ -1661,7 +1792,7 @@ export function keyUpEdge(keycode, opts) {
   return r;
 }
 
-export function padGetAxes(out, stickindex, padindex) {
+export function padGetAxes(out: Vec2, stickindex: number, padindex?: number): void {
   assert(stickindex >= 0 && stickindex < NUM_STICKS);
   if (padindex === undefined || padindex === ANY) {
     let sub = vec2();
@@ -1676,13 +1807,17 @@ export function padGetAxes(out, stickindex, padindex) {
   v2copy(out, sticks[stickindex]);
 }
 
-function padButtonDownInternal(gpd, ps, padcode, peek) {
+function padButtonDownInternal(
+  gpd: GamepadData, ps: Rec<number, number>, padcode: ValidPadValue, peek: boolean
+): number {
   if (ps[padcode]) {
     return getFrameDt();
   }
   return 0;
 }
-function padButtonDownEdgeInternal(gpd, ps, padcode, peek) {
+function padButtonDownEdgeInternal(
+  gpd: GamepadData, ps: Rec<number, number>, padcode: ValidPadValue, peek: boolean
+): number {
   if (ps[padcode] === DOWN_EDGE) {
     if (!peek) {
       ps[padcode] = DOWN;
@@ -1691,7 +1826,9 @@ function padButtonDownEdgeInternal(gpd, ps, padcode, peek) {
   }
   return 0;
 }
-function padButtonUpEdgeInternal(gpd, ps, padcode, peek) {
+function padButtonUpEdgeInternal(
+  gpd: GamepadData, ps: Rec<number, number>, padcode: ValidPadValue, peek: boolean
+): number {
   if (padcode === ANY) {
     let r = 0;
     for (let ii = 0; ii < PAD.ANALOG_UP; ++ii) {
@@ -1713,7 +1850,11 @@ function padButtonUpEdgeInternal(gpd, ps, padcode, peek) {
   return 0;
 }
 
-function padButtonShared(fn, padcode, padindex, opts) {
+export type PadCheckOpts = {
+  peek?: boolean;
+};
+type PadFn = (gpd: GamepadData, ps: Rec<number, number>, padcode: ValidPadValue, peek: boolean) => number;
+function padButtonShared(fn: PadFn, padcode: ValidPadValue, padindex?: number, opts?: PadCheckOpts | null): number {
   assert(padcode !== undefined);
   let r = 0;
   // Handle calling without a specific pad index
@@ -1744,13 +1885,13 @@ function padButtonShared(fn, padcode, padindex, opts) {
   r += fn(gpd, ps, padcode, peek);
   return r;
 }
-export function padButtonDown(padcode, padindex, opts) {
+export function padButtonDown(padcode: ValidPadValue, padindex?: number, opts?: PadCheckOpts | null): number {
   return padButtonShared(padButtonDownInternal, padcode, padindex, opts);
 }
-export function padButtonDownEdge(padcode, padindex, opts) {
+export function padButtonDownEdge(padcode: ValidPadValue, padindex?: number, opts?: PadCheckOpts | null): number {
   return padButtonShared(padButtonDownEdgeInternal, padcode, padindex, opts);
 }
-export function padButtonUpEdge(padcode, padindex, opts) {
+export function padButtonUpEdge(padcode: ValidPadValue, padindex?: number, opts?: PadCheckOpts | null): number {
   return padButtonShared(padButtonUpEdgeInternal, padcode, padindex, opts);
 }
 
@@ -1758,7 +1899,12 @@ let start_pos = vec2();
 let cur_pos = vec2();
 let delta = vec2();
 
-export function inputClick(param) {
+export function inputClick(param?: MouseClickParam): null | {
+  button: ButtonIndex;
+  pos: Vec2;
+  start_time: number;
+  was_double_click: boolean;
+} {
   param = param || {};
   if (input_eaten_mouse || !param.in_event_cb && no_active_touches) {
     return null;
@@ -1769,7 +1915,7 @@ export function inputClick(param) {
   let click_invalid = false;
 
   for (let touch_id in touches) {
-    let touch_data = touches[touch_id];
+    let touch_data = touches[touch_id]!;
     if (touch_data.total > max_click_dist) {
       // Do *not* register in_event_cb, would fire even when we would disregard this click
       click_invalid = true;
@@ -1793,7 +1939,7 @@ export function inputClick(param) {
       }
       return {
         button: touch_data.button,
-        pos: check_pos.slice(0),
+        pos: check_pos.slice(0) as Vec2,
         start_time: touch_data.start_time,
         was_double_click: wasDoubleClick(pos_param),
       };
@@ -1802,17 +1948,29 @@ export function inputClick(param) {
 
   if (param.in_event_cb && !mouse_over_captured && !click_invalid) {
     // TODO: Maybe need to also pass along earlier exclusions?  Working okay for now though.
-    if (!param.phys) {
-      param.phys = {};
+    let param2: MouseClickParam & {
+      phys?: Partial<PosParam>;
+    } = param;
+    if (!param2.phys) {
+      param2.phys = {};
     }
-    param.phys.button = typeof param.in_event_button === 'number' ? param.in_event_button : button;
-    camera2d.virtualToDomPosParam(param.phys, pos_param);
-    inEventOn('mouseup', param.phys, param.in_event_cb);
+    param2.phys.button = typeof param2.in_event_button === 'number' ? param2.in_event_button : button;
+    camera2d.virtualToDomPosParam(param2.phys, pos_param);
+    inEventOn('mouseup', param2.phys, param2.in_event_cb);
   }
   return null;
 }
 
-export function mouseDownEdge(param) {
+export type MouseDownEdgeParam = Partial<PosParam> & {
+  in_event_cb?: EventCallback | null; // for clicks and key presses
+  peek?: boolean;
+};
+export type MouseDownEdgeRet = {
+  button: ButtonIndex;
+  pos: Vec2;
+  start_time: number;
+};
+export function mouseDownEdge(param?: MouseDownEdgeParam): null | MouseDownEdgeRet {
   param = param || {};
   if (input_eaten_mouse || !param.in_event_cb && no_active_touches) {
     return null;
@@ -1821,7 +1979,7 @@ export function mouseDownEdge(param) {
   let button = pos_param.button;
 
   for (let touch_id in touches) {
-    let touch_data = touches[touch_id];
+    let touch_data = touches[touch_id]!;
     if (!touch_data.down_edge ||
       !(button === ANY || button === touch_data.button)
     ) {
@@ -1833,7 +1991,7 @@ export function mouseDownEdge(param) {
       }
       return {
         button: touch_data.button,
-        pos: check_pos.slice(0),
+        pos: check_pos.slice(0) as Vec2,
         start_time: touch_data.start_time,
       };
     }
@@ -1841,12 +1999,15 @@ export function mouseDownEdge(param) {
 
   if (param.in_event_cb && !mouse_over_captured) {
     // TODO: Maybe need to also pass along earlier exclusions?  Working okay for now though.
-    if (!param.phys) {
-      param.phys = {};
+    let param2: MouseDownEdgeParam & {
+      phys?: Partial<PosParam>;
+    } = param;
+    if (!param2.phys) {
+      param2.phys = {};
     }
-    param.phys.button = button;
-    camera2d.virtualToDomPosParam(param.phys, pos_param);
-    inEventOn('mousedown', param.phys, param.in_event_cb);
+    param2.phys.button = button;
+    camera2d.virtualToDomPosParam(param2.phys, pos_param);
+    inEventOn('mousedown', param2.phys, param2.in_event_cb);
   }
   return null;
 }
@@ -1854,7 +2015,7 @@ export function mouseDownEdge(param) {
 // Completely consume any clicks or drags coming from a mouse down event in this
 // area - used to catch focus leaving an edit box without wanting to do what
 // a click would normally do.
-export function mouseConsumeClicks(param) {
+export function mouseConsumeClicks(param: PPosParam): void {
   // skipping when pointerLocked because when we get locked between frames, this will kill the
   // (persistent) pointer-locked "touch"'s position
   if (no_active_touches || pointerLocked()) {
@@ -1864,7 +2025,7 @@ export function mouseConsumeClicks(param) {
   let pos_param = mousePosParam(param);
   let button = pos_param.button;
   for (let touch_id in touches) {
-    let touch_data = touches[touch_id];
+    let touch_data = touches[touch_id]!;
     // Skipping those that already dispatched a drag this frame, must have been handled, do not consume it!
     if (!(button === ANY || button === touch_data.button) || touch_data.dispatched_drag) {
       continue;
@@ -1879,7 +2040,29 @@ export function mouseConsumeClicks(param) {
   }
 }
 
-export function inputDrag(param) {
+export type DragParam = Partial<PosParam> & {
+  min_dist?: number;
+  not_touch_id?: string;
+  peek?: boolean;
+  eat_clicks?: boolean;
+  payload?: unknown;
+};
+type DragLongPressSharedRet = {
+  cur_pos: Vec2;
+  start_pos: Vec2;
+  delta: Vec2; // this frame's delta
+  total: number;  // total (linear) distance dragged
+  button: ButtonIndex;
+  touch: boolean;
+  start_time: number;
+  is_down_edge: boolean;
+  down_time: number;
+  touch_id: string;
+};
+export type DragRet = DragLongPressSharedRet & {
+  dropped: boolean;
+};
+export function inputDrag(param?: DragParam): null | DragRet {
   if (input_eaten_mouse || no_active_touches) {
     return null;
   }
@@ -1890,7 +2073,7 @@ export function inputDrag(param) {
   let min_dist = param.min_dist || 0;
 
   for (let touch_id in touches) {
-    let touch_data = touches[touch_id];
+    let touch_data = touches[touch_id]!;
     if (!(button === ANY || button === touch_data.button) || touch_data.dispatched_drag ||
       touch_id === param.not_touch_id
     ) {
@@ -1910,7 +2093,7 @@ export function inputDrag(param) {
       if (!param.peek) {
         touch_data.dispatched_drag = true;
       }
-      let is_down_edge = touch_data.down_edge;
+      let is_down_edge = Boolean(touch_data.down_edge);
       if (param.eat_clicks) {
         touch_data.down_edge = touch_data.up_edge = 0;
       }
@@ -1932,15 +2115,25 @@ export function inputDrag(param) {
         is_down_edge,
         down_time: touch_data.down_time,
         touch_id,
-        dropped: touch_data.up_edge,
+        dropped: Boolean(touch_data.up_edge),
       };
     }
   }
   return null;
 }
 
+export type LongPressRet = DragLongPressSharedRet & {
+  long_press: true;
+};
+export type LongPressParam = Partial<PosParam> & {
+  long_press_max_dist?: number;
+  min_time?: number;
+  button?: ButtonIndex;
+  peek?: boolean;
+  eat_clicks?: boolean;
+};
 // a lot like drag(), refactor to share more?
-export function longPress(param) {
+export function longPress(param?: LongPressParam): null | LongPressRet {
   if (input_eaten_mouse || no_active_touches) {
     return null;
   }
@@ -1951,7 +2144,7 @@ export function longPress(param) {
   let min_time = param.min_time || 500;
 
   for (let touch_id in touches) {
-    let touch_data = touches[touch_id];
+    let touch_data = touches[touch_id]!;
     if (!(button === ANY || button === touch_data.button) || touch_data.long_press_dispatched ||
       touch_data.button === POINTERLOCK
     ) {
@@ -1971,7 +2164,7 @@ export function longPress(param) {
         // ? touch_data.dispatched = true;
         touch_data.long_press_dispatched = true;
       }
-      let is_down_edge = touch_data.down_edge;
+      let is_down_edge = Boolean(touch_data.down_edge);
       if (param.eat_clicks) {
         touch_data.down_edge = touch_data.up_edge = 0;
       }
@@ -1988,6 +2181,7 @@ export function longPress(param) {
         touch: touch_data.touch,
         start_time: touch_data.start_time,
         is_down_edge,
+        touch_id,
         down_time: touch_data.down_time,
       };
     }
@@ -1995,7 +2189,13 @@ export function longPress(param) {
   return null;
 }
 
-export function dragDrop(param) {
+export type DragDropParam = Partial<PosParam> & {
+  peek?: boolean;
+};
+export type DragDropRet = {
+  drag_payload: unknown;
+};
+export function dragDrop(param?: DragDropParam): null | DragDropRet {
   if (input_eaten_mouse || no_active_touches) {
     return null;
   }
@@ -2004,7 +2204,7 @@ export function dragDrop(param) {
   let button = pos_param.button;
 
   for (let touch_id in touches) {
-    let touch_data = touches[touch_id];
+    let touch_data = touches[touch_id]!;
     // Maybe touch_data.dispatched_drag_over instead/as well?
     if (!(button === ANY || button === touch_data.button) || touch_data.dispatched || !touch_data.drag_payload) {
       continue;
@@ -2025,7 +2225,14 @@ export function dragDrop(param) {
   return null;
 }
 
-export function dragOver(param) {
+export type DragOverParam = Partial<PosParam> & {
+  peek?: boolean;
+};
+export type DragOverRet = {
+  cur_pos: Vec2;
+  drag_payload: unknown;
+};
+export function dragOver(param?: DragOverParam): null | DragOverRet {
   if (input_eaten_mouse || no_active_touches) {
     return null;
   }
@@ -2034,7 +2241,7 @@ export function dragOver(param) {
   let button = pos_param.button;
 
   for (let touch_id in touches) {
-    let touch_data = touches[touch_id];
+    let touch_data = touches[touch_id]!;
     if (!(button === ANY || button === touch_data.button) ||
       touch_data.dispatched_drag_over ||
       !touch_data.drag_payload

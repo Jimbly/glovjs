@@ -51,7 +51,14 @@ const {
   glDepthTest,
   glScissorTest,
 } = require('./glstate');
-const input = require('./input.js');
+const {
+  internal: {
+    inputEndFrame,
+    inputStartup,
+    inputTick,
+    inputTickInactive,
+  }
+} = require('./input.js');
 const { inputAllowAllEvents } = require('./input.js');
 const local_storage = require('./local_storage.js');
 const mat3FromMat4 = require('gl-mat3/fromMat4');
@@ -1031,7 +1038,7 @@ function tick(timestamp) {
   }
   if (dirty_render && !render_frames_needed) {
     resetEffects();
-    input.tickInputInactive();
+    inputTickInactive();
     last_tick_cpu = 0;
     for (let ii = post_tick.length - 1; ii >= 0; --ii) {
       if (post_tick[ii].inactive && !--post_tick[ii].ticks) {
@@ -1126,7 +1133,7 @@ function tick(timestamp) {
 
   if (document.hidden || document.webkitHidden || no_render) {
     resetEffects();
-    input.tickInputInactive();
+    inputTickInactive();
     last_tick_cpu = 0;
     for (let ii = post_tick.length - 1; ii >= 0; --ii) {
       if (post_tick[ii].inactive && !--post_tick[ii].ticks) {
@@ -1180,7 +1187,7 @@ function tick(timestamp) {
   profilerStopStart('mid');
 
   soundTick(dt);
-  input.tickInput();
+  inputTick();
   actionTopOfFrame();
   bindsTopOfFrame();
   uiTick(dt);
@@ -1286,7 +1293,7 @@ function tick(timestamp) {
     }
   }
 
-  input.endFrame();
+  inputEndFrame();
   resetEffects();
   textureTick();
 
@@ -1522,7 +1529,7 @@ export function startup(params) {
   addViewSpaceGlobal('light_dir');
   camera2d.startup();
   spriteStartup();
-  input.startup(canvas, params);
+  inputStartup(canvas, params);
   actionStartup();
   modelStartup();
 

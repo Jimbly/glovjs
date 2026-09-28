@@ -202,13 +202,6 @@ interface SpotSubInternal extends SpotSubParam {
 
 type SpotListElem = SpotInternal | SpotSubInternal;
 
-// TODO: move to input.js when converted to TypeScript
-type MouseOverParam = {
-  peek?: boolean;
-  eat_clicks?: boolean;
-  spot_debug_ignore?: boolean;
-};
-
 import assert from 'assert';
 const { abs, max } = Math;
 import verify from 'glov/common/verify';
@@ -240,6 +233,7 @@ import {
   mouseDownMidClick,
   mouseMoved,
   mouseOver,
+  MouseOverParam,
   mousePosIsTouch,
   padButtonDownEdge,
 } from './input.js';
@@ -597,7 +591,7 @@ function spotDebug(): void {
   camera2d.push();
   camera2d.setDOMMapped();
   let show_all = keyDown(KEYS.SHIFT);
-  spotDebugList(show_all, frame_spots);
+  spotDebugList(Boolean(show_all), frame_spots);
 
   if (pad_mode || show_all) {
     for (let ii = SPOT_NAV_LEFT; ii <= SPOT_NAV_DOWN; ++ii) {

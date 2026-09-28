@@ -380,7 +380,7 @@ class ScrollAreaInternal implements ScrollArea {
         y: handle_screenpos,
         w: bar_w,
         h: handle_pixel_h,
-        button: 0,
+        button: BUTTON_LEFT,
         spot_debug_ignore: true,
       };
 
