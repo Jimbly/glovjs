@@ -244,19 +244,16 @@ function parseBindKey(str: string): string | {
   let key_or_controller = m[2];
   let key = inputNameNormalize(m[3]);
   let bindtype: BindType;
-  let validkey: ValidKey | ValidPad;
   if (key_or_controller) {
     bindtype = key_or_controller.toLowerCase() as BindType;
     if (bindtype === 'key') {
       if (!inputValidKeyName(key)) {
         return `Unknown key "${key}"`;
       }
-      validkey = key as ValidKey; // TypeScript TODO: inputValidKeyName should handle this coercion
     } else {
       if (!inputValidPadName(key)) {
         return `Unknown controller button "${key}"`;
       }
-      validkey = key as ValidPad; // TypeScript TODO: inputValidKeyName should handle this coercion
     }
   } else {
     if (inputValidKeyName(key)) {
@@ -264,10 +261,8 @@ function parseBindKey(str: string): string | {
         return `Ambiguous parameter, please use use Key${key} or Controller${key}.`;
       }
       bindtype = 'key';
-      validkey = key as ValidKey;
     } else if (inputValidPadName(key)) {
       bindtype = 'controller';
-      validkey = key as ValidPad;
     } else {
       return `"${key}" is not recognized as a valid controller button nor key.`;
     }
@@ -275,7 +270,7 @@ function parseBindKey(str: string): string | {
   return {
     modnames,
     bindtype,
-    key: validkey,
+    key,
   };
 }
 
