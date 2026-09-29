@@ -12,7 +12,7 @@ export const BIND_FLAG_NOKB = 1<<1;
 export const BIND_LEVEL_PRETICK = 100;
 
 import assert from 'assert';
-import { Rec, TSMap } from 'glov/common/types';
+import { Rec, TSMap, WithRequired } from 'glov/common/types';
 import verify from 'glov/common/verify';
 import { cmd_parse } from './cmds';
 import { getFrameIndex } from './engine';
@@ -167,7 +167,10 @@ export function bindBind(bindtype: BindType, opt: BindOpt<ValidKey | ValidPad>):
   }
 }
 
-export function bindUnbind(bindtype: BindType, opt: Partial<BindOpt<ValidKey | ValidPad>>): string[] {
+export function bindUnbind(
+  bindtype: BindType,
+  opt: WithRequired<Partial<BindOpt<ValidKey | ValidPad>>, 'key'|'modifiers'>
+): string[] {
   assert(opt.key); // required parameter
   assert(opt.modifiers !== undefined); // required parameter
   let base_list = all_binds[bindtype];
@@ -225,7 +228,7 @@ const bind_set = [{
   },
 }];
 
-export type BindExport = Omit<Bind, 'code'> & {
+export type BindExport = Omit<Bind, 'code' | 'action' | 'down_frame'> & {
   key: ValidPad | ValidKey;
 };
 export function bindExport(): BindExport[] {

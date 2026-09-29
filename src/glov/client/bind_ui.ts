@@ -13,8 +13,16 @@ export const DEFAULT_BINDABLE_CMDS: Rec<string, string> = {
 
 import assert from 'assert';
 import { CmdRespFunc } from 'glov/common/cmd_parse';
-import { Optional, Rec, TSMap } from 'glov/common/types';
-import { capitalize, identity, plural } from 'glov/common/util';
+import {
+  Optional,
+  Rec,
+  TSMap,
+} from 'glov/common/types';
+import {
+  capitalize,
+  identity,
+  plural,
+} from 'glov/common/util';
 import { actionExists } from './actions';
 import { autoResetSkippedFrames } from './auto_reset';
 import {
@@ -25,12 +33,16 @@ import {
   bindUnbind,
 } from './binds';
 import { cmd_parse } from './cmds';
+import { getFrameDt } from './engine';
 import {
   ALIGN,
   FontStyle,
   fontStyleColored,
 } from './font';
 import {
+  eatAllKeyboardInput,
+  inputFrameKeyUp,
+  inputLookupKeyName,
   inputNameNormalize,
   inputPadMode,
   inputValidKeyName,
@@ -51,6 +63,7 @@ import {
   buttonText,
   copyTextToClipboard,
   drawRect,
+  modalDialog,
   UIBox,
   uiButtonHeight,
   uiButtonWidth,
@@ -521,15 +534,113 @@ function bindLocalName(bind: {
   });
 }
 
+function initialBindsMap(): Rec<string, BindExport> {
+  let binds = bindExport();
+  let ret: Rec<string, BindExport> = {};
+  for (let ii = 0; ii < binds.length; ++ii) {
+    let bind = binds[ii];
+    ret[bindToString(bind)] = bind;
+  }
+  return ret;
+}
+
 class BindUIState {
   page: BindType = inputPadMode() ? 'controller' : 'key';
   scroll_area = scrollAreaCreate();
+  editing_bind: null | {
+    idx: number;
+    cmd: string;
+    existing: BindExport | null;
+  } = null;
   constructor() {
     layoutMapInit();
   }
+  initial_binds = initialBindsMap();
 }
 let bind_ui_state: BindUIState;
 let default_style = fontStyleColored(null, 0x000000ff);
+
+function revertChanges(cur_binds: BindExport[], just_test: boolean): boolean {
+  let old_binds = bind_ui_state.initial_binds;
+  let seen: TSMap<true> = {};
+  for (let ii = 0; ii < cur_binds.length; ++ii) {
+    let bind = cur_binds[ii];
+    let bind_str = bindToString(cur_binds[ii]);
+    if (old_binds[bind_str]) {
+      seen[bind_str] = true;
+    } else {
+      if (just_test) {
+        return true;
+      }
+      unbindSub(bind);
+    }
+  }
+  for (let key in old_binds) {
+    if (!seen[key]) {
+      if (just_test) {
+        return true;
+      }
+      addUserBind(old_binds[key]!);
+    }
+  }
+  return false;
+}
+
+function handleEditBind(): void {
+  if (bind_ui_state.page === 'key') {
+    let keyup = inputFrameKeyUp();
+    let editing = bind_ui_state.editing_bind;
+    assert(editing);
+    if (keyup) {
+      bind_ui_state.editing_bind = null;
+      let key = inputLookupKeyName(keyup.code);
+      if (!key) {
+        modalDialog({
+          title: 'Unrecognized key',
+          text: 'Sorry, that key was not recognized, please try a different key',
+          buttons: {
+            OK: null,
+          }
+        });
+      } else {
+        if (editing.existing) {
+          // remove the bind we're replacing
+          bindUnbind('key', {
+            key: editing.existing.key,
+            modifiers: editing.existing.modifiers,
+            cmd: editing.existing.cmd,
+          });
+        }
+        // unbind anything else bound to this key
+        unbindSub({
+          bindtype: 'key',
+          modifiers: keyup.mod,
+          key,
+          // layer, // maybe want to avoid unbinding things on other layers?
+          // no cmd, unbind any matching key on this layer
+        });
+
+        addUserBind({
+          bindtype: 'key',
+          layer: undefined,
+          key,
+          modifiers: keyup.mod,
+          cmd: editing.cmd,
+        });
+      }
+    }
+    eatAllKeyboardInput();
+  }
+}
+
+let edit_anim_t = 0;
+function editAnim(): string {
+  if (autoResetSkippedFrames('editanim')) {
+    edit_anim_t = 0;
+  }
+  edit_anim_t += getFrameDt();
+  return ['?..', '.?.', '..?'][floor((edit_anim_t % 600 / 600) * 3)];
+}
 
 export function bindUIRun(opts: UIBox & {
   pad: number;
@@ -549,6 +660,11 @@ export function bindUIRun(opts: UIBox & {
   if (!bind_ui_state || autoResetSkippedFrames('bindui')) {
     bind_ui_state = new BindUIState();
   }
+
+  if (bind_ui_state.editing_bind) {
+    handleEditBind();
+  }
+
   let button_width = uiButtonWidth();
   let button_height = uiButtonHeight();
   let font = uiGetFont();
@@ -567,6 +683,7 @@ export function bindUIRun(opts: UIBox & {
     text: 'Keyboard',
   })) {
     bind_ui_state.page = 'key';
+    bind_ui_state.editing_bind = null;
   }
   if (buttonText({
     x: x + (w + pad) / 2, y, z, w: (w - pad) / 2,
@@ -575,6 +692,7 @@ export function bindUIRun(opts: UIBox & {
     text: 'Controller',
   })) {
     bind_ui_state.page = 'controller';
+    bind_ui_state.editing_bind = null;
   }
   y += button_height + pad/2;
 
@@ -582,6 +700,7 @@ export function bindUIRun(opts: UIBox & {
   bind_ui_state.scroll_area.begin({
     x, y, z, w: scroll_w, h: y0 + h - y - button_height - pad/2,
     background_color: null,
+    auto_hide: true,
   });
   w = scroll_w - bind_ui_state.scroll_area.barWidth();
   y = pad/2;
@@ -607,40 +726,85 @@ export function bindUIRun(opts: UIBox & {
     x += label_w + pad;
     let rowcount = 0;
 
+    let show_add_new = true;
+    if (bind_ui_state.editing_bind &&
+      bind_ui_state.editing_bind.cmd === cmd &&
+      bind_ui_state.editing_bind.idx === active_binds.length
+    ) {
+      show_add_new = false;
+      active_binds = active_binds.slice(0);
+      active_binds.push({
+        bindtype: bind_ui_state.page,
+        cmd,
+        modifiers: 0,
+        layer: 'default',
+        key: 'TBD' as ValidKey,
+      });
+    }
+
     // display existing binds, button to change, button to clear
     for (let ii = 0; ii < active_binds.length; ++ii) {
       let bind = active_binds[ii];
       if (bind.bindtype !== bind_ui_state.page) {
         continue;
       }
-      if (buttonText({
-        x, y, z, w: bind_remove_w, h: row_h,
-        text: 'X',
-        tooltip: `Remove binding of ${formatBindKey(true, bind)} to "${bind.cmd}"`,
-      })) {
-        bindUnbind(bind.bindtype, bind);
+      const is_editing = bind_ui_state.editing_bind &&
+        bind_ui_state.editing_bind.cmd === cmd &&
+        bind_ui_state.editing_bind.idx === ii;
+      let this_w = bind_button_w;
+      if (show_add_new || !is_editing) {
+        if (buttonText({
+          x, y, z, w: bind_remove_w, h: row_h,
+          text: 'X',
+          tooltip: `Remove binding of ${formatBindKey(true, bind)} to "${bind.cmd}"`,
+        })) {
+          bind_ui_state.editing_bind = null;
+          unbindSub(bind);
+        }
+        x += bind_remove_w;
+      } else {
+        this_w += bind_remove_w;
       }
-      x += bind_remove_w;
       if (buttonText({
-        x, y, z, w: bind_button_w, h: row_h,
-        text: bindLocalName(bind),
-        tooltip: 'Change this binding',
+        x, y, z, w: this_w, h: row_h,
+        text: is_editing ? editAnim() : bindLocalName(bind),
+        tooltip: is_editing ? 'Press the desired key, or click to cancel changing this binding' : undefined,
       })) {
-        // TODO: change
+        if (is_editing) {
+          bind_ui_state.editing_bind = null;
+        } else {
+          bind_ui_state.editing_bind = {
+            cmd,
+            idx: ii,
+            existing: bind,
+          };
+        }
       }
-      x += bind_button_w + pad;
+      x += this_w + pad;
       ++rowcount;
       if (rowcount === binds_per_row) {
-        x = label_w + pad;
-        y += row_h + floor(pad / 2);
+        if (is_editing && !show_add_new) {
+          // this is the last, no wrapping
+        } else {
+          x = label_w + pad;
+          y += row_h + floor(pad / 2);
+          rowcount = 0;
+        }
       }
     }
 
-    if (buttonText({
-      x, y, z, w: bind_remove_w + bind_button_w, h: row_h,
-      text: '+Add new',
-    })) {
-      // TODO: add
+    if (show_add_new) {
+      if (buttonText({
+        x, y, z, w: bind_remove_w + bind_button_w, h: row_h,
+        key: `addnew${cmd}`,
+        text: '+Add new',
+      })) {
+        bind_ui_state.editing_bind = {
+          cmd,
+          idx: active_binds.length,
+          existing: null,
+        };
+      }
     }
 
     y += row_h;
@@ -657,10 +821,10 @@ export function bindUIRun(opts: UIBox & {
     x: x0 + w - button_width * 3 - pad * 2,
     y: y0 + h - button_height,
     z,
-    disabled: true, // TODO
+    disabled: !revertChanges(cur_binds, true),
     text: 'Revert Changes',
   })) {
-    // TODO
+    revertChanges(cur_binds, false);
   }
   if (buttonText({
     x: x0 + w - button_width * 2 - pad,

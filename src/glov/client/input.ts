@@ -334,6 +334,16 @@ export function inputValidKeyName(key: string): key is ValidKey {
   return Boolean((KEYS_ORIG as TSMap<number>)[key]);
 }
 
+export function inputLookupKeyName(key_code: number): ValidKey | null {
+  let key: ValidKey;
+  for (key in KEYS_ORIG) {
+    if (KEYS_ORIG[key] === key_code) {
+      return key;
+    }
+  }
+  return null;
+}
+
 export function inputValidPadName(key: string): key is ValidPad {
   return Boolean((PAD as TSMap<number>)[key]);
 }
@@ -642,6 +652,17 @@ function releaseAllKeysDown(evt: Event): void {
   }
 }
 
+function modFromEvent(event: OurKeyboardEvent): number {
+  return (event.shiftKey ? MOD_SHIFT : 0) |
+    (event.ctrlKey ? MOD_CTRL : 0) |
+    (event.altKey ? MOD_ALT : 0);
+}
+
+export type FrameKeyUp = {
+  code: number;
+  mod: number;
+};
+let frame_keyup: null | FrameKeyUp;
 function onKeyUp(event: OurKeyboardEvent): void {
   renderNeeded();
   protectUnload(event.ctrlKey);
@@ -666,7 +687,16 @@ function onKeyUp(event: OurKeyboardEvent): void {
     }
   }
 
+  frame_keyup = {
+    code,
+    mod: modFromEvent(event),
+  };
+
   inEventHandle('keyup', event);
+}
+
+export function inputFrameKeyUp(): null | FrameKeyUp {
+  return frame_keyup;
 }
 
 function onKeyDown(event: OurKeyboardEvent): void {
@@ -694,9 +724,7 @@ function onKeyDown(event: OurKeyboardEvent): void {
   if (ks.state !== DOWN) { // not a repeat event
     ++ks.down_edge;
     ks.state = DOWN;
-    ks.down_mod = (event.shiftKey ? MOD_SHIFT : 0) |
-      (event.ctrlKey ? MOD_CTRL : 0) |
-      (event.altKey ? MOD_ALT : 0);
+    ks.down_mod = modFromEvent(event);
     ks.origin_time = eventTimestamp(event);
     // ks.down_start = ks.origin_time;
 
@@ -1403,6 +1431,7 @@ function inputEndFrame(skip_mouse?: boolean): void {
     mouse_button_had_up_edge = false;
   }
   input_eaten_kb = false;
+  frame_keyup = null;
 }
 
 function inputTickInactive(): void {
@@ -1723,7 +1752,7 @@ export function keyDown(keycode: ValidKeyValue, opts?: KeyCheckOpts | null): num
   }
   last_mod = ks.down_mod;
   if (ks.state === DOWN) {
-    assert(ks.down_time); // Will fire if we call keyDown() before tickInput()
+    assert(ks.down_time); // Will fire if we call keyDown() before inputTick()
   }
   return ks.down_time;
 }
