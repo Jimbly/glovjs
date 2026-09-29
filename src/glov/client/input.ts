@@ -15,7 +15,7 @@ const DOWN_EDGE = 2; // only for pads
 
 // per-app overrideable options
 const TOUCH_AS_MOUSE = true;
-let map_analog_to_dpad = true;
+let map_analog_to_dpad = false; // default binds and actions should take care of this now
 
 let mouse_log = 0;
 
@@ -199,14 +199,14 @@ export const PAD = {
   CANCEL: 1, // GLOV name
   X: 2,
   Y: 3,
-  LB: 4,
   LEFT_BUMPER: 4,
-  RB: 5,
+  LB: 4,
   RIGHT_BUMPER: 5,
-  LT: 6,
+  RB: 5,
   LEFT_TRIGGER: 6,
-  RT: 7,
+  LT: 6,
   RIGHT_TRIGGER: 7,
+  RT: 7,
   BACK: 8,
   START: 9,
   LEFT_STICK: 10,
@@ -215,14 +215,15 @@ export const PAD = {
   DOWN: 13,
   LEFT: 14,
   RIGHT: 15,
-  ANALOG_UP: 20,
-  ANALOG_LEFT: 21,
-  ANALOG_DOWN: 22,
-  ANALOG_RIGHT: 23,
+  CENTER: 16, // Guide / PS button
   LSTICK_UP: 20,
   LSTICK_LEFT: 21,
   LSTICK_DOWN: 22,
   LSTICK_RIGHT: 23,
+  ANALOG_UP: 20, // alias for left stick
+  ANALOG_LEFT: 21,
+  ANALOG_DOWN: 22,
+  ANALOG_RIGHT: 23,
   RSTICK_UP: 24,
   RSTICK_LEFT: 25,
   RSTICK_DOWN: 26,
@@ -353,7 +354,28 @@ export function inputLookupKeyName(key_code: number): ValidKey | null {
   return null;
 }
 
+export function inputLookupPadName(pad_code: number): ValidPad | null {
+  let key: ValidPad;
+  for (key in PAD) {
+    if (PAD[key] === pad_code) {
+      return key;
+    }
+  }
+  return null;
+}
+
+const REDUNANT_NAMES = arrayToSet([
+  'SELECT', 'CANCEL', 'LB', 'RB', 'LT', 'RT',
+  'ANALOG_UP',
+  'ANALOG_LEFT',
+  'ANALOG_DOWN',
+  'ANALOG_RIGHT',
+]);
 export function inputValidPadName(key: string): key is ValidPad {
+  if (REDUNANT_NAMES[key]) {
+    // redundant names not allowed in binds system
+    return false;
+  }
   return Boolean((PAD as TSMap<number>)[key]);
 }
 
@@ -1095,6 +1117,13 @@ function genAnalogMap(): void {
     ANALOG_MAP[PAD.UP] = [PAD.LSTICK_UP, PAD.RSTICK_UP];
     ANALOG_MAP[PAD.DOWN] = [PAD.LSTICK_DOWN, PAD.RSTICK_DOWN];
   }
+  // Not for analog, but use this to allow ANY as a pad button parameter
+  let any_arr = [];
+  let key: ValidPad;
+  for (key in PAD) {
+    any_arr.push(PAD[key]);
+  }
+  ANALOG_MAP[ANY] = any_arr;
 }
 
 let passive_param: false | { passive: false } = false;
@@ -1192,6 +1221,14 @@ function getGamepadData(idx: number): GamepadData {
   return gpd;
 }
 
+export type FramePadUp = {
+  code: number;
+};
+let frame_padup: null | FramePadUp;
+export function inputFramePadUp(): null | FramePadUp {
+  return frame_padup;
+}
+
 function updatePadState(gpd: GamepadData, ps: PadState, is_down: boolean, padcode: number): void {
   if (is_down && !ps[padcode]) {
     ps[padcode] = DOWN_EDGE;
@@ -1215,6 +1252,9 @@ function updatePadState(gpd: GamepadData, ps: PadState, is_down: boolean, padcod
       touches[touch_id].down(null, true);
     }
   } else if (!is_down && ps[padcode]) {
+    frame_padup = {
+      code: padcode,
+    };
     ps[padcode] = UP_EDGE;
     if (padcode === pad_to_touch) {
       let touch_id = `g${gpd.id}`;
@@ -1445,6 +1485,7 @@ function inputEndFrame(skip_mouse?: boolean): void {
   }
   input_eaten_kb = false;
   frame_keyup = null;
+  frame_padup = null;
 }
 
 function inputTickInactive(): void {

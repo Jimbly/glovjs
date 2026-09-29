@@ -216,10 +216,14 @@ function actionStartup(): void {
   actionBindPad('DOWN', 'down', 'nav');
   actionBindPad('LEFT', 'left', 'nav');
   actionBindPad('RIGHT', 'right', 'nav');
-  actionBindPad('ANALOG_UP', 'up', 'nav');
-  actionBindPad('ANALOG_LEFT', 'left', 'nav');
-  actionBindPad('ANALOG_DOWN', 'down', 'nav');
-  actionBindPad('ANALOG_RIGHT', 'right', 'nav');
+  actionBindPad('LSTICK_UP', 'up', 'nav');
+  actionBindPad('LSTICK_LEFT', 'left', 'nav');
+  actionBindPad('LSTICK_DOWN', 'down', 'nav');
+  actionBindPad('LSTICK_RIGHT', 'right', 'nav');
+  actionBindPad('RSTICK_UP', 'up', 'nav');
+  actionBindPad('RSTICK_LEFT', 'left', 'nav');
+  actionBindPad('RSTICK_DOWN', 'down', 'nav');
+  actionBindPad('RSTICK_RIGHT', 'right', 'nav');
   actionBindPad('LEFT_BUMPER', 'prev', 'nav');
   actionBindPad('RIGHT_BUMPER', 'next', 'nav');
   actionBindKB('TAB', 'next', 0, 'nav');
@@ -248,11 +252,11 @@ function actionStartup(): void {
   // general binds
   actionBindKB('SPACE', 'accept', 0, 'nav');
   actionBindKB('ENTER', 'accept', 0, 'nav');
-  actionBindPad('SELECT', 'accept', 'nav');
+  actionBindPad('A', 'accept', 'nav');
 
   actionBindKB('ESC', 'cancel', 0, 'nav');
   actionBindKB('BACKSPACE', 'cancel', 0, 'nav');
-  actionBindPad('CANCEL', 'cancel', 'nav');
+  actionBindPad('B', 'cancel', 'nav');
 
   // modal dialogs
   actionBindKB('O', 'ok', 0, 'nav');

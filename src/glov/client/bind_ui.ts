@@ -41,15 +41,19 @@ import {
   fontStyleColored,
 } from './font';
 import {
+  eatAllInput,
   eatAllKeyboardInput,
   inputFrameKeyUp,
+  inputFramePadUp,
   inputLookupKeyName,
+  inputLookupPadName,
   inputNameNormalize,
   inputPadMode,
   inputValidKeyName,
   inputValidPadName,
   keyDown,
   KEYS,
+  padButtonDown,
   ValidKey,
   ValidPad,
 } from './input';
@@ -625,12 +629,13 @@ function handleEditBind(): void {
   let editing = bind_ui_state.editing_bind;
   assert(editing);
   if (editing.waiting_for_no_keys) {
-    if (!keyDown(ANY) && !inputFrameKeyUp()) {
+    if (!keyDown(ANY) && !inputFrameKeyUp() && !padButtonDown(ANY) && !inputFramePadUp()) {
       editing.waiting_for_no_keys = false;
     } else {
       return;
     }
   }
+  let new_bind: BindExport | undefined;
   if (bindtype === 'key') {
     let keyup = inputFrameKeyUp();
     if (keyup) {
@@ -650,34 +655,67 @@ function handleEditBind(): void {
           }
         });
       } else {
-        let new_bind: BindExport = {
+        new_bind = {
           bindtype,
           key,
           layer: defaultLayer(editing.cmd, bindtype, key),
           modifiers: keyup.mod,
           cmd: editing.cmd,
         };
-        if (editing.existing) {
-          // replace existing bind
-          let idx = cur_binds.indexOf(editing.existing);
-          assert(idx !== -1);
-          cur_binds[idx] = new_bind;
-        } else {
-          cur_binds.push(new_bind);
-        }
-        // unbind anything else bound to this key
-        for (let ii = cur_binds.length - 1; ii >= 0; --ii) {
-          let bind = cur_binds[ii];
-          if (bind === new_bind) {
-            continue;
-          }
-          if (bind.bindtype === bindtype && bind.key === key && bind.modifiers === keyup.mod) {
-            cur_binds.splice(ii, 1);
-          }
-        }
       }
     }
     eatAllKeyboardInput();
+  } else if (bindtype === 'controller') {
+    let padup = inputFramePadUp();
+    if (padup) {
+      bind_ui_state.editing_bind = null;
+      let padcode = inputLookupPadName(padup.code);
+      if (!padcode) {
+        let diag = `padcode: ${padcode}`;
+        modalDialog({
+          title: 'Unrecognized button',
+          text: 'Sorry, that button was not recognized, please try a different' +
+            ' button and report this to the developer.\n\n' +
+            `Diagnostic info: ${diag}`,
+          buttons: {
+            'Copy to clipboard': function () {
+              copyTextToClipboard(diag);
+            },
+            OK: null,
+          }
+        });
+      } else {
+        new_bind = {
+          bindtype,
+          key: padcode,
+          layer: defaultLayer(editing.cmd, bindtype, padcode),
+          modifiers: 0,
+          cmd: editing.cmd,
+        };
+      }
+    }
+    eatAllInput(true);
+  }
+
+  if (new_bind) {
+    if (editing.existing) {
+      // replace existing bind
+      let idx = cur_binds.indexOf(editing.existing);
+      assert(idx !== -1);
+      cur_binds[idx] = new_bind;
+    } else {
+      cur_binds.push(new_bind);
+    }
+    // unbind anything else bound to this key
+    for (let ii = cur_binds.length - 1; ii >= 0; --ii) {
+      let bind = cur_binds[ii];
+      if (bind === new_bind) {
+        continue;
+      }
+      if (bind.bindtype === bindtype && bind.key === new_bind.key && bind.modifiers === new_bind.modifiers) {
+        cur_binds.splice(ii, 1);
+      }
+    }
   }
 }
 
