@@ -380,6 +380,28 @@ cmd_parse.register({
   }
 });
 
+const SPECIAL_NAMES: TSMap<string> = {
+  PAGEUP: 'PageUp',
+  PAGEDOWN: 'PageDown',
+  NUMPAD0: 'NumPad0',
+  NUMPAD1: 'NumPad1',
+  NUMPAD2: 'NumPad2',
+  NUMPAD3: 'NumPad3',
+  NUMPAD4: 'NumPad4',
+  NUMPAD5: 'NumPad5',
+  NUMPAD6: 'NumPad6',
+  NUMPAD7: 'NumPad7',
+  NUMPAD8: 'NumPad8',
+  NUMPAD9: 'NumPad9',
+  NUMPAD_MULTIPLY: 'NumPad*',
+  NUMPAD_ADD: 'NumPad+',
+  NUMPAD_SUBTRACT: 'NumPad-',
+  NUMPAD_DECIMAL_POINT: 'NumPad.',
+  NUMPAD_DIVIDE: 'NumPad/',
+};
+function formatKeyName(key: string): string {
+  return SPECIAL_NAMES[key] || toCamelCase(key);
+}
 
 function formatBindKey(show_bindtype: boolean, entry: {
   bindtype: BindType;
@@ -388,7 +410,7 @@ function formatBindKey(show_bindtype: boolean, entry: {
   modifiers: number;
 }): string {
   return `${modToString(entry.modifiers)}${show_bindtype ? capitalize(entry.bindtype) : ''}` +
-    `${entry.key_name || toCamelCase(String(entry.key))}`;
+    `${entry.key_name || formatKeyName(entry.key)}`;
 }
 
 
@@ -615,10 +637,15 @@ function handleEditBind(): void {
       bind_ui_state.editing_bind = null;
       let key = inputLookupKeyName(keyup.code);
       if (!key) {
+        let diag = `key: ${key}, code: ${keyup.code}, eventCode: ${keyup.eventCode}, eventKey:${keyup.eventKey}`;
         modalDialog({
           title: 'Unrecognized key',
-          text: 'Sorry, that key was not recognized, please try a different key',
+          text: 'Sorry, that key was not recognized, please try a different key and report this to the developer.\n\n' +
+            `Diagnostic info: ${diag}`,
           buttons: {
+            'Copy to clipboard': function () {
+              copyTextToClipboard(diag);
+            },
             OK: null,
           }
         });

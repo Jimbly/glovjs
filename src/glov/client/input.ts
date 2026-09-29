@@ -77,6 +77,8 @@ export let KEYS = {
   SHIFT: 16,
   CTRL: 17,
   ALT: 18,
+  PAUSE: 19,
+  CAPS_LOCK: 20,
   ESC: 27,
   ESCAPE: 27,
   SPACE: 32,
@@ -88,6 +90,7 @@ export let KEYS = {
   UP: 38,
   RIGHT: 39,
   DOWN: 40,
+  PRINT_SCREEN: 44,
   INS: 45,
   DEL: 46,
 
@@ -129,6 +132,10 @@ export let KEYS = {
   Y: 89,
   Z: 90,
 
+  META_LEFT: 91,
+  META_RIGHT: 92,
+  CONTEXT_MENU: 93,
+
   NUMPAD0: 96,
   NUMPAD1: 97,
   NUMPAD2: 98,
@@ -158,6 +165,8 @@ export let KEYS = {
   F11: 122,
   F12: 123,
 
+  NUM_LOCK: 144,
+  SCROLL_LOCK: 145,
   SEMICOLON: 186,
   EQUALS: 187,
   COMMA: 188,
@@ -660,6 +669,8 @@ function modFromEvent(event: OurKeyboardEvent): number {
 
 export type FrameKeyUp = {
   code: number;
+  eventCode: string;
+  eventKey: string;
   mod: number;
 };
 let frame_keyup: null | FrameKeyUp;
@@ -689,6 +700,8 @@ function onKeyUp(event: OurKeyboardEvent): void {
 
   frame_keyup = {
     code,
+    eventCode: event.code,
+    eventKey: event.key,
     mod: modFromEvent(event),
   };
 
@@ -1460,7 +1473,9 @@ export function eatAllKeyboardInput(): void {
 export function inputEatForEditBoxEarly(): void {
   for (let code_str in key_state_new) {
     let code = Number(code_str);
-    if (code >= KEYS.SPACE && code <= KEYS.NUMPAD_DIVIDE) {
+    if (code >= KEYS.SPACE && code <= KEYS.Z ||
+      code >= KEYS.NUMPAD0 && code <= KEYS.NUMPAD_DIVIDE
+    ) {
       let ks = key_state_new[code]!;
       if (ks.state === UP) {
         key_state_new[code] = null!;
