@@ -20,6 +20,7 @@ import {
 } from 'glov/common/types';
 import {
   capitalize,
+  clone,
   identity,
   plural,
 } from 'glov/common/util';
@@ -47,11 +48,13 @@ import {
   inputPadMode,
   inputValidKeyName,
   inputValidPadName,
+  keyDown,
   KEYS,
   ValidKey,
   ValidPad,
 } from './input';
 import {
+  ANY,
   MOD_ALT,
   MOD_CTRL,
   MOD_SHIFT,
@@ -77,7 +80,7 @@ type UserBinds = {
   binds?: string[];
 };
 let user_binds: UserBinds;
-let base_binds: string[];
+let base_binds: Rec<string, BindExport>;
 
 type UserBindParam = {
   modifiers: number;
@@ -126,10 +129,9 @@ function modNamesToNumber(modnames: string | undefined): number {
   return modifiers;
 }
 
-function defaultLayer(cmd: string): string {
+function defaultLayerSub(cmd: string): string {
   let suffix = `.${cmd}`;
-  for (let ii = 0; ii < base_binds.length; ++ii) {
-    let str = base_binds[ii];
+  for (let str in base_binds) {
     if (str.endsWith(suffix)) {
       let tail = str.slice(0, -(cmd.length + 1));
       let idx = tail.lastIndexOf(' ');
@@ -141,18 +143,23 @@ function defaultLayer(cmd: string): string {
   return 'default';
 }
 
+function defaultLayer(cmd: string, bindtype: BindType, key: ValidKey | ValidPad): string {
+  let layer = defaultLayerSub(cmd);
+  if (layer === 'nav' && bindtype === 'key') {
+    let keycode = KEYS[key as ValidKey];
+    if (keycode && keycode >= KEYS['0'] && keycode <= KEYS.NUMPAD_DIVIDE) {
+      // a nav key, but overlaps edit box keys, put into navext
+      layer = 'navext';
+    }
+  }
+  return layer;
+}
+
 function addUserBind(param: UserBindParam): void {
   const { bindtype, key, modifiers, cmd } = param;
   let { layer } = param;
   if (!layer) {
-    layer = defaultLayer(cmd);
-    if (layer === 'nav' && bindtype === 'key') {
-      let keycode = KEYS[key as ValidKey];
-      if (keycode && keycode >= KEYS['0'] && keycode <= KEYS.NUMPAD_DIVIDE) {
-        // a nav key, but overlaps edit box keys, put into navext
-        layer = 'navext';
-      }
-    }
+    layer = defaultLayer(cmd, bindtype, key);
     param.layer = layer;
   }
   if (persist_binds) {
@@ -206,7 +213,7 @@ function unbindSub(opt: {
           diff = true;
         }
       }
-      if (base_binds.includes(full_bind)) {
+      if (base_binds[full_bind]) {
         user_binds.unbinds = user_binds.unbinds || [];
         if (!user_binds.unbinds.includes(full_bind)) {
           user_binds.unbinds.push(full_bind);
@@ -402,7 +409,7 @@ cmd_parse.register({
     let ret_user: string[] = [];
     for (let ii = 0; ii < list.length; ++ii) {
       let entry = list[ii];
-      let is_default = base_binds.includes(bindToString(entry));
+      let is_default = base_binds[bindToString(entry)];
       let line = `${formatBindKey(true, entry)}` +
         ` ${entry.layer !== 'default' ? `${entry.layer}.` : ''}${entry.cmd}`;
       (is_default ? ret_default : ret_user).push(line);
@@ -444,7 +451,12 @@ cmd_parse.register({
 export function bindUIStartup(): void {
   assert(!persist_binds); // should be called exactly once
 
-  base_binds = bindExport().map(bindToString);
+  let base_binds_list = bindExport();
+  base_binds = Object.create(null);
+  for (let ii = 0; ii < base_binds_list.length; ++ii) {
+    let bind = base_binds_list[ii];
+    base_binds[bindToString(bind)] = bind;
+  }
 
   user_binds = localStorageGetJSON<UserBinds>('binds', {});
 
@@ -551,17 +563,18 @@ class BindUIState {
     idx: number;
     cmd: string;
     existing: BindExport | null;
+    waiting_for_no_keys: boolean;
   } = null;
   constructor() {
     layoutMapInit();
   }
   initial_binds = initialBindsMap();
+  cur_binds = bindExport();
 }
 let bind_ui_state: BindUIState;
 let default_style = fontStyleColored(null, 0x000000ff);
 
-function revertChanges(cur_binds: BindExport[], just_test: boolean): boolean {
-  let old_binds = bind_ui_state.initial_binds;
+function applyChanges(old_binds: Rec<string, BindExport>, cur_binds: BindExport[], just_test: boolean): boolean {
   let seen: TSMap<true> = {};
   for (let ii = 0; ii < cur_binds.length; ++ii) {
     let bind = cur_binds[ii];
@@ -572,7 +585,7 @@ function revertChanges(cur_binds: BindExport[], just_test: boolean): boolean {
       if (just_test) {
         return true;
       }
-      unbindSub(bind);
+      addUserBind(bind);
     }
   }
   for (let key in old_binds) {
@@ -580,17 +593,29 @@ function revertChanges(cur_binds: BindExport[], just_test: boolean): boolean {
       if (just_test) {
         return true;
       }
-      addUserBind(old_binds[key]!);
+      unbindSub(old_binds[key]!);
     }
+  }
+  if (!just_test) {
+    bind_ui_state.initial_binds = initialBindsMap();
   }
   return false;
 }
 
 function handleEditBind(): void {
-  if (bind_ui_state.page === 'key') {
+  let { cur_binds } = bind_ui_state;
+  let bindtype = bind_ui_state.page;
+  let editing = bind_ui_state.editing_bind;
+  assert(editing);
+  if (editing.waiting_for_no_keys) {
+    if (!keyDown(ANY) && !inputFrameKeyUp()) {
+      editing.waiting_for_no_keys = false;
+    } else {
+      return;
+    }
+  }
+  if (bindtype === 'key') {
     let keyup = inputFrameKeyUp();
-    let editing = bind_ui_state.editing_bind;
-    assert(editing);
     if (keyup) {
       bind_ui_state.editing_bind = null;
       let key = inputLookupKeyName(keyup.code);
@@ -603,30 +628,31 @@ function handleEditBind(): void {
           }
         });
       } else {
-        if (editing.existing) {
-          // remove the bind we're replacing
-          bindUnbind('key', {
-            key: editing.existing.key,
-            modifiers: editing.existing.modifiers,
-            cmd: editing.existing.cmd,
-          });
-        }
-        // unbind anything else bound to this key
-        unbindSub({
-          bindtype: 'key',
-          modifiers: keyup.mod,
+        let new_bind: BindExport = {
+          bindtype,
           key,
-          // layer, // maybe want to avoid unbinding things on other layers?
-          // no cmd, unbind any matching key on this layer
-        });
-
-        addUserBind({
-          bindtype: 'key',
-          layer: undefined,
-          key,
+          layer: defaultLayer(editing.cmd, bindtype, key),
           modifiers: keyup.mod,
           cmd: editing.cmd,
-        });
+        };
+        if (editing.existing) {
+          // replace existing bind
+          let idx = cur_binds.indexOf(editing.existing);
+          assert(idx !== -1);
+          cur_binds[idx] = new_bind;
+        } else {
+          cur_binds.push(new_bind);
+        }
+        // unbind anything else bound to this key
+        for (let ii = cur_binds.length - 1; ii >= 0; --ii) {
+          let bind = cur_binds[ii];
+          if (bind === new_bind) {
+            continue;
+          }
+          if (bind.bindtype === bindtype && bind.key === key && bind.modifiers === keyup.mod) {
+            cur_binds.splice(ii, 1);
+          }
+        }
       }
     }
     eatAllKeyboardInput();
@@ -668,7 +694,7 @@ export function bindUIRun(opts: UIBox & {
   let button_width = uiButtonWidth();
   let button_height = uiButtonHeight();
   let font = uiGetFont();
-  let cur_binds = bindExport();
+  let { cur_binds } = bind_ui_state;
   let binds_by_cmd: Rec<string, BindExport[]> = {};
   for (let ii = 0; ii < cur_binds.length; ++ii) {
     let bind = cur_binds[ii];
@@ -714,7 +740,7 @@ export function bindUIRun(opts: UIBox & {
   let idx = 0;
   for (let cmd in bindable_cmds) {
     let row_y_start = y;
-    let active_binds = binds_by_cmd[cmd]!;
+    let active_binds = binds_by_cmd[cmd] || [];
     x = 0;
 
     font.draw({
@@ -759,7 +785,9 @@ export function bindUIRun(opts: UIBox & {
           tooltip: `Remove binding of ${formatBindKey(true, bind)} to "${bind.cmd}"`,
         })) {
           bind_ui_state.editing_bind = null;
-          unbindSub(bind);
+          let cur_idx = cur_binds.indexOf(bind);
+          assert(cur_idx !== -1);
+          cur_binds.splice(cur_idx, 1);
         }
         x += bind_remove_w;
       } else {
@@ -777,6 +805,7 @@ export function bindUIRun(opts: UIBox & {
             cmd,
             idx: ii,
             existing: bind,
+            waiting_for_no_keys: true,
           };
         }
       }
@@ -803,6 +832,7 @@ export function bindUIRun(opts: UIBox & {
           cmd,
           idx: active_binds.length,
           existing: null,
+          waiting_for_no_keys: true,
         };
       }
     }
@@ -821,26 +851,27 @@ export function bindUIRun(opts: UIBox & {
     x: x0 + w - button_width * 3 - pad * 2,
     y: y0 + h - button_height,
     z,
-    disabled: !revertChanges(cur_binds, true),
-    text: 'Revert Changes',
+    disabled: !applyChanges(base_binds, cur_binds, true),
+    text: 'Reset to Defaults',
   })) {
-    revertChanges(cur_binds, false);
+    bind_ui_state.cur_binds = clone(Object.values(base_binds) as BindExport[]);
   }
+  let any_changes = applyChanges(bind_ui_state.initial_binds, cur_binds, true);
   if (buttonText({
     x: x0 + w - button_width * 2 - pad,
     y: y0 + h - button_height,
     z,
-    disabled: true, // TODO
-    text: 'Reset to Defaults',
+    disabled: !any_changes,
+    text: 'Apply',
   })) {
-    // TODO
+    applyChanges(bind_ui_state.initial_binds, cur_binds, false);
   }
   if (buttonText({
     x: x0 + w - button_width,
     y: y0 + h - button_height,
     z,
-    // hotaction: 'cancel', probably not?
-    text: 'Done',
+    hotaction: any_changes ? undefined : 'cancel',
+    text: any_changes ? 'Cancel' : 'Done',
   })) {
     ret = true;
   }
