@@ -734,6 +734,7 @@ export function bindUIRun(opts: UIBox & {
   label_style?: FontStyle;
 }): boolean {
   let { x, y, z, w, h, pad, bindable_cmds, label_style } = opts;
+  const tiny_add_new = true;
   z = z || Z.UI;
   bindable_cmds = bindable_cmds || DEFAULT_BINDABLE_CMDS;
   label_style = label_style || default_style;
@@ -795,7 +796,8 @@ export function bindUIRun(opts: UIBox & {
   let label_w = min(button_width, floor(w / 3));
   let bind_remove_w = row_h;
   let binds_per_row = 3;
-  let bind_button_w = max(row_h, ((w - pad * (binds_per_row + 1) - label_w) / binds_per_row) - bind_remove_w);
+  const avail_w = w - pad * (binds_per_row + 1) - label_w - (tiny_add_new ? bind_remove_w + pad : 0);
+  let bind_button_w = max(row_h, (avail_w / binds_per_row) - bind_remove_w);
 
   let idx = 0;
   for (let cmd in bindable_cmds) {
@@ -837,6 +839,13 @@ export function bindUIRun(opts: UIBox & {
       const is_editing = bind_ui_state.editing_bind &&
         bind_ui_state.editing_bind.cmd === cmd &&
         bind_ui_state.editing_bind.idx === ii;
+
+      if (rowcount === binds_per_row) {
+        x = label_w + pad;
+        y += row_h + floor(pad / 2);
+        rowcount = 0;
+      }
+
       let this_w = bind_button_w;
       if (show_add_new || !is_editing) {
         if (buttonText({
@@ -871,22 +880,19 @@ export function bindUIRun(opts: UIBox & {
       }
       x += this_w + pad;
       ++rowcount;
-      if (rowcount === binds_per_row) {
-        if (is_editing && !show_add_new) {
-          // this is the last, no wrapping
-        } else {
-          x = label_w + pad;
-          y += row_h + floor(pad / 2);
-          rowcount = 0;
-        }
-      }
     }
 
     if (show_add_new) {
+      if (!tiny_add_new && rowcount === binds_per_row) {
+        x = label_w + pad;
+        y += row_h + floor(pad / 2);
+        rowcount = 0;
+      }
       if (buttonText({
-        x, y, z, w: bind_remove_w + bind_button_w, h: row_h,
+        x, y, z, w: tiny_add_new ? bind_remove_w : bind_remove_w + bind_button_w, h: row_h,
         key: `addnew${cmd}`,
-        text: '+Add new',
+        text: tiny_add_new ? '+' : '+Add new',
+        tooltip: tiny_add_new ? 'Add new bind' : undefined,
       })) {
         bind_ui_state.editing_bind = {
           cmd,
