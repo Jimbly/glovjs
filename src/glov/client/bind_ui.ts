@@ -719,6 +719,18 @@ function handleEditBind(): void {
   }
 }
 
+function validControllerBinds(): boolean {
+  let seen: TSMap<true> = {};
+  let { cur_binds } = bind_ui_state;
+  for (let ii = 0; ii < cur_binds.length; ++ii) {
+    let bind = cur_binds[ii];
+    if (bind.bindtype === 'controller') {
+      seen[bind.cmd] = true;
+    }
+  }
+  return Boolean(seen.up && seen.down && seen.left && seen.right && seen.accept && seen.cancel);
+}
+
 let edit_anim_t = 0;
 function editAnim(): string {
   if (autoResetSkippedFrames('editanim')) {
@@ -813,6 +825,7 @@ export function bindUIRun(opts: UIBox & {
     });
     x += label_w + pad;
     let rowcount = 0;
+    let totalcount = 0;
 
     let show_add_new = true;
     if (bind_ui_state.editing_bind &&
@@ -864,6 +877,7 @@ export function bindUIRun(opts: UIBox & {
       }
       if (buttonText({
         x, y, z, w: this_w, h: row_h,
+        key: `bind${cmd}-${totalcount}`,
         text: is_editing ? editAnim() : bindLocalName(bind),
         tooltip: is_editing ? 'Press the desired key, or click to cancel changing this binding' : undefined,
       })) {
@@ -880,6 +894,7 @@ export function bindUIRun(opts: UIBox & {
       }
       x += this_w + pad;
       ++rowcount;
+      ++totalcount;
     }
 
     if (show_add_new) {
@@ -888,9 +903,12 @@ export function bindUIRun(opts: UIBox & {
         y += row_h + floor(pad / 2);
         rowcount = 0;
       }
+      if (tiny_add_new && (totalcount % 3) !== 0) {
+        x += bind_remove_w;
+      }
       if (buttonText({
         x, y, z, w: tiny_add_new ? bind_remove_w : bind_remove_w + bind_button_w, h: row_h,
-        key: `addnew${cmd}`,
+        key: `bind${cmd}-${totalcount}`,
         text: tiny_add_new ? '+' : '+Add new',
         tooltip: tiny_add_new ? 'Add new bind' : undefined,
       })) {
@@ -930,7 +948,18 @@ export function bindUIRun(opts: UIBox & {
     disabled: !any_changes,
     text: 'Apply',
   })) {
-    applyChanges(bind_ui_state.initial_binds, cur_binds, false);
+    if (inputPadMode() && !validControllerBinds()) {
+      modalDialog({
+        title: 'Invalid Controller bindings',
+        text: 'Controller bindings are invalid - at least the navigational' +
+          ' directions and Accept and Cancel must be bound.',
+        buttons: {
+          OK: null,
+        },
+      });
+    } else {
+      applyChanges(bind_ui_state.initial_binds, cur_binds, false);
+    }
   }
   if (buttonText({
     x: x0 + w - button_width,
