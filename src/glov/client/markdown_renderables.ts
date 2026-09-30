@@ -203,6 +203,7 @@ class MDRImg implements MDLayoutBlock, MDDrawBlock, Box {
       h: this.h,
       frame: img_data.frame,
       color,
+      nozoom: true, // if it's in an atlas, it should have sufficient padding to not need this
     });
     profilerStop();
   }
