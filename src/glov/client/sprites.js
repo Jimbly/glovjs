@@ -1068,7 +1068,11 @@ Sprite.prototype.getAspect = function () {
   if (!tex) {
     return 1;
   }
-  return tex.src_width / tex.src_height;
+  let aspect = tex.src_width / tex.src_height;
+  if (this.uvs) {
+    aspect *= (this.uvs[2] - this.uvs[0]) / (this.uvs[3] - this.uvs[1]);
+  }
+  return aspect;
 };
 
 Sprite.prototype.onReInit = function (cb) {

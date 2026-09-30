@@ -33,6 +33,9 @@ const dummy_sprite = {
     return false;
   },
   texs: [dummy_texture],
+  getAspect() {
+    return 1;
+  },
 } as Sprite;
 
 markdownImageRegister('foo', {
