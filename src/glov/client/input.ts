@@ -734,6 +734,20 @@ export function inputFrameKeyUp(): null | FrameKeyUp {
   return frame_keyup;
 }
 
+let keyboard_layout_map: Rec<number, string> = localStorageGetJSON('layout_map', {});
+function updateLayoutMap(code: number, name: string): void {
+  if (keyboard_layout_map[code] !== name) {
+    keyboard_layout_map[code] = name;
+    localStorageSetJSON('layout_map', keyboard_layout_map);
+  }
+}
+
+// Only known/correct if it's been pushed
+// This is used as a fallback to `keyboard.getLayoutMap` which does not exist on Firefox
+export function inputKeyName(code: number): string | undefined {
+  return keyboard_layout_map[code];
+}
+
 function onKeyDown(event: OurKeyboardEvent): void {
   protectUnload(event.ctrlKey);
   let code = qwertyKeyCodeFromEvent(event);
@@ -748,7 +762,10 @@ function onKeyDown(event: OurKeyboardEvent): void {
     event.stopPropagation();
     event.preventDefault();
   }
-  // console.log(`${event.code} ${event.keyCode}`);
+  // console.log(`${event.code} ${event.keyCode} ${event.key}`);
+  if (typeof event.key === 'string') {
+    updateLayoutMap(code, event.key);
+  }
   onUserInput();
 
   // Letting through to our code regardless of no_stop, because we handle things like ESC in INPUT elements

@@ -46,6 +46,7 @@ import {
   eatAllKeyboardInput,
   inputFrameKeyUp,
   inputFramePadUp,
+  inputKeyName,
   inputLookupKeyName,
   inputLookupPadName,
   inputNameNormalize,
@@ -477,7 +478,7 @@ function formatBindKey(show_bindtype: boolean, entry: {
   modifiers: number;
 }): string {
   return `${modToString(entry.modifiers)}${show_bindtype ? capitalize(entry.bindtype) : ''}` +
-    `${entry.key_name || show_bindtype ? toCamelCase(entry.key) : formatKeyName(entry.key)}`;
+    `${entry.key_name || (show_bindtype ? toCamelCase(entry.key) : formatKeyName(entry.key))}`;
 }
 
 
@@ -576,12 +577,11 @@ type LayoutMapper = {
 };
 let layout_map: LayoutMapper;
 
-let did_layout_map_init = false;
+let layout_map_initing = false;
 function layoutMapInit(): void {
-  if (did_layout_map_init) {
+  if (layout_map_initing) {
     return;
   }
-  did_layout_map_init = true;
 
   let nav = navigator as unknown as {
     keyboard: {
@@ -592,28 +592,39 @@ function layoutMapInit(): void {
     return;
   }
 
+  layout_map_initing = true;
   nav.keyboard.getLayoutMap().then(function (lm) {
     layout_map = lm;
   }, function (err) {
     console.warn(`Error getting keyboard layout map: ${err}`);
   });
+  setTimeout(function () {
+    layout_map_initing = false;
+  }, 1000);
 }
 
 function keyLocalName(key: ValidKey): string | undefined {
+  layoutMapInit();
   // TODO: lazy populate this from `event.key` for a fallback
   let key_code = KEYS[key];
-  if (layout_map && key_code) {
-    // convert to event code
-    let event_code = eventCodeFromKeyCode(key_code);
-    if (event_code) {
-      try {
-        let ret = layout_map.get(event_code);
-        if (ret) {
-          return toCamelCase(ret);
+  if (key_code) {
+    if (layout_map) {
+      // convert to event code
+      let event_code = eventCodeFromKeyCode(key_code);
+      if (event_code) {
+        try {
+          let ret = layout_map.get(event_code);
+          if (ret) {
+            return toCamelCase(ret);
+          }
+        } catch (e) {
+          // ignore
         }
-      } catch (e) {
-        // ignore
       }
+    }
+    let ret = inputKeyName(key_code);
+    if (ret) {
+      return toCamelCase(ret);
     }
   }
 }
@@ -682,9 +693,6 @@ class BindUIState {
     existing: BindExport | null;
     waiting_for_no_keys: boolean;
   } = null;
-  constructor() {
-    layoutMapInit();
-  }
   initial_binds = initialBindsMap();
   cur_binds = bindExport();
 }
