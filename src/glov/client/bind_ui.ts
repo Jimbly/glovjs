@@ -25,7 +25,8 @@ import {
   plural,
 } from 'glov/common/util';
 import { actionExists } from './actions';
-import { autoResetSkippedFrames } from './auto_reset';
+import { autoResetEachFrame, autoResetSkippedFrames } from './auto_reset';
+import { autoAtlas, autoAtlasContains, autoAtlasSwap } from './autoatlas';
 import {
   bindBind,
   BindExport,
@@ -54,6 +55,7 @@ import {
   keyDown,
   KEYS,
   padButtonDown,
+  padName,
   ValidKey,
   ValidPad,
 } from './input';
@@ -65,7 +67,11 @@ import {
 } from './input_constants';
 import { eventCodeFromKeyCode } from './keycode';
 import { localStorageGetJSON, localStorageSetJSON } from './local_storage';
+import { markdownImageRegisterAutoAtlas } from './markdown_renderables';
 import { scrollAreaCreate } from './scroll_area';
+import { dropDown } from './selection_box';
+import * as settings from './settings';
+import { settingsRegister, settingsSet } from './settings';
 import {
   buttonText,
   copyTextToClipboard,
@@ -78,6 +84,55 @@ import {
 } from './ui';
 
 const { max, min, floor } = Math;
+
+const CONTROLLER_NAMES = {
+  auto: 'Auto',
+  xbox: 'Xbox',
+  xboxone: 'Xbox One',
+  ps4: 'PS4',
+  ps5: 'PS5',
+  switch: 'Switch',
+  steamdeck: 'SteamDeck',
+};
+type ControllerIcons = keyof typeof CONTROLLER_NAMES;
+const CONTROLLER_ICONS = Object.keys(CONTROLLER_NAMES) as ControllerIcons[];
+declare module 'glov/client/settings' {
+  let controller_icons: ControllerIcons;
+}
+
+settingsRegister({
+  controller_icons: {
+    default_value: 'auto',
+    type: cmd_parse.TYPE_STRING,
+    help: `Which controller icons to use (valid options: ${CONTROLLER_ICONS.join(', ')})`,
+  },
+});
+
+function controllerIconAuto(): ControllerIcons {
+  let id = padName().toLowerCase();
+  if (id.includes('dualshock') || id.includes('ps4')) {
+    return 'ps4';
+  }
+  if (id.includes('054c') && id.includes('05c4')) {
+    return 'ps4';
+  }
+  if (id.includes('054c') && (id.includes('0ce6') || id.includes('0df2'))) {
+    return 'ps5';
+  }
+  if (id.includes('dualsense') || id.includes('ps5')) {
+    return 'ps5';
+  }
+  if (id.includes('sony')) {
+    return 'ps4';
+  }
+  if (id.includes('xbox one') || id.includes('xbox sx') || id.includes('xbox series')) {
+    return 'xboxone';
+  }
+  if (id.includes('nintendo') || id.includes('switch')) {
+    return 'switch';
+  }
+  return 'xbox'; // Default fallback
+}
 
 type UserBinds = {
   unbinds?: string[];
@@ -402,6 +457,14 @@ const SPECIAL_NAMES: TSMap<string> = {
   NUMPAD_SUBTRACT: 'NumPad-',
   NUMPAD_DECIMAL_POINT: 'NumPad.',
   NUMPAD_DIVIDE: 'NumPad/',
+  LSTICK_UP: 'LStickUp',
+  LSTICK_RIGHT: 'LStickRight',
+  LSTICK_DOWN: 'LStickDown',
+  LSTICK_LEFT: 'LStickLeft',
+  RSTICK_UP: 'RStickUp',
+  RSTICK_RIGHT: 'RStickRight',
+  RSTICK_DOWN: 'RStickDown',
+  RSTICK_LEFT: 'RStickLeft',
 };
 function formatKeyName(key: string): string {
   return SPECIAL_NAMES[key] || toCamelCase(key);
@@ -414,7 +477,7 @@ function formatBindKey(show_bindtype: boolean, entry: {
   modifiers: number;
 }): string {
   return `${modToString(entry.modifiers)}${show_bindtype ? capitalize(entry.bindtype) : ''}` +
-    `${entry.key_name || formatKeyName(entry.key)}`;
+    `${entry.key_name || show_bindtype ? toCamelCase(entry.key) : formatKeyName(entry.key)}`;
 }
 
 
@@ -478,6 +541,9 @@ export function bindUIStartup(): void {
     let bind = base_binds_list[ii];
     base_binds[bindToString(bind)] = bind;
   }
+
+  markdownImageRegisterAutoAtlas('gamepad');
+  autoAtlas('gamepad', 'a'); // start it loading
 
   user_binds = localStorageGetJSON<UserBinds>('binds', {});
 
@@ -552,6 +618,17 @@ function keyLocalName(key: ValidKey): string | undefined {
   }
 }
 
+let cur_icon_set: ControllerIcons = 'xbox';
+const ATLAS_BY_CONTROLLER: Record<ControllerIcons, string> = {
+  auto: 'gamepad', // never used
+  xbox: 'gamepad',
+  xboxone: 'gamepad-xboxone',
+  ps4: 'gamepad-ps4',
+  ps5: 'gamepad-ps5',
+  switch: 'gamepad-switch',
+  steamdeck: 'gamepad-steamdeck',
+};
+
 function bindLocalName(bind: {
   bindtype: BindType;
   key: ValidKey | ValidPad;
@@ -560,6 +637,25 @@ function bindLocalName(bind: {
   let key_name;
   if (bind.bindtype === 'key') {
     key_name = keyLocalName(bind.key as ValidKey);
+  }
+  if (bind.bindtype === 'controller') {
+    let img = bind.key.toLowerCase();
+    if (autoResetEachFrame('bindLocalName-controllers')) {
+      let new_set = settings.controller_icons;
+      if (!ATLAS_BY_CONTROLLER[new_set]) {
+        new_set = 'auto';
+      }
+      if (new_set === 'auto') {
+        new_set = controllerIconAuto();
+      }
+      if (new_set !== cur_icon_set) {
+        cur_icon_set = new_set;
+        autoAtlasSwap('gamepad', ATLAS_BY_CONTROLLER[new_set]);
+      }
+    }
+    if (autoAtlasContains('gamepad', img)) {
+      return `[img=${bind.key.toLowerCase()}]`;
+    }
   }
   return formatBindKey(false, {
     ...bind,
@@ -793,9 +889,10 @@ export function bindUIRun(opts: UIBox & {
     bind_ui_state.page = 'controller';
     bind_ui_state.editing_bind = null;
   }
-  y += button_height + pad/2;
+  y += button_height + pad;
 
   let scroll_w = w + pad;
+  y -= pad / 2;
   bind_ui_state.scroll_area.begin({
     x, y, z, w: scroll_w, h: y0 + h - y - button_height - pad/2,
     background_color: null,
@@ -810,6 +907,34 @@ export function bindUIRun(opts: UIBox & {
   let binds_per_row = 3;
   const avail_w = w - pad * (binds_per_row + 1) - label_w - (tiny_add_new ? bind_remove_w + pad : 0);
   let bind_button_w = max(row_h, (avail_w / binds_per_row) - bind_remove_w);
+
+  if (bind_ui_state.page === 'controller') {
+    x = 0;
+    font.draw({
+      style: label_style,
+      x, y, z, w: label_w, h: row_h,
+      align: ALIGN.HVCENTERFIT,
+      text: 'Button Icons',
+    });
+    x += label_w + pad;
+    let new_icons = dropDown({
+      x, y, width: (bind_button_w + bind_remove_w) * 2 + pad,
+      items: CONTROLLER_ICONS.map((id) => {
+        let name = CONTROLLER_NAMES[id];
+        if (id === 'auto') {
+          name = `Auto (${CONTROLLER_NAMES[controllerIconAuto()]})`;
+        }
+        return {
+          tag: id,
+          name,
+        };
+      }),
+    }, settings.controller_icons);
+    if (new_icons && new_icons.tag !== settings.controller_icons) {
+      settingsSet('controller_icons', new_icons.tag as string);
+    }
+    y += row_h + pad;
+  }
 
   let idx = 0;
   for (let cmd in bindable_cmds) {
@@ -877,7 +1002,8 @@ export function bindUIRun(opts: UIBox & {
       }
       if (buttonText({
         x, y, z, w: this_w, h: row_h,
-        key: `bind${cmd}-${totalcount}`,
+        key: `bind${cmd}-${totalcount}-${cur_icon_set}`,
+        markdown: true,
         text: is_editing ? editAnim() : bindLocalName(bind),
         tooltip: is_editing ? 'Press the desired key, or click to cancel changing this binding' : undefined,
       })) {

@@ -1197,6 +1197,7 @@ const NUM_STICKS = 2;
 const PAD_THRESHOLD = 0.35; // for turning analog motion into digital events
 
 type GamepadData = {
+  name: string;
   id: number;
   timestamp: number;
   sticks: Vec2[];
@@ -1209,6 +1210,7 @@ function getGamepadData(idx: number): GamepadData {
   let gpd = gamepad_data[idx];
   if (!gpd) {
     gpd = gamepad_data[idx] = {
+      name: 'unknown',
       id: idx,
       timestamp: 0,
       sticks: new Array(NUM_STICKS),
@@ -1273,6 +1275,7 @@ function updatePadState(gpd: GamepadData, ps: PadState, is_down: boolean, padcod
 type GetGamepadsFn = () => GetGamepadsRet;
 type GamepadQueryButtonData = number | { value: number };
 type GamepadQueryData = {
+  id: string;
   timestamp: number;
   buttons: GamepadQueryButtonData[];
   axes: number[];
@@ -1284,6 +1287,10 @@ type NavigatorFallback = {
   getGamepads?: GetGamepadsFn;
   webkitGetGamepads?: GetGamepadsFn;
 };
+export function padName(padindex?: number): string {
+  padindex = padindex || 0;
+  return gamepad_data[padindex]?.name || 'unknown';
+}
 function gamepadUpdate(): void {
   let gamepads;
   try {
@@ -1304,6 +1311,7 @@ function gamepadUpdate(): void {
         continue;
       }
       let gpd = getGamepadData(ii);
+      gpd.name = gamepad.id || 'unknown';
       let ps = pad_states[ii];
       // Update button states
       if (gpd.timestamp < gamepad.timestamp) {
