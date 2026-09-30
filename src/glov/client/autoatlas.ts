@@ -75,6 +75,11 @@ function saveOrig(sprite: AutoAtlasSprite): void {
   }
 }
 
+let no_warn = false;
+export function autoAtlasNoWarn(new_value: boolean): void {
+  no_warn = new_value;
+}
+
 class AutoAtlasImp {
   sprites: TSMap<AutoAtlasSprite> = {};
 
@@ -352,12 +357,14 @@ class AutoAtlasImp {
     let ret = this.sprites[img_name];
     if (!ret) {
       ret = this.sprites[img_name] = this.prealloc();
-      if (hit_startup) {
+      if (hit_startup && !no_warn) {
         dataError(`AutoAtlas "${this.atlas_name}" does not contain image "${img_name}"`);
         spriteMakeError(ret);
       }
     }
-    ret.autoatlas_used = true;
+    if (!no_warn) {
+      ret.autoatlas_used = true;
+    }
     return ret;
   }
 
@@ -456,6 +463,11 @@ export function autoAtlasOnImage(atlas_name: string, cb: (img_name: string) => v
 
 export function autoAtlas(atlas_name: string, img_name: string): SpriteWithUIData {
   return autoAtlasGet(atlas_name).get(img_name);
+}
+
+// will return false while loading
+export function autoAtlasContains(atlas_name: string, img_name: string): boolean {
+  return Boolean(autoAtlasGet(atlas_name).sprites[img_name]);
 }
 
 export function autoAtlasSwap(src: string, dest: string): void {

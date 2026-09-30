@@ -12,6 +12,7 @@ import {
 } from 'glov/common/vmath';
 import {
   autoAtlas,
+  autoAtlasNoWarn,
   autoAtlasOnImage,
 } from './autoatlas';
 import {
@@ -122,9 +123,11 @@ export function markdownImageRegisterAutoAtlas(atlas_name: string): void {
     if (img_name === 'def') { // exists in every atlas
       return;
     }
+    autoAtlasNoWarn(true);
     markdownImageRegister(img_name, {
       sprite: autoAtlas(atlas_name, img_name),
     });
+    autoAtlasNoWarn(false);
   });
 }
 
