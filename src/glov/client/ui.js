@@ -1284,6 +1284,7 @@ export function buttonTextDraw(param, state, focused) {
   let text_height = param.font_height;
   if (param.markdown) {
     markdownAuto({
+      key: param.key,
       font: font_use,
       font_style,
       x, y, z,

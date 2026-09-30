@@ -853,7 +853,7 @@ export function markdownDraw(param: MarkdownDrawCachedParam): void {
 type MarkdownAutoParamBase = MarkdownStateParam & MarkdownParseParam & MarkdownLayoutParam;
 type MarkdownAutoParamDraw = MarkdownAutoParamBase & MarkdownDrawParam;
 type MarkdownAutoParamNoDraw = MarkdownAutoParamBase & { no_draw: true };
-export type MarkdownAutoParam = MarkdownAutoParamDraw | MarkdownAutoParamNoDraw;
+export type MarkdownAutoParam = (MarkdownAutoParamDraw | MarkdownAutoParamNoDraw) & { key?: string };
 function isAutoDrawParam(param: MarkdownAutoParam): param is MarkdownAutoParamDraw {
   return !(param as MarkdownAutoParamNoDraw).no_draw;
 }
@@ -881,6 +881,7 @@ export function markdownAuto(param: MarkdownAutoParam): MarkdownDims {
       param.indent || 0,
       param.align || 0,
       param.font_style ? fontStyleHash(param.font_style) : 0,
+      param.key || '',
     ].join(':');
     state.cache = getUIElemData(cache_key, { key: text }, mdcAlloc);
     profilerStop();
