@@ -181,6 +181,9 @@ module.exports = function (opts) {
       let img_file = files[ii];
       let m = img_file.relative.match(regex_atlas_input);
       let atlas_name = m[1].toLowerCase();
+      if (atlas_name.startsWith('_')) {
+        continue;
+      }
       let list_data = lists[atlas_name] = lists[atlas_name] || [];
       list_data.push(img_file.relative);
     }
