@@ -1,12 +1,13 @@
 import {
   KeysMatching,
+  KeysMatchingLoose,
   NumberBoolean,
 } from 'glov/common/types';
 import * as settings from './settings';
 
 export type SettingsNumericalKeys = KeysMatching<typeof settings, number>;
 export type SettingsStringKeys = KeysMatching<typeof settings, string>;
-// export type SettingsValueKeys = KeysMatching<typeof settings, string | number>;
+export type SettingsValueKeys = KeysMatchingLoose<typeof settings, string | number>;
 
 declare module 'glov/client/settings' {
   // Engine settings declared in settings.js:
