@@ -216,6 +216,7 @@ class ScrollAreaInternal implements ScrollArea {
     this.scroll_pos = clamped_pos;
   }
 
+  just_scrolled = false;
   keyboardScroll(): void {
     if (this.was_disabled) {
       return;
@@ -239,6 +240,7 @@ class ScrollAreaInternal implements ScrollArea {
     }
 
     if (modified) {
+      this.just_scrolled = true;
       this.clampScrollPos();
     }
   }
@@ -259,6 +261,7 @@ class ScrollAreaInternal implements ScrollArea {
       // assumes the focus'd spot was in the same camera transform, if not, need to adapt to use .dom_pos instead
       this.scrollIntoFocus(focused_sub_elem.y, focused_sub_elem.y + focused_sub_elem.h + 1, this.h);
     }
+    this.just_scrolled = false;
 
     let maxvalue = max(h - this.h+1, 0);
     if (this.scroll_pos > maxvalue) {
@@ -577,17 +580,26 @@ class ScrollAreaInternal implements ScrollArea {
     let changed = false;
     miny = max(miny, 0);
     if (miny < this.scroll_pos) {
-      this.scroll_pos = miny;
+      if (!this.just_scrolled) {
+        this.scroll_pos = miny;
+      }
       changed = true;
     }
     maxy -= h;
     if (maxy > this.scroll_pos) {
-      this.scroll_pos = maxy;
+      if (!this.just_scrolled) {
+        this.scroll_pos = maxy;
+      }
       changed = true;
     }
     if (changed) {
-      // Make it smooth/bouncy a bit
-      this.overscroll = old_scroll_pos - this.scroll_pos;
+      if (this.just_scrolled) {
+        // we keyboard scrolled and now the element is out of focus, just unfocus instead
+        spotUnfocus();
+      } else {
+        // Make it smooth/bouncy a bit
+        this.overscroll = old_scroll_pos - this.scroll_pos;
+      }
     }
     this.ignore_this_fram_drag = true;
   }
