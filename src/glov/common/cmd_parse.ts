@@ -44,6 +44,7 @@ type CmdValueDefBase<T=string|number> = {
   default_value?: string | number;
   enum_lookup?: TSMap<number>; // TYPE_INT only
   is_toggle?: boolean;
+  no_value_display?: boolean; // do not display message with new value upon change
   set?: (str: T) => void;
   get?: () => T;
 };
@@ -501,7 +502,7 @@ class CmdParse {
         param.on_change(false);
       }
       if (param.get) {
-        return value();
+        return param.no_value_display ? resp_func() : value();
       } else {
         return resp_func(null, `${label} updated`);
       }
