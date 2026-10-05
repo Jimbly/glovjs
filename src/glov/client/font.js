@@ -20,6 +20,7 @@ export const ALIGN = {
 
   HFIT: 1 << 4,
   HWRAP: 1 << 5,
+  MANUALWRAP: 1 << 6, // just for Markdown - basically a workaround for insufficient HVCENTERFIT logic
 
   HCENTERFIT: 1 | (1 << 4),
   HRIGHTFIT: 2 | (1 << 4),

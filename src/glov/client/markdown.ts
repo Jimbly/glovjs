@@ -198,6 +198,7 @@ function layoutChildren(content: MDLayoutBlock[], param: MDLayoutCalcParam): MDD
   let ret: MDDrawBlock[] = [];
   let last_break_post = true;
   let safety = 0;
+  let do_wrap = param.align & ALIGN.HWRAP;
   function isStartOfLine(block: MDDrawBlock): boolean {
     return block.dims.x === param.cursor.line_x0;
   }
@@ -210,6 +211,11 @@ function layoutChildren(content: MDLayoutBlock[], param: MDLayoutCalcParam): MDD
     }
     let last_block = ret[ret.length - 1];
     let new_blocks = elem.layout(param);
+    if (!do_wrap) {
+      ret = ret.concat(new_blocks);
+      idx++;
+      continue;
+    }
     if (last_break_post || elem.break_pre) {
       // break allowed before this element
       if (new_blocks.length) {
@@ -392,7 +398,7 @@ class MDBlockText implements MDLayoutBlock {
     let { cursor, line_height, text_height } = param;
     let ret: MDDrawBlockText[] = [];
     let text = this.content;
-    if (!(param.align & ALIGN.HWRAP)) {
+    if (!(param.align & (ALIGN.HWRAP | ALIGN.MANUALWRAP))) {
       text = text.replace(/\n/g, ' ');
     }
     text = text.replace(/&nbsp;/g, '\xA0');
@@ -458,6 +464,27 @@ class MDBlockText implements MDLayoutBlock {
       } else {
         // all whitespace, just advance cursor
         cursor.x += param.font.getStringWidth(param.font_style, text_height, text);
+      }
+    } else if (param.align & ALIGN.MANUALWRAP) {
+      let lines = text.split('\n');
+      for (let ii = 0; ii < lines.length; ++ii) {
+        let line = lines[ii];
+        let str_w = param.font.getStringWidth(param.font_style, text_height, line);
+        let layout_param: MDBlockTextLayout = {
+          x: -1, // filled below
+          y: -1, // filled below
+          font: param.font,
+          font_style: param.font_style,
+          h: text_height,
+          w: str_w,
+          align: param.align,
+          text: line,
+        };
+        markdownLayoutFit(param, layout_param);
+        ret.push(new MDDrawBlockText(layout_param));
+        if (ii !== lines.length - 1) {
+          markdownLayoutWrap(param);
+        }
       }
     } else {
       let str_w = param.font.getStringWidth(param.font_style, text_height, text);
@@ -648,6 +675,48 @@ function markdownLayout(param: MarkdownStateCached & MarkdownLayoutParam): void 
     miny = min(miny, dims.y);
   }
   let bottom_pad = max(0, calc_param.cursor.line_y1 - maxy);
+  // do HFIT scaling (before centering)
+  if ((calc_param.align & ALIGN.HFIT) && maxx > calc_param.w + EPSILON && draw_blocks.length) {
+    // Note: this will only get hit for HFIT w/out HWRAP (or w/ MANUALWRAP)
+    //   - the FIT+WRAP combo case should be covered in markdownLayoutFit
+    let row_h_est = calc_param.line_height / 2;
+    let row_start_idx = 0;
+    let last_dims = draw_blocks[0].dims;
+    let row_maxx = last_dims.x + last_dims.w;
+    for (let ii = 1; ii < draw_blocks.length + 1; ++ii) {
+      let is_last = ii === draw_blocks.length;
+      let do_scaling = is_last;
+      if (!is_last) {
+        let dims = draw_blocks[ii].dims;
+        let ymid = dims.y + dims.h / 2;
+        if (ymid > last_dims.y + last_dims.h / 2 + row_h_est &&
+          dims.x < last_dims.x + last_dims.w / 2
+        ) {
+          do_scaling = true;
+        }
+      }
+      if (do_scaling) {
+        // detected a wrap, do alignment
+        let xscale = calc_param.w / row_maxx;
+        if (xscale < 1) {
+          for (let jj = row_start_idx; jj < ii; ++jj) {
+            let block = draw_blocks[jj];
+            let x0 = block.dims.x;
+            let x1 = x0 + block.dims.w;
+            block.dims.x = x0 * xscale;
+            block.dims.w = (x1 - x0) * xscale;
+          }
+        }
+        row_start_idx = ii;
+        row_maxx = 0;
+      }
+      if (!is_last) {
+        last_dims = draw_blocks[ii].dims;
+        row_maxx = max(row_maxx, last_dims.x + last_dims.w);
+      }
+
+    }
+  }
   if ((calc_param.align & (ALIGN.HRIGHT | ALIGN.HCENTER)) && draw_blocks.length) {
     // Find rightmost block for every row
     let row_h_est = calc_param.line_height / 2;
@@ -685,17 +754,6 @@ function markdownLayout(param: MarkdownStateCached & MarkdownLayoutParam): void 
       if (!is_last) {
         last_dims = draw_blocks[ii].dims;
       }
-    }
-  }
-  if ((calc_param.align & ALIGN.HFIT) && maxx > calc_param.w + EPSILON) {
-    // Note: this will only get hit for HFIT w/out HWRAP - the combo case should be covered in markdownLayoutFit
-    let xscale = calc_param.w / maxx;
-    for (let ii = 0; ii < draw_blocks.length; ++ii) {
-      let block = draw_blocks[ii];
-      let x0 = block.dims.x;
-      let x1 = x0 + block.dims.w;
-      block.dims.x = x0 * xscale;
-      block.dims.w = (x1 - x0) * xscale;
     }
   }
   if (draw_blocks.length && (calc_param.align & (ALIGN.VCENTER | ALIGN.VBOTTOM))) {

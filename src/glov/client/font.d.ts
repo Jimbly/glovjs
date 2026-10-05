@@ -43,6 +43,7 @@ export enum ALIGN {
 
   HFIT,
   HWRAP,
+  MANUALWRAP,
 
   // Convenience combinations of the above:
   HCENTERFIT,
