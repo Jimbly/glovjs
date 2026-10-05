@@ -1,7 +1,7 @@
 /* globals navigator */
 
 export const DEFAULT_BINDABLE_CMDS: Rec<string, string> = {
-  up: 'Up',
+  up: 'General Interface#Up',
   left: 'Left',
   down: 'Down',
   right: 'Right',
@@ -24,6 +24,7 @@ import {
   identity,
   plural,
 } from 'glov/common/util';
+import { Vec4 } from 'glov/common/vmath';
 import { actionExists } from './actions';
 import { autoResetEachFrame, autoResetSkippedFrames } from './auto_reset';
 import { autoAtlas, autoAtlasContains, autoAtlasSwap } from './autoatlas';
@@ -46,6 +47,7 @@ import {
   eatAllKeyboardInput,
   inputFrameKeyUp,
   inputFramePadUp,
+  inputKeyInverseMapped,
   inputKeyName,
   inputLookupKeyName,
   inputLookupPadName,
@@ -66,7 +68,7 @@ import {
   MOD_CTRL,
   MOD_SHIFT,
 } from './input_constants';
-import { eventCodeFromKeyCode } from './keycode';
+import { eventCodeFromKeyCode, qwertyKeyCodeFromEventCode } from './keycode';
 import { localStorageGetJSON, localStorageSetJSON } from './local_storage';
 import { markdownImageRegisterAutoAtlas } from './markdown_renderables';
 import { scrollAreaCreate } from './scroll_area';
@@ -85,6 +87,8 @@ import {
 } from './ui';
 
 const { max, min, floor } = Math;
+
+type BindExportLight = Omit<BindExport, 'last_used'>;
 
 const CONTROLLER_NAMES = {
   auto: 'Auto',
@@ -140,7 +144,7 @@ type UserBinds = {
   binds?: string[];
 };
 let user_binds: UserBinds;
-let base_binds: Rec<string, BindExport>;
+let base_binds: Rec<string, BindExportLight>;
 
 type UserBindParam = {
   modifiers: number;
@@ -152,8 +156,19 @@ type UserBindParam = {
 
 let persist_binds = false;
 
+function needsCamelCase(s: string): boolean {
+  for (let ii = 0; ii < s.length; ++ii) {
+    let c = s.charCodeAt(ii);
+    if (c >= 97 && c <= 122) {
+      return ii === 0;
+    }
+  }
+  return true;
+}
 function toCamelCase(s: string): string {
-  return s.split('_').map((a) => capitalize(a.toLowerCase())).join('');
+  return s.split('_').map((a) => {
+    return needsCamelCase(a) ? capitalize(a.toLowerCase()) : a;
+  }).join('');
 }
 
 const MOD_LOOKUP: TSMap<number> = {
@@ -172,7 +187,7 @@ function modToString(modifiers: number): string {
   return ret.join('');
 }
 
-function bindToString(bind: Omit<BindExport, 'events'> | Optional<UserBindParam, 'layer'>): string {
+function bindToString(bind: Omit<BindExportLight, 'events'> | Optional<UserBindParam, 'layer'>): string {
   return `${modToString(bind.modifiers).toLowerCase()}${bind.bindtype.toLowerCase()}` +
     `${toCamelCase(bind.key).toLowerCase()}` +
     ` ${bind.layer && bind.layer !== 'default' ?`${bind.layer}.`:''}${bind.cmd}`;
@@ -387,6 +402,9 @@ function addBindFromString(param: string, auto_unbind: boolean): string | null {
   let modifiers = modNamesToNumber(modnames);
 
   if (auto_unbind) {
+    if (!layer) {
+      layer = defaultLayer(cmd, bindtype, key);
+    }
     unbindSub({
       bindtype,
       modifiers,
@@ -466,21 +484,26 @@ const SPECIAL_NAMES: TSMap<string> = {
   RSTICK_RIGHT: 'RStickRight',
   RSTICK_DOWN: 'RStickDown',
   RSTICK_LEFT: 'RStickLeft',
+  ArrowUp: 'Up',
+  ArrowLeft: 'Left',
+  ArrowRight: 'Right',
+  ArrowDown: 'Down',
+  Escape: 'Esc',
 };
 function formatKeyName(key: string): string {
   return SPECIAL_NAMES[key] || toCamelCase(key);
 }
 
-function formatBindKey(show_bindtype: boolean, entry: {
+function formatBindKeyForCmd(entry: {
   bindtype: BindType;
   key: ValidKey | ValidPad;
   key_name?: string;
   modifiers: number;
 }): string {
-  return `${modToString(entry.modifiers)}${show_bindtype ? capitalize(entry.bindtype) : ''}` +
-    `${entry.key_name || (show_bindtype ? toCamelCase(entry.key) : formatKeyName(entry.key))}`;
+  return `${modToString(entry.modifiers)}${capitalize(entry.bindtype)}` +
+    `${entry.key_name ? SPECIAL_NAMES[entry.key_name] || entry.key_name :
+    toCamelCase(entry.key)}`;
 }
-
 
 cmd_parse.register({
   cmd: 'bindlist',
@@ -495,7 +518,7 @@ cmd_parse.register({
     for (let ii = 0; ii < list.length; ++ii) {
       let entry = list[ii];
       let is_default = base_binds[bindToString(entry)];
-      let line = `${formatBindKey(true, entry)}` +
+      let line = `${formatBindKeyForCmd(entry)}` +
         ` ${entry.layer !== 'default' ? `${entry.layer}.` : ''}${entry.cmd}`;
       (is_default ? ret_default : ret_user).push(line);
     }
@@ -574,8 +597,10 @@ export function bindUIStartup(): void {
 
 type LayoutMapper = {
   get: (event_code: string) => string | undefined;
+  keys: () => string[]; // not actually, it's really some kind of Iterator
 };
 let layout_map: LayoutMapper;
+let layout_inverse_map: Rec<ValidKey, ValidKey>;
 
 let layout_map_initing = false;
 function layoutMapInit(): void {
@@ -595,6 +620,29 @@ function layoutMapInit(): void {
   layout_map_initing = true;
   nav.keyboard.getLayoutMap().then(function (lm) {
     layout_map = lm;
+    layout_inverse_map = {};
+    if (layout_map) {
+      let keys = layout_map.keys();
+      if (keys && keys.forEach) {
+        keys.forEach(function (event_code: string) {
+          let input_code_number = qwertyKeyCodeFromEventCode(event_code);
+          if (!input_code_number) {
+            return;
+          }
+          let input_code_name = inputLookupKeyName(input_code_number);
+          if (!input_code_name) {
+            return;
+          }
+          let key_name = layout_map.get(event_code);
+          if (key_name) {
+            let key_name_uc = key_name.toUpperCase();
+            if (inputValidKeyName(key_name_uc)) {
+              layout_inverse_map[key_name_uc] = input_code_name;
+            }
+          }
+        });
+      }
+    }
   }, function (err) {
     console.warn(`Error getting keyboard layout map: ${err}`);
   });
@@ -603,9 +651,23 @@ function layoutMapInit(): void {
   }, 1000);
 }
 
+// Given a letter like 'W', return the input API key name (e.g. 'Z' on Azerty) that maps to it
+export function inverseMappedHotkey(letter: ValidKey): ValidKey {
+  if (layout_inverse_map && layout_inverse_map[letter]) {
+    return layout_inverse_map[letter];
+  }
+  let key_code = inputKeyInverseMapped(letter);
+  if (key_code) {
+    let key_name = inputLookupKeyName(key_code);
+    if (key_name) {
+      return key_name;
+    }
+  }
+  return letter;
+}
+
 function keyLocalName(key: ValidKey): string | undefined {
   layoutMapInit();
-  // TODO: lazy populate this from `event.key` for a fallback
   let key_code = KEYS[key];
   if (key_code) {
     if (layout_map) {
@@ -640,7 +702,7 @@ const ATLAS_BY_CONTROLLER: Record<ControllerIcons, string> = {
   steamdeck: 'gamepad-steamdeck',
 };
 
-function bindLocalName(bind: {
+export function bindLocalName(bind: {
   bindtype: BindType;
   key: ValidKey | ValidPad;
   modifiers: number;
@@ -668,15 +730,27 @@ function bindLocalName(bind: {
       return `[img=${bind.key.toLowerCase()}]`;
     }
   }
-  return formatBindKey(false, {
-    ...bind,
-    key_name,
-  });
+
+  let qwerty_name = formatKeyName(bind.key);
+  if (key_name && qwerty_name.startsWith('NumPad') && qwerty_name.endsWith(key_name)) {
+    // inputKeyName will return `2` for `NumPad2`
+    key_name = undefined;
+  }
+  if (key_name && !key_name.trim()) { // e.g. ' '
+    key_name = undefined;
+  }
+  if (key_name && key_name.startsWith('Arrow')) {
+    // keyLocalName returns 'Arrowup', we just want 'Up', etc.
+    key_name = undefined;
+  }
+
+  return `${modToString(bind.modifiers)}` +
+    `${key_name ? SPECIAL_NAMES[key_name] || key_name : qwerty_name}`;
 }
 
-function initialBindsMap(): Rec<string, BindExport> {
+function initialBindsMap(): Rec<string, BindExportLight> {
   let binds = bindExport();
-  let ret: Rec<string, BindExport> = {};
+  let ret: Rec<string, BindExportLight> = {};
   for (let ii = 0; ii < binds.length; ++ii) {
     let bind = binds[ii];
     ret[bindToString(bind)] = bind;
@@ -690,16 +764,20 @@ class BindUIState {
   editing_bind: null | {
     idx: number;
     cmd: string;
-    existing: BindExport | null;
+    existing: BindExportLight | null;
     waiting_for_no_keys: boolean;
   } = null;
   initial_binds = initialBindsMap();
-  cur_binds = bindExport();
+  cur_binds: BindExportLight[] = bindExport();
 }
 let bind_ui_state: BindUIState;
 let default_style = fontStyleColored(null, 0x000000ff);
 
-function applyChanges(old_binds: Rec<string, BindExport>, cur_binds: BindExport[], just_test: boolean): boolean {
+function applyChanges(
+  old_binds: Rec<string, BindExportLight>,
+  cur_binds: BindExportLight[],
+  just_test: boolean
+): boolean {
   let seen: TSMap<true> = {};
   for (let ii = 0; ii < cur_binds.length; ++ii) {
     let bind = cur_binds[ii];
@@ -739,7 +817,7 @@ function handleEditBind(): void {
       return;
     }
   }
-  let new_bind: BindExport | undefined;
+  let new_bind: BindExportLight | undefined;
   if (bindtype === 'key') {
     let keyup = inputFrameKeyUp();
     if (keyup) {
@@ -810,10 +888,18 @@ function handleEditBind(): void {
     } else {
       cur_binds.push(new_bind);
     }
-    // unbind anything else bound to this key
+    // unbind anything else bound to this key in the same layer
+    let layer = defaultLayer(new_bind.cmd, bindtype, new_bind.key);
+    if (layer === 'navext') {
+      layer = 'nav';
+    }
+
     for (let ii = cur_binds.length - 1; ii >= 0; --ii) {
       let bind = cur_binds[ii];
       if (bind === new_bind) {
+        continue;
+      }
+      if (bind.layer !== layer || layer === 'nav' && bind.layer === 'navext') {
         continue;
       }
       if (bind.bindtype === bindtype && bind.key === new_bind.key && bind.modifiers === new_bind.modifiers) {
@@ -848,12 +934,16 @@ export function bindUIRun(opts: UIBox & {
   pad: number;
   bindable_cmds?: Rec<string, string>;
   label_style?: FontStyle;
+  header_style?: FontStyle;
+  alt_background_color?: Vec4;
 }): boolean {
-  let { x, y, z, w, h, pad, bindable_cmds, label_style } = opts;
+  let { x, y, z, w, h, pad, bindable_cmds, label_style, header_style, alt_background_color } = opts;
   const tiny_add_new = true;
   z = z || Z.UI;
   bindable_cmds = bindable_cmds || DEFAULT_BINDABLE_CMDS;
   label_style = label_style || default_style;
+  header_style = header_style || label_style || default_style;
+  alt_background_color = alt_background_color || [0,0,0,0.25];
   x += pad;
   y += pad;
   let x0 = x;
@@ -872,7 +962,7 @@ export function bindUIRun(opts: UIBox & {
   let button_height = uiButtonHeight();
   let font = uiGetFont();
   let { cur_binds } = bind_ui_state;
-  let binds_by_cmd: Rec<string, BindExport[]> = {};
+  let binds_by_cmd: Rec<string, BindExportLight[]> = {};
   for (let ii = 0; ii < cur_binds.length; ++ii) {
     let bind = cur_binds[ii];
     binds_by_cmd[bind.cmd] = binds_by_cmd[bind.cmd] || [];
@@ -887,6 +977,7 @@ export function bindUIRun(opts: UIBox & {
   })) {
     bind_ui_state.page = 'key';
     bind_ui_state.editing_bind = null;
+    bind_ui_state.scroll_area.resetScroll();
   }
   if (buttonText({
     x: x + (w + pad) / 2, y, z, w: (w - pad) / 2,
@@ -896,8 +987,11 @@ export function bindUIRun(opts: UIBox & {
   })) {
     bind_ui_state.page = 'controller';
     bind_ui_state.editing_bind = null;
+    bind_ui_state.scroll_area.resetScroll();
   }
   y += button_height + pad;
+
+  bind_ui_state.scroll_area.keyboardScroll();
 
   let scroll_w = w + pad;
   y -= pad / 2;
@@ -946,15 +1040,29 @@ export function bindUIRun(opts: UIBox & {
 
   let idx = 0;
   for (let cmd in bindable_cmds) {
-    let row_y_start = y;
     let active_binds = binds_by_cmd[cmd] || [];
     x = 0;
+
+    let label = bindable_cmds[cmd]!;
+    if (label.includes('#')) {
+      let header;
+      [header, label] = label.split('#');
+      y += pad/2;
+      font.draw({
+        style: header_style,
+        x, y, z, w, h: row_h,
+        align: ALIGN.HVCENTERFIT,
+        text: header,
+      });
+      y += row_h + pad/2;
+    }
+    let row_y_start = y;
 
     font.draw({
       style: label_style,
       x, y, z, w: label_w, h: row_h,
       align: ALIGN.HVCENTERFIT,
-      text: bindable_cmds[cmd]!,
+      text: label,
     });
     x += label_w + pad;
     let rowcount = 0;
@@ -997,7 +1105,7 @@ export function bindUIRun(opts: UIBox & {
         if (buttonText({
           x, y, z, w: bind_remove_w, h: row_h,
           text: 'X',
-          tooltip: `Remove binding of ${formatBindKey(true, bind)} to "${bind.cmd}"`,
+          tooltip: `Remove binding of ${formatBindKeyForCmd(bind)} to "${bind.cmd}"`,
         })) {
           bind_ui_state.editing_bind = null;
           let cur_idx = cur_binds.indexOf(bind);
@@ -1058,7 +1166,7 @@ export function bindUIRun(opts: UIBox & {
     y += row_h;
     ++idx;
     if (idx % 2) {
-      drawRect(0, row_y_start - pad/2, w, y + pad/2, z - 0.5, [0,0,0,0.25]);
+      drawRect(0, row_y_start - pad/2, w, y + pad/2, z - 0.5, alt_background_color);
     }
     y += pad;
   }
@@ -1072,7 +1180,7 @@ export function bindUIRun(opts: UIBox & {
     disabled: !applyChanges(base_binds, cur_binds, true),
     text: 'Reset to Defaults',
   })) {
-    bind_ui_state.cur_binds = clone(Object.values(base_binds) as BindExport[]);
+    bind_ui_state.cur_binds = clone(Object.values(base_binds) as BindExportLight[]);
   }
   let any_changes = applyChanges(bind_ui_state.initial_binds, cur_binds, true);
   if (buttonText({

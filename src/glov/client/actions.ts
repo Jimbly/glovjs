@@ -16,7 +16,7 @@ import {
 } from './binds';
 import { platformGetID } from './client_config';
 import { cmd_parse } from './cmds';
-import { getFrameDtHr } from './engine';
+import { debugDefineIsSet, getFrameDtHr } from './engine';
 import {
   KEYS,
   MOD_CTRL,
@@ -270,7 +270,7 @@ function actionStartup(): void {
   // actionBindPad('Y', 'cancel', 'nav');
   // actionBindPad('BACK', 'cancel', 'nav');
 
-  if (0) {
+  if (debugDefineIsSet('IJKL')) {
     // convenient set for checking if any hardcoded arrows/wasd/enter/space/etc is used
     actionBindKB('I', 'up', 0, 'navext');
     actionBindKB('J', 'left', 0, 'navext');
@@ -278,5 +278,14 @@ function actionStartup(): void {
     actionBindKB('L', 'right', 0, 'navext');
     actionBindKB('U', 'accept', 0, 'nav');
     actionBindKB('O', 'cancel', 0, 'nav');
+  }
+  if (debugDefineIsSet('YGHJ')) {
+    // second set for checking if any hardcoded arrows/wasd/enter/space/etc is used
+    actionBindKB('Y', 'up', 0, 'navext');
+    actionBindKB('G', 'left', 0, 'navext');
+    actionBindKB('H', 'down', 0, 'navext');
+    actionBindKB('J', 'right', 0, 'navext');
+    actionBindKB('R', 'accept', 0, 'nav');
+    actionBindKB('F', 'cancel', 0, 'nav');
   }
 }

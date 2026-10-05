@@ -93,8 +93,17 @@ type Bind = {
   action: BindAction;
   bindtype: BindType;
   code: number;
+  last_used: number;
   down_frame: number; // set to the current frame if we saw a down edge; only return truthy for down if matching
+  key: ValidKey | ValidPad;
 };
+export function bindIsKey<T extends Bind|BindExport>(bind: T): bind is T & { key: ValidKey } {
+  return bind.bindtype === 'key';
+}
+export function bindIsController<T extends Bind|BindExport>(bind: T): bind is T & { key: ValidPad } {
+  return bind.bindtype === 'controller';
+}
+
 type BindList = {
   code: number;
   binds: Bind[];
@@ -120,10 +129,14 @@ export type BindOpt<T> = {
 };
 
 function cmpLayerPriority(a: Bind, b: Bind): number {
-  return layers[b.layer]!.priority - layers[a.layer]!.priority;
+  let d = layers[b.layer]!.priority - layers[a.layer]!.priority;
+  if (d) {
+    return d;
+  }
+  return b.modifiers - a.modifiers;
 }
 
-export function bindGeneric(entry: BindList, bindtype: BindType, opt: BindOpt<unknown>): void {
+export function bindGeneric(entry: BindList, bindtype: BindType, opt: BindOpt<ValidKey|ValidPad>): void {
   let modifiers = opt.modifiers || 0;
   let layer = opt.layer || 'default';
   assert(layers[layer]);
@@ -134,7 +147,9 @@ export function bindGeneric(entry: BindList, bindtype: BindType, opt: BindOpt<un
     layer,
     bindtype,
     code: entry.code,
+    last_used: -1,
     down_frame: -1,
+    key: opt.key,
   };
   entry.binds.push(bind);
   entry.binds.sort(cmpLayerPriority);
@@ -228,9 +243,7 @@ const bind_set = [{
   },
 }];
 
-export type BindExport = Omit<Bind, 'code' | 'action' | 'down_frame'> & {
-  key: ValidPad | ValidKey;
-};
+export type BindExport = Omit<Bind, 'code' | 'action' | 'down_frame'>;
 export function bindExport(): BindExport[] {
   let ret: BindExport[] = [];
   bind_set.forEach(function (set) {
@@ -248,6 +261,10 @@ export function bindExport(): BindExport[] {
     }
   });
   return ret;
+}
+
+export function bindsForCmd(action: string): BindExport[] {
+  return binds_by_cmd[action] || [];
 }
 
 export type ActionOpts = {
@@ -303,6 +320,7 @@ export function bindDownEdge(action: string, opts?: ActionOpts | null): number {
     if (ret) {
       finalret += ret;
       bind.down_frame = cur_frame;
+      bind.last_used = cur_frame;
     }
   }
   return finalret;
@@ -357,6 +375,7 @@ export function bindDown(action: string, opts?: BindDownOpts | null): number {
     if (ret) {
       finalret = max(finalret, ret);
       bind.down_frame = cur_frame;
+      bind.last_used = cur_frame;
     }
   }
   return finalret;
@@ -385,6 +404,7 @@ export function bindDispatch(opt?: {
           if (set.downEdge(bindlist.code, {
             mod: bind.modifiers,
           })) {
+            bind.last_used = cur_frame;
             handler(bind.cmd);
           }
         }

@@ -736,6 +736,7 @@ export function inputFrameKeyUp(): null | FrameKeyUp {
 
 let keyboard_layout_map: Rec<number, string> = localStorageGetJSON('layout_map', {});
 function updateLayoutMap(code: number, name: string): void {
+  name = name.toLowerCase();
   if (keyboard_layout_map[code] !== name) {
     keyboard_layout_map[code] = name;
     localStorageSetJSON('layout_map', keyboard_layout_map);
@@ -746,6 +747,18 @@ function updateLayoutMap(code: number, name: string): void {
 // This is used as a fallback to `keyboard.getLayoutMap` which does not exist on Firefox
 export function inputKeyName(code: number): string | undefined {
   return keyboard_layout_map[code];
+}
+
+// Only known/correct if it's been pushed
+// This is used as a fallback to `keyboard.getLayoutMap` which does not exist on Firefox
+export function inputKeyInverseMapped(letter: string): number | undefined {
+  letter = letter.toLowerCase();
+  for (let key_code in keyboard_layout_map) {
+    let v = keyboard_layout_map[key_code]!;
+    if (v === letter) {
+      return Number(key_code);
+    }
+  }
 }
 
 function onKeyDown(event: OurKeyboardEvent): void {
