@@ -379,7 +379,7 @@ export function inputValidPadName(key: string): key is ValidPad {
     // redundant names not allowed in binds system
     return false;
   }
-  return Boolean((PAD as TSMap<number>)[key]);
+  return Boolean(typeof (PAD as TSMap<number>)[key] === 'number');
 }
 
 let text_keys: Rec<number, true>;
