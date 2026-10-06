@@ -192,6 +192,8 @@ if (typeof Proxy === 'function') {
     }
   });
 }
+const PAD_NUM_SIMPLE_BUTTONS = 17;
+const PAD_TOTAL_BUTTONS = 28;
 export const PAD = {
   A: 0,
   SELECT: 0, // GLOV name
@@ -238,6 +240,7 @@ export type ValidPadValue = typeof PAD[ValidPad];
 import {
   Rec,
   TSMap,
+  WithRequired,
 } from 'glov/common/types';
 import {
   v2add,
@@ -1231,8 +1234,13 @@ type GamepadData = {
   id: number;
   timestamp: number;
   sticks: Vec2[];
+  button_mask: number; // bitmask state of simple buttons as of last querying
 };
-type PadState = Rec<number, number>;
+type PadStateEntry = {
+  value: number;
+  down_mod: number;
+};
+type PadState = PadStateEntry[];
 let pad_states: PadState[] = []; // One map per gamepad to pad button states
 let gamepad_data: GamepadData[] = []; // Other tracking data per gamepad
 
@@ -1244,17 +1252,25 @@ function getGamepadData(idx: number): GamepadData {
       id: idx,
       timestamp: 0,
       sticks: new Array(NUM_STICKS),
+      button_mask: 0,
     };
     for (let ii = 0; ii < NUM_STICKS; ++ii) {
       gpd.sticks[ii] = vec2();
     }
-    pad_states[idx] = {};
+    pad_states[idx] = [];
+    for (let ii = 0; ii < PAD_TOTAL_BUTTONS; ++ii) {
+      pad_states[idx].push({
+        value: 0,
+        down_mod: 0,
+      });
+    }
   }
   return gpd;
 }
 
 export type FramePadUp = {
   code: number;
+  mod: number;
 };
 let frame_padup: null | FramePadUp;
 export function inputFramePadUp(): null | FramePadUp {
@@ -1262,8 +1278,10 @@ export function inputFramePadUp(): null | FramePadUp {
 }
 
 function updatePadState(gpd: GamepadData, ps: PadState, is_down: boolean, padcode: number): void {
-  if (is_down && !ps[padcode]) {
-    ps[padcode] = DOWN_EDGE;
+  let pse = ps[padcode];
+  if (is_down && !pse.value) {
+    pse.value = DOWN_EDGE;
+    pse.down_mod = gpd.button_mask & ~(1<<padcode);
     onUserInput();
     if (touch_mode) {
       localStorageSetJSON('touch_mode', false);
@@ -1283,11 +1301,12 @@ function updatePadState(gpd: GamepadData, ps: PadState, is_down: boolean, padcod
       }
       touches[touch_id].down(null, true);
     }
-  } else if (!is_down && ps[padcode]) {
+  } else if (!is_down && pse.value) {
     frame_padup = {
       code: padcode,
+      mod: pse.down_mod,
     };
-    ps[padcode] = UP_EDGE;
+    pse.value = UP_EDGE;
     if (padcode === pad_to_touch) {
       let touch_id = `g${gpd.id}`;
       let touch_data = touches[touch_id];
@@ -1348,14 +1367,23 @@ function gamepadUpdate(): void {
         let buttons = gamepad.buttons;
         gpd.timestamp = gamepad.timestamp;
 
-        let numButtons = buttons.length;
-        for (let n = 0; n < numButtons; n++) {
+        let button_states = [];
+        let button_mask = 0;
+        let num_buttons = min(buttons.length, PAD_NUM_SIMPLE_BUTTONS);
+        for (let n = 0; n < num_buttons; n++) {
           let value = buttons[n];
           if (typeof value === 'object') {
             value = value.value;
           }
           let is_down = value > 0.5;
-          updatePadState(gpd, ps, is_down, n);
+          button_states.push(is_down);
+          if (is_down) {
+            button_mask |= 1 << n;
+          }
+        }
+        gpd.button_mask = button_mask;
+        for (let n = 0; n < num_buttons; ++n) {
+          updatePadState(gpd, ps, button_states[n], n);
         }
       }
 
@@ -1463,18 +1491,15 @@ function inputTick(): void {
   no_active_touches = empty(touches);
 }
 
-function endFrameTickMap(map: TSMap<number>): void {
-  Object.keys(map).forEach((keycode) => {
-    switch (map[keycode]) {
-      case DOWN_EDGE:
-        map[keycode] = DOWN;
-        break;
-      case UP_EDGE:
-        delete map[keycode];
-        break;
-      default:
+function endFrameTickMap(ps: PadState): void {
+  for (let ii = 0; ii < ps.length; ++ii) {
+    let pse = ps[ii];
+    if (pse.value === DOWN_EDGE) {
+      pse.value = DOWN;
+    } else if (pse.value === UP_EDGE) {
+      pse.value = 0;
     }
-  });
+  }
 }
 function inputEndFrame(skip_mouse?: boolean): void {
   for (let code in key_state_new) {
@@ -1930,53 +1955,66 @@ export function padGetAxes(out: Vec2, stickindex: number, padindex?: number): vo
   v2copy(out, sticks[stickindex]);
 }
 
+export type PadCheckOpts = {
+  peek?: boolean;
+  mod?: number; // bitmask of 1 << ValidPadValue
+};
+type RealizedPadCheckOpts = WithRequired<PadCheckOpts, 'mod'>;
+
 function padButtonDownInternal(
-  gpd: GamepadData, ps: Rec<number, number>, padcode: ValidPadValue, peek: boolean
+  gpd: GamepadData, ps: PadState, padcode: ValidPadValue, opts: RealizedPadCheckOpts
 ): number {
-  if (ps[padcode]) {
-    return getFrameDt();
+  let pse = ps[padcode];
+  if (pse.value === DOWN || pse.value === DOWN_EDGE) {
+    if ((pse.down_mod & opts.mod) === opts.mod) {
+      return getFrameDt();
+    }
   }
   return 0;
 }
 function padButtonDownEdgeInternal(
-  gpd: GamepadData, ps: Rec<number, number>, padcode: ValidPadValue, peek: boolean
+  gpd: GamepadData, ps: PadState, padcode: ValidPadValue, opts: RealizedPadCheckOpts
 ): number {
-  if (ps[padcode] === DOWN_EDGE) {
-    if (!peek) {
-      ps[padcode] = DOWN;
+  let pse = ps[padcode];
+  if (pse.value === DOWN_EDGE) {
+    if ((pse.down_mod & opts.mod) === opts.mod) {
+      if (!opts.peek) {
+        pse.value = DOWN;
+      }
+      return 1;
     }
-    return 1;
   }
   return 0;
 }
 function padButtonUpEdgeInternal(
-  gpd: GamepadData, ps: Rec<number, number>, padcode: ValidPadValue, peek: boolean
+  gpd: GamepadData, ps: PadState, padcode: ValidPadValue, opts: RealizedPadCheckOpts
 ): number {
   if (padcode === ANY) {
     let r = 0;
-    for (let ii = 0; ii < PAD.ANALOG_UP; ++ii) {
-      if (ps[ii] === UP_EDGE) {
-        if (!peek) {
-          delete ps[padcode];
+    for (let ii = 0; ii < PAD_TOTAL_BUTTONS; ++ii) {
+      let pse = ps[ii];
+      if (pse.value === UP_EDGE) {
+        if (!opts.peek) {
+          pse.value = 0;
         }
         r++;
       }
     }
     return r;
   }
-  if (ps[padcode] === UP_EDGE) {
-    if (!peek) {
-      delete ps[padcode];
+  let pse = ps[padcode];
+  if (pse.value === UP_EDGE) {
+    if ((pse.down_mod & opts.mod) === opts.mod) {
+      if (!opts.peek) {
+        pse.value = 0;
+      }
+      return 1;
     }
-    return 1;
   }
   return 0;
 }
 
-export type PadCheckOpts = {
-  peek?: boolean;
-};
-type PadFn = (gpd: GamepadData, ps: Rec<number, number>, padcode: ValidPadValue, peek: boolean) => number;
+type PadFn = (gpd: GamepadData, ps: PadState, padcode: ValidPadValue, opts: RealizedPadCheckOpts) => number;
 function padButtonShared(fn: PadFn, padcode: ValidPadValue, padindex?: number, opts?: PadCheckOpts | null): number {
   assert(padcode !== undefined);
   let r = 0;
@@ -1995,17 +2033,18 @@ function padButtonShared(fn: PadFn, padcode: ValidPadValue, padindex?: number, o
   if (!gpd) {
     return 0;
   }
+  opts = opts || {};
+  opts.mod = opts.mod || 0;
+  let opts2 = opts as RealizedPadCheckOpts;
   let ps = pad_states[padindex];
-
-  let peek = Boolean(opts && opts.peek);
 
   let am = ANALOG_MAP[padcode];
   if (am) {
     for (let ii = 0; ii < am.length; ++ii) {
-      r += fn(gpd, ps, am[ii], peek) || 0;
+      r += fn(gpd, ps, am[ii], opts2) || 0;
     }
   }
-  r += fn(gpd, ps, padcode, peek);
+  r += fn(gpd, ps, padcode, opts2);
   return r;
 }
 export function padButtonDown(padcode: ValidPadValue, padindex?: number, opts?: PadCheckOpts | null): number {
