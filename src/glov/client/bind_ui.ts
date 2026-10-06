@@ -36,7 +36,7 @@ import {
   bindUnbind,
 } from './binds';
 import { cmd_parse } from './cmds';
-import { getFrameDt } from './engine';
+import { debugDefineIsSet, getFrameDt } from './engine';
 import {
   ALIGN,
   FontStyle,
@@ -172,6 +172,42 @@ function toCamelCase(s: string): string {
   }).join('');
 }
 
+const SPECIAL_NAMES: TSMap<string> = {
+  PAGEUP: 'PageUp',
+  PAGEDOWN: 'PageDown',
+  NUMPAD0: 'NumPad0',
+  NUMPAD1: 'NumPad1',
+  NUMPAD2: 'NumPad2',
+  NUMPAD3: 'NumPad3',
+  NUMPAD4: 'NumPad4',
+  NUMPAD5: 'NumPad5',
+  NUMPAD6: 'NumPad6',
+  NUMPAD7: 'NumPad7',
+  NUMPAD8: 'NumPad8',
+  NUMPAD9: 'NumPad9',
+  NUMPAD_MULTIPLY: 'NumPad*',
+  NUMPAD_ADD: 'NumPad+',
+  NUMPAD_SUBTRACT: 'NumPad-',
+  NUMPAD_DECIMAL_POINT: 'NumPad.',
+  NUMPAD_DIVIDE: 'NumPad/',
+  LSTICK_UP: 'LStickUp',
+  LSTICK_RIGHT: 'LStickRight',
+  LSTICK_DOWN: 'LStickDown',
+  LSTICK_LEFT: 'LStickLeft',
+  RSTICK_UP: 'RStickUp',
+  RSTICK_RIGHT: 'RStickRight',
+  RSTICK_DOWN: 'RStickDown',
+  RSTICK_LEFT: 'RStickLeft',
+  ArrowUp: 'Up',
+  ArrowLeft: 'Left',
+  ArrowRight: 'Right',
+  ArrowDown: 'Down',
+  Escape: 'Esc',
+};
+function formatKeyName(key: string): string {
+  return SPECIAL_NAMES[key] || toCamelCase(key);
+}
+
 const KEY_MOD_LOOKUP: TSMap<number> = {
   shift: MOD_SHIFT,
   alt: MOD_ALT,
@@ -182,7 +218,7 @@ const KEY_MOD_NAME: Rec<number, string> = {
   [MOD_ALT]: 'Alt',
   [MOD_CTRL]: 'Ctrl',
 };
-function modToString(bindtype: BindType, modifiers: number): string {
+function modToString(bindtype: BindType, modifiers: number, images: boolean): string {
   let ret = [];
   let idx = 0;
   while (modifiers) {
@@ -194,7 +230,16 @@ function modToString(bindtype: BindType, modifiers: number): string {
       } else if (bindtype === 'controller') {
         name = inputLookupPadName(idx);
         if (name) {
-          name = toCamelCase(name);
+          if (images) {
+            let img = name.toLowerCase();
+            if (autoAtlasContains('gamepad', img)) {
+              name = `[img=${img}]`;
+            } else {
+              name = formatKeyName(name);
+            }
+          } else {
+            name = toCamelCase(name);
+          }
         }
       }
       if (name) {
@@ -208,7 +253,7 @@ function modToString(bindtype: BindType, modifiers: number): string {
 }
 
 function bindToString(bind: Omit<BindExportLight, 'events'> | Optional<UserBindParam, 'layer'>): string {
-  return `${modToString(bind.bindtype, bind.modifiers).toLowerCase()}${bind.bindtype.toLowerCase()}` +
+  return `${modToString(bind.bindtype, bind.modifiers, false).toLowerCase()}${bind.bindtype.toLowerCase()}` +
     `${toCamelCase(bind.key).toLowerCase()}` +
     ` ${bind.layer && bind.layer !== 'default' ?`${bind.layer}.`:''}${bind.cmd}`;
 }
@@ -499,49 +544,13 @@ cmd_parse.register({
   }
 });
 
-const SPECIAL_NAMES: TSMap<string> = {
-  PAGEUP: 'PageUp',
-  PAGEDOWN: 'PageDown',
-  NUMPAD0: 'NumPad0',
-  NUMPAD1: 'NumPad1',
-  NUMPAD2: 'NumPad2',
-  NUMPAD3: 'NumPad3',
-  NUMPAD4: 'NumPad4',
-  NUMPAD5: 'NumPad5',
-  NUMPAD6: 'NumPad6',
-  NUMPAD7: 'NumPad7',
-  NUMPAD8: 'NumPad8',
-  NUMPAD9: 'NumPad9',
-  NUMPAD_MULTIPLY: 'NumPad*',
-  NUMPAD_ADD: 'NumPad+',
-  NUMPAD_SUBTRACT: 'NumPad-',
-  NUMPAD_DECIMAL_POINT: 'NumPad.',
-  NUMPAD_DIVIDE: 'NumPad/',
-  LSTICK_UP: 'LStickUp',
-  LSTICK_RIGHT: 'LStickRight',
-  LSTICK_DOWN: 'LStickDown',
-  LSTICK_LEFT: 'LStickLeft',
-  RSTICK_UP: 'RStickUp',
-  RSTICK_RIGHT: 'RStickRight',
-  RSTICK_DOWN: 'RStickDown',
-  RSTICK_LEFT: 'RStickLeft',
-  ArrowUp: 'Up',
-  ArrowLeft: 'Left',
-  ArrowRight: 'Right',
-  ArrowDown: 'Down',
-  Escape: 'Esc',
-};
-function formatKeyName(key: string): string {
-  return SPECIAL_NAMES[key] || toCamelCase(key);
-}
-
 function formatBindKeyForCmd(entry: {
   bindtype: BindType;
   key: ValidKey | ValidPad;
   key_name?: string;
   modifiers: number;
 }): string {
-  return `${modToString(entry.bindtype, entry.modifiers)}${capitalize(entry.bindtype)}` +
+  return `${modToString(entry.bindtype, entry.modifiers, false)}${capitalize(entry.bindtype)}` +
     `${entry.key_name ? SPECIAL_NAMES[entry.key_name] || entry.key_name :
     toCamelCase(entry.key)}`;
 }
@@ -753,12 +762,23 @@ export function bindLocalName(bind: {
   key: ValidKey | ValidPad;
   modifiers: number;
 }): string {
-  let key_name;
   if (bind.bindtype === 'key') {
-    key_name = keyLocalName(bind.key as ValidKey);
-  }
-  if (bind.bindtype === 'controller') {
-    let img = bind.key.toLowerCase();
+    let key_name = keyLocalName(bind.key as ValidKey);
+    let qwerty_name = formatKeyName(bind.key);
+    if (key_name && qwerty_name.startsWith('NumPad') && qwerty_name.endsWith(key_name)) {
+      // inputKeyName will return `2` for `NumPad2`
+      key_name = undefined;
+    }
+    if (key_name && !key_name.trim()) { // e.g. ' '
+      key_name = undefined;
+    }
+    if (key_name && key_name.startsWith('Arrow')) {
+      // keyLocalName returns 'Arrowup', we just want 'Up', etc.
+      key_name = undefined;
+    }
+    return `${modToString(bind.bindtype, bind.modifiers, false)}` +
+      `${key_name ? SPECIAL_NAMES[key_name] || key_name : qwerty_name}`;
+  } else if (bind.bindtype === 'controller') {
     if (autoResetEachFrame('bindLocalName-controllers')) {
       let new_set = settings.controller_icons;
       if (!ATLAS_BY_CONTROLLER[new_set]) {
@@ -772,26 +792,17 @@ export function bindLocalName(bind: {
         autoAtlasSwap('gamepad', ATLAS_BY_CONTROLLER[new_set]);
       }
     }
+    let main_name;
+    let img = bind.key.toLowerCase();
     if (autoAtlasContains('gamepad', img)) {
-      return `[img=${bind.key.toLowerCase()}]`;
+      main_name = `[img=${img}]`;
+    } else {
+      main_name = formatKeyName(bind.key);
     }
+    return `${modToString(bind.bindtype, bind.modifiers, true)}` +
+      `${main_name}`;
   }
-
-  let qwerty_name = formatKeyName(bind.key);
-  if (key_name && qwerty_name.startsWith('NumPad') && qwerty_name.endsWith(key_name)) {
-    // inputKeyName will return `2` for `NumPad2`
-    key_name = undefined;
-  }
-  if (key_name && !key_name.trim()) { // e.g. ' '
-    key_name = undefined;
-  }
-  if (key_name && key_name.startsWith('Arrow')) {
-    // keyLocalName returns 'Arrowup', we just want 'Up', etc.
-    key_name = undefined;
-  }
-
-  return `${modToString(bind.bindtype, bind.modifiers)}` +
-    `${key_name ? SPECIAL_NAMES[key_name] || key_name : qwerty_name}`;
+  return `?${bind.bindtype}`;
 }
 
 function initialBindsMap(): Rec<string, BindExportLight> {
@@ -805,7 +816,7 @@ function initialBindsMap(): Rec<string, BindExportLight> {
 }
 
 class BindUIState {
-  page: BindType = inputPadMode() ? 'controller' : 'key';
+  page: BindType = inputPadMode() || debugDefineIsSet('CONTROLLER') ? 'controller' : 'key';
   scroll_area = scrollAreaCreate();
   editing_bind: null | {
     idx: number;
@@ -917,7 +928,7 @@ function handleEditBind(): void {
           bindtype,
           key: padcode,
           layer: defaultLayer(editing.cmd, bindtype, padcode),
-          modifiers: 0,
+          modifiers: padup.mod,
           cmd: editing.cmd,
         };
       }
