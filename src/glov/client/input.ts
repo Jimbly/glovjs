@@ -1989,19 +1989,6 @@ function padButtonDownEdgeInternal(
 function padButtonUpEdgeInternal(
   gpd: GamepadData, ps: PadState, padcode: ValidPadValue, opts: RealizedPadCheckOpts
 ): number {
-  if (padcode === ANY) {
-    let r = 0;
-    for (let ii = 0; ii < PAD_TOTAL_BUTTONS; ++ii) {
-      let pse = ps[ii];
-      if (pse.value === UP_EDGE) {
-        if (!opts.peek) {
-          pse.value = 0;
-        }
-        r++;
-      }
-    }
-    return r;
-  }
   let pse = ps[padcode];
   if (pse.value === UP_EDGE) {
     if ((pse.down_mod & opts.mod) === opts.mod) {
@@ -2022,6 +2009,12 @@ function padButtonShared(fn: PadFn, padcode: ValidPadValue, padindex?: number, o
   if (padindex === undefined || padindex === ANY) {
     for (let ii = 0; ii < pad_states.length; ++ii) {
       r += padButtonShared(fn, padcode, ii, opts);
+    }
+    return r;
+  }
+  if (padcode === ANY) {
+    for (let ii = 0; ii < PAD_TOTAL_BUTTONS; ++ii) {
+      r += padButtonShared(fn, ii, padindex, opts);
     }
     return r;
   }
