@@ -57,6 +57,7 @@ import {
   inputValidPadName,
   keyDown,
   KEYS,
+  PAD,
   padButtonDown,
   padName,
   ValidKey,
@@ -171,37 +172,71 @@ function toCamelCase(s: string): string {
   }).join('');
 }
 
-const MOD_LOOKUP: TSMap<number> = {
+const KEY_MOD_LOOKUP: TSMap<number> = {
   shift: MOD_SHIFT,
   alt: MOD_ALT,
   ctrl: MOD_CTRL,
 };
-function modToString(modifiers: number): string {
+const KEY_MOD_NAME: Rec<number, string> = {
+  [MOD_SHIFT]: 'Shift',
+  [MOD_ALT]: 'Alt',
+  [MOD_CTRL]: 'Ctrl',
+};
+function modToString(bindtype: BindType, modifiers: number): string {
   let ret = [];
-  for (let key in MOD_LOOKUP) {
-    let v = MOD_LOOKUP[key]!;
-    if (modifiers & v) {
-      ret.push(`${capitalize(key)}+`);
+  let idx = 0;
+  while (modifiers) {
+    let bit = 1<<idx;
+    if (modifiers & bit) {
+      let name: string | undefined | null;
+      if (bindtype === 'key') {
+        name = KEY_MOD_NAME[bit];
+      } else if (bindtype === 'controller') {
+        name = inputLookupPadName(idx);
+        if (name) {
+          name = toCamelCase(name);
+        }
+      }
+      if (name) {
+        ret.push(`${name}+`);
+      }
+      modifiers &= ~bit;
     }
+    idx++;
   }
   return ret.join('');
 }
 
 function bindToString(bind: Omit<BindExportLight, 'events'> | Optional<UserBindParam, 'layer'>): string {
-  return `${modToString(bind.modifiers).toLowerCase()}${bind.bindtype.toLowerCase()}` +
+  return `${modToString(bind.bindtype, bind.modifiers).toLowerCase()}${bind.bindtype.toLowerCase()}` +
     `${toCamelCase(bind.key).toLowerCase()}` +
     ` ${bind.layer && bind.layer !== 'default' ?`${bind.layer}.`:''}${bind.cmd}`;
 }
 
-function modNamesToNumber(modnames: string | undefined): number {
+function modNamesToNumber(bindtype: BindType, modnames: string | undefined): number | string {
   let modifiers = 0;
+  let err: string | undefined;
   if (modnames) {
     modnames.split('+').filter(identity).forEach(function (part) {
-      assert(MOD_LOOKUP[part]);
-      modifiers |= MOD_LOOKUP[part];
+      if (bindtype === 'key') {
+        let v = KEY_MOD_LOOKUP[part];
+        if (typeof v === 'number') {
+          modifiers |= v;
+        } else {
+          err = `recognized modifier "${part}"`;
+        }
+      } else if (bindtype === 'controller') {
+        part = inputNameNormalize(part);
+        if (inputValidPadName(part)) {
+          let v = PAD[part];
+          modifiers |= 1 << v;
+        } else {
+          err = `recognized modifier "${part}"`;
+        }
+      }
     });
   }
-  return modifiers;
+  return err || modifiers;
 }
 
 function defaultLayerSub(cmd: string): string {
@@ -305,7 +340,7 @@ function unbindSub(opt: {
 }
 
 const bind_param_regex = /^(?:([^ .]+)\.)?(.+)?$/i;
-const bind_key_regex = /^((?:(?:Shift|Ctrl|Alt)\+)+)?(Key|Controller)?([a-z0-9]+)$/i;
+const bind_key_regex = /^((?:\w+\+)+)?(Key|Controller)?([a-z0-9]+)$/i;
 function parseBindKey(str: string): string | {
   modnames: string | undefined;
   bindtype: BindType;
@@ -370,7 +405,10 @@ function unbindFromString(param: string): string | string[] {
     layer = m3[1] as string | undefined;
     cmd = m3[2] as string;
   }
-  let modifiers = modNamesToNumber(modnames);
+  let modifiers = modNamesToNumber(bindtype, modnames);
+  if (typeof modifiers === 'string') {
+    return modifiers;
+  }
 
   return unbindSub({
     bindtype,
@@ -399,7 +437,10 @@ function addBindFromString(param: string, auto_unbind: boolean): string | null {
   let layer = m3[1] as string | undefined;
   let cmd = m3[2] as string;
 
-  let modifiers = modNamesToNumber(modnames);
+  let modifiers = modNamesToNumber(bindtype, modnames);
+  if (typeof modifiers === 'string') {
+    return modifiers;
+  }
 
   if (auto_unbind) {
     if (!layer) {
@@ -500,7 +541,7 @@ function formatBindKeyForCmd(entry: {
   key_name?: string;
   modifiers: number;
 }): string {
-  return `${modToString(entry.modifiers)}${capitalize(entry.bindtype)}` +
+  return `${modToString(entry.bindtype, entry.modifiers)}${capitalize(entry.bindtype)}` +
     `${entry.key_name ? SPECIAL_NAMES[entry.key_name] || entry.key_name :
     toCamelCase(entry.key)}`;
 }
@@ -541,6 +582,11 @@ cmd_parse.register({
       for (let ii = 0; ii < list.length; ++ii) {
         unbindFromString(list[ii]);
         ++diffs;
+      }
+      if (user_binds.binds.length) {
+        // Clear this just in case there was a remaining slightly malformed bind
+        user_binds.binds = [];
+        localStorageSetJSON<UserBinds>('binds', user_binds);
       }
     }
     // Restore all unbinds
@@ -744,7 +790,7 @@ export function bindLocalName(bind: {
     key_name = undefined;
   }
 
-  return `${modToString(bind.modifiers)}` +
+  return `${modToString(bind.bindtype, bind.modifiers)}` +
     `${key_name ? SPECIAL_NAMES[key_name] || key_name : qwerty_name}`;
 }
 

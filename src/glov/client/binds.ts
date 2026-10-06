@@ -29,6 +29,7 @@ import {
   padButtonDown,
   padButtonDownEdge,
   padButtonUpEdge,
+  PadCheckOpts,
   ValidKey,
   ValidPad,
 } from './input';
@@ -287,6 +288,21 @@ export function bindDownEdge(action: string, opts?: ActionOpts | null): number {
     }
     let ret = 0;
     verify(bind.action === 'action'); // probably doesn't make sense to query for cmd-type binds?
+    let eff_opts: KeyCheckOpts | PadCheckOpts | null | undefined;
+    if (bind.modifiers) {
+      if (opts) {
+        eff_opts = {
+          ...opts,
+          mod: bind.modifiers,
+        };
+      } else {
+        eff_opts = {
+          mod: bind.modifiers,
+        };
+      }
+    } else {
+      eff_opts = opts;
+    }
     if (bind.bindtype === 'key') {
       if (opts && opts.flags) {
         if (opts.flags & BIND_FLAG_NOKB) {
@@ -298,24 +314,9 @@ export function bindDownEdge(action: string, opts?: ActionOpts | null): number {
           }
         }
       }
-      let eff_opts: KeyCheckOpts | null | undefined;
-      if (bind.modifiers) {
-        if (opts) {
-          eff_opts = {
-            ...opts,
-            mod: bind.modifiers,
-          };
-        } else {
-          eff_opts = {
-            mod: bind.modifiers,
-          };
-        }
-      } else {
-        eff_opts = opts;
-      }
       ret += keyDownEdge(bind.code, eff_opts);
     } else {
-      ret += padButtonDownEdge(bind.code, ANY, opts);
+      ret += padButtonDownEdge(bind.code, ANY, eff_opts);
     }
     if (ret) {
       finalret += ret;
@@ -360,17 +361,17 @@ export function bindDown(action: string, opts?: BindDownOpts | null): number {
       }
     }
     let ret;
+    let eff_opts: KeyCheckOpts | PadCheckOpts | null | undefined = opts;
+    if (bind.modifiers) {
+      eff_opts = {
+        mod: bind.modifiers,
+        peek: opts ? opts.peek : undefined,
+      };
+    }
     if (bind.bindtype === 'key') {
-      let eff_opts: KeyCheckOpts | null | undefined = opts;
-      if (bind.modifiers) {
-        eff_opts = {
-          mod: bind.modifiers,
-          peek: opts ? opts.peek : undefined,
-        };
-      }
       ret = keyDown(bind.code, eff_opts);
     } else {
-      ret = padButtonDown(bind.code, ANY, opts);
+      ret = padButtonDown(bind.code, ANY, eff_opts);
     }
     if (ret) {
       finalret = max(finalret, ret);
