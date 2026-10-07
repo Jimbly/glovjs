@@ -38,6 +38,8 @@ const sprite_sets = {
     collapsagories: { atlas: 'pixely' },
     collapsagories_rollover: { atlas: 'pixely' },
     collapsagories_shadow_down: { atlas: 'pixely' },
+
+    focusglow: { atlas: 'pixely' },
   },
 };
 

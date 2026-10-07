@@ -3,7 +3,6 @@ import type { TSMap, WithRequired } from 'glov/common/types';
 import { clone, has, merge } from 'glov/common/util';
 import verify from 'glov/common/verify';
 import {
-  unit_vec,
   Vec2,
   vec4,
 } from 'glov/common/vmath';
@@ -47,9 +46,9 @@ import {
   spriteClipResume,
 } from './sprites';
 import {
-  drawElipse,
   drawRect2,
   getUIElemData,
+  indicateFocus,
   LabelBaseOptions,
   uiFontStyleNormal,
   uiGetFont,
@@ -986,8 +985,7 @@ export function markdownLabel(param: MarkdownAutoParam & LabelBaseOptions): Mark
       def: SPOT_DEFAULT_LABEL,
     });
     if (spot_ret.focused && spotPadMode()) {
-      // No focused style support yet, do a generic glow instead?
-      drawElipse(x - w*0.25, y-h*0.25, x + w*1.25, y + h*1.25, z - 0.001, 0.5, unit_vec);
+      indicateFocus(x, y, w, h, z);
     }
   }
   return dims;

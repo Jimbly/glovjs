@@ -357,6 +357,10 @@ export function menuFadeParamsSetDefault(fade_params: MenuFadeParams): void;
 export function menuUp(param?: MenuFadeParams): void;
 export function copyTextToClipboard(text: string): boolean;
 export function provideUserString(title: Text, str: string, alt_buttons?: ModalDialogButtons): void;
+
+export function indicateFocus(x: number, y: number, w: number, h: number, z: number): void;
+export function uiSetFocusIndicator(fn: typeof indicateFocus): void;
+
 export function drawRect(x0: number, y0: number, x1: number, y1: number, z?: number, color?: ROVec4): void;
 export function drawRect2(param: UIBoxColored): void;
 export function drawRect4Color(

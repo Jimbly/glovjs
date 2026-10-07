@@ -207,6 +207,15 @@ export function getUIElemData(type, param, allocator) {
   return elem_data;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-use-before-define
+let focus_indicator = defaultFocusIndicator;
+export function indicateFocus(x, y, w, h, z) {
+  focus_indicator(x, y, w, h, z);
+}
+export function uiSetFocusIndicator(fn) {
+  focus_indicator = fn;
+}
+
 function doBlurEffect(factor) {
   effects.applyGaussianBlur({
     blur: factor,
@@ -492,6 +501,8 @@ const base_ui_sprites = {
   collapsagories_rollover: { atlas: 'default' },
   collapsagories_shadow_down: { atlas: 'default' },
   collapsagories_shadow_up: null,
+
+  focusglow: { atlas: 'default' },
 };
 
 function uiStartup(param) {
@@ -1565,9 +1576,7 @@ export function label(param) {
         }
       }
       if (need_focus_indicator) {
-        // No focused style provided, do a generic glow instead?
-        // eslint-disable-next-line @typescript-eslint/no-use-before-define
-        drawElipse(x - w*0.25, y-h*0.25, x + w*1.25, y + h*1.25, z - 0.001, 0.5, unit_vec);
+        focus_indicator(x, y, w, h, z);
       }
     }
   }
@@ -2484,6 +2493,22 @@ export function setFontHeight(_font_height) {
   uiStyleModify(uiStyleDefault(), {
     text_height: _font_height,
   });
+}
+
+function defaultFocusIndicator(x, y, w, h, z) {
+  // No focused style provided, do a generic glow instead?
+  //drawElipse(x - w*0.25, y-h*0.25, x + w*1.25, y + h*1.25, z - 0.001, 0.5, unit_vec);
+  let grow = min(w, h) * 0.1;
+  h += grow * 2;
+  w += grow * 2;
+  let v_scale = h / sprites.focusglow.uidata.total_h;
+  let h_scale = w / sprites.focusglow.uidata.total_w;
+  drawBox({
+    x: x - grow,
+    y: y - grow,
+    z,
+    w, h,
+  }, sprites.focusglow, min(v_scale, h_scale));
 }
 
 function uiApplyStyle(style) {
