@@ -57,6 +57,7 @@ export class EntityBaseClient extends EntityBaseCommon {
   fade: number | null;
   last_update_timestamp: number;
   index_key: undefined | (string|number)[];
+  declare serialize_ignored: Partial<Record<string, boolean>>;
 
   constructor(data: EntityBaseDataCommon) {
     super(data);
@@ -66,6 +67,18 @@ export class EntityBaseClient extends EntityBaseCommon {
     this.data_overrides = [];
     this.seq_id = 0;
     this.last_update_timestamp = engine.frame_timestamp;
+  }
+
+  serialize(): DataObject {
+    let ret: DataObject = {};
+    let data = this.data as DataObject;
+    for (let key in data) {
+      let v = data[key];
+      if (v !== undefined && !this.serialize_ignored[key]) {
+        ret[key] = v;
+      }
+    }
+    return ret;
   }
 
   isMe(): boolean {
@@ -295,3 +308,4 @@ export class EntityBaseClient extends EntityBaseCommon {
   }
 
 }
+EntityBaseClient.prototype.serialize_ignored = {};
