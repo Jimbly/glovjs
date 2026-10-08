@@ -1227,7 +1227,7 @@ function inputStartup(_canvas: HTMLCanvasElement, params: InputStartupParams): v
 const DEADZONE = 0.26;
 const DEADZONE_SQ = DEADZONE * DEADZONE;
 const NUM_STICKS = 2;
-const PAD_THRESHOLD = 0.35; // for turning analog motion into digital events
+const PAD_THRESHOLD = 0.5; // for turning analog motion into digital events
 
 type GamepadData = {
   name: string;
