@@ -8,10 +8,10 @@
 
 import assert from 'assert';
 
-const UP_EDGE = 0; // only for pads, which use === null as "up"
 const UP = 0; // only for key/mouse
 const DOWN = 1;
 const DOWN_EDGE = 2; // only for pads
+const UP_EDGE = 3; // only for pads
 
 // per-app overrideable options
 const TOUCH_AS_MOUSE = true;
