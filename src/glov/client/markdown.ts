@@ -185,7 +185,7 @@ export interface MDLayoutBlock {
 }
 
 function didBreak(prev: MDDrawBlock, next: MDDrawBlock): boolean {
-  return next.dims.x < prev.dims.x + prev.dims.w;
+  return next.dims.x < prev.dims.x + prev.dims.w - EPSILON;
 }
 
 function layoutChildren(content: MDLayoutBlock[], param: MDLayoutCalcParam): MDDrawBlock[] {
