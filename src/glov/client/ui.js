@@ -57,6 +57,7 @@ const {
 } = require('./input');
 const { linkTick, linkObscureRect } = require('./link.js');
 const { getStringFromLocalizable } = require('./localization.js');
+const { localStorageOnError } = require('./local_storage');
 const { markdownAuto } = require('./markdown');
 const { abs, ceil, floor, max, min, round, sqrt } = Math;
 const { scrollAreaSetPixelScale } = require('./scroll_area.js');
@@ -505,6 +506,24 @@ const base_ui_sprites = {
   focusglow: { atlas: 'default' },
 };
 
+function engineDefaultLocalStorageError(e) {
+  if (modal_dialog) {
+    // Already a modal dialog open, don't break the game!
+    return;
+  }
+  // eslint-disable-next-line @typescript-eslint/no-use-before-define
+  modalDialog({
+    title: 'Error writing to Local Storage',
+    text: 'An error occurred writing to the Local Storage, likely due to' +
+      ' security settings or other browser settings.\n\n' +
+      'This app will continue to function normally, however your progress will' +
+      ' likely not be saved if you leave and return later.',
+    buttons: {
+      OK: null,
+    },
+  });
+}
+
 function uiStartup(param) {
   font = param.font;
   title_font = param.title_font || font;
@@ -560,6 +579,8 @@ function uiStartup(param) {
 
   // eslint-disable-next-line @typescript-eslint/no-use-before-define
   scaleSizes(1);
+
+  localStorageOnError(engineDefaultLocalStorageError);
 }
 
 let dynamic_text_elem;
