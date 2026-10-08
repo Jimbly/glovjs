@@ -2517,8 +2517,6 @@ export function setFontHeight(_font_height) {
 }
 
 function defaultFocusIndicator(x, y, w, h, z) {
-  // No focused style provided, do a generic glow instead?
-  //drawElipse(x - w*0.25, y-h*0.25, x + w*1.25, y + h*1.25, z - 0.001, 0.5, unit_vec);
   let grow = min(w, h) * 0.1;
   h += grow * 2;
   w += grow * 2;
@@ -2527,7 +2525,7 @@ function defaultFocusIndicator(x, y, w, h, z) {
   drawBox({
     x: x - grow,
     y: y - grow,
-    z,
+    z: z - 0.01,
     w, h,
   }, sprites.focusglow, min(v_scale, h_scale));
 }
