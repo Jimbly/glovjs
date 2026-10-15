@@ -1,3 +1,6 @@
+const gb = require('glov-build');
+const ldtkproc = require('./ldtk');
+
 module.exports = function (config) {
   config.bundles.push({
     entrypoint: 'worker',
@@ -53,4 +56,13 @@ module.exports = function (config) {
     'client/spine/**.skel',
     'client/spine/**.json',
   );
+
+  // LDtk level support - also requires stable atlas parameters in atlas.yaml
+  gb.task({
+    name: 'ldtkproc',
+    input: ['ldtk/**/*.ldtkl'],
+    ...ldtkproc(),
+  });
+  config.client_fsdata.push('ldtkproc:**');
+  config.fsdata_embed.push('.ldtkl');
 };

@@ -256,7 +256,7 @@ function actionStartup(): void {
   actionBindPad('A', 'accept', 0, 'nav');
 
   actionBindKB('ESC', 'cancel', 0, 'nav');
-  actionBindKB('BACKSPACE', 'cancel', 0, 'nav');
+  actionBindKB('BACKSPACE', 'cancel', 0, 'navext');
   actionBindPad('B', 'cancel', 0, 'nav');
 
   // modal dialogs

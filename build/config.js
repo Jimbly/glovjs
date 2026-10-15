@@ -99,7 +99,7 @@ module.exports = function (gb) {
       'client_texproc_output:!**/favicon*.png',
       'client_autoatlas:**.auat',
     ],
-    fsdata_embed: ['.json', '.tflag', '.auat'],
+    fsdata_embed: ['.json', '.tflag', '.auat'], // get stored as a JS object, not binary encoded
     fsdata_strip: ['.json'],
     fsdata_sized_embed: {
       globs: [

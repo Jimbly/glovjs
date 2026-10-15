@@ -1,6 +1,7 @@
 /* eslint-disable @stylistic/max-len */
 
 const assert = require('assert');
+const fs = require('fs');
 const path = require('path');
 const { asyncEach } = require('glov-async');
 const gb = require('glov-build');
@@ -165,6 +166,182 @@ function packSkyline(img_list, pad, max_tex_size) {
   return { width: maxx, height: maxy };
 }
 
+let stable_atlas_dir = path.join(__dirname, '../ldtk');
+function updateStableAtlas(job, atlas_name, config_data, imgs_for_packing) {
+  pngAllocTempReset();
+  let tilesize = config_data.stable_atlas_tilesize;
+  let max_size = config_data.stable_atlas_max_size || tilesize * 4;
+  let tex_size = config_data.stable_atlas_tex_size || 1024;
+  if (!fs.existsSync(stable_atlas_dir)) {
+    fs.mkdirSync(stable_atlas_dir);
+  }
+
+  let existing_index = {};
+  let index_file = `${stable_atlas_dir}/${atlas_name}.idx`;
+  let existing_index_entries = [];
+  if (fs.existsSync(index_file)) {
+    let lines = fs.readFileSync(index_file, 'utf8').split('\n');
+    for (let ii = 0; ii < lines.length; ++ii) {
+      let line = lines[ii];
+      if (line) {
+        let pair = line.split(':');
+        assert(pair.length === 2);
+        let idx = Number(pair[1]);
+        assert(isFinite(idx));
+        existing_index[pair[0]] = idx;
+        existing_index_entries.push([pair[0], idx]);
+      }
+    }
+  }
+
+  // pack output, starting with previously know images
+  let bit_w = floor(tex_size / tilesize);
+  tex_size = bit_w * tilesize;
+  let used = {};
+  let placed = {};
+  let reserved = {};
+
+  let maxy = 0;
+  function place(img_name, idx, tile_w, tile_h) {
+    let place_x = idx % bit_w;
+    let place_y = (idx - place_x) / bit_w;
+    for (let yy = 0; yy < tile_h; ++yy) {
+      for (let xx = 0; xx < tile_w; ++xx) {
+        let posidx = idx + xx + yy * bit_w;
+        used[posidx] = true;
+        maxy = max(maxy, place_y + yy);
+      }
+    }
+    placed[img_name] = [place_x, place_y];
+  }
+  place('reserved', 0, 1, 1);
+  reserved.reserved = true;
+  function canPlace(idx, tile_w, tile_h) {
+    let place_x = idx % bit_w;
+    let place_y = (idx - place_x) / bit_w;
+    if (place_x + tile_w > bit_w) {
+      return false;
+    }
+    for (let yy = 0; yy < tile_h; ++yy) {
+      for (let xx = 0; xx < tile_w; ++xx) {
+        let posidx = place_x + xx + (place_y + yy) * bit_w;
+        if (used[posidx]) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+  // place in existing positions
+  let seen = {};
+  for (let ii = 0; ii < imgs_for_packing.length; ++ii) {
+    let img_data = imgs_for_packing[ii];
+    let { img_name } = img_data;
+    let img = img_data.imgs[0];
+    let { width: imgw, height: imgh } = img;
+    if (imgw > max_size || imgh > max_size || imgw % tilesize || imgh % tilesize) {
+      continue;
+    }
+    seen[img_name] = true;
+    let posidx = existing_index[img_name];
+    if (posidx !== undefined) {
+      let tile_w = imgw / tilesize;
+      let tile_h = imgh / tilesize;
+      if (canPlace(posidx, tile_w, tile_h)) {
+        place(img_name, posidx, tile_w, tile_h);
+      } else {
+        job.warn(`Stable Atlas: Image "${img_name}" no longer fits in its previous position`);
+      }
+    }
+  }
+  // reserve most recent 32 images in the index
+  for (let ii = existing_index_entries.length - 1, left = 32; ii >= 0 && left; --ii) {
+    let entry = existing_index_entries[ii];
+    let img_name = entry[0];
+    if (seen[img_name]) {
+      // was either placed, or didn't fit where it was
+      continue;
+    }
+    reserved[img_name] = true;
+    place(img_name, entry[1], 1, 1);
+    --left;
+  }
+
+  // find new positions
+  let nextx = 0;
+  let nexty = 0;
+  for (let ii = 0; ii < imgs_for_packing.length; ++ii) {
+    let img_data = imgs_for_packing[ii];
+    let { img_name } = img_data;
+    let img = img_data.imgs[0];
+    let { width: imgw, height: imgh } = img;
+    if (imgw > max_size || imgh > max_size || imgw % tilesize || imgh % tilesize) {
+      continue;
+    }
+    if (placed[img_name]) {
+      continue;
+    }
+    let tile_w = imgw / tilesize;
+    let tile_h = imgh / tilesize;
+    while (true) {
+      if (canPlace(nextx + nexty * bit_w, tile_w, tile_h)) {
+        place(img_name, nextx + nexty * bit_w, tile_w, tile_h);
+        break;
+      }
+      nextx++;
+      if (nextx === bit_w) {
+        nextx = 0;
+        nexty++;
+      }
+    }
+  }
+
+  let pngout = pngAllocTemp(tex_size, (maxy + 1) * tilesize, `stable_atlas:${atlas_name}`);
+  for (let ii = 0; ii < imgs_for_packing.length; ++ii) {
+    let img_data = imgs_for_packing[ii];
+    let { img_name } = img_data;
+    let img = img_data.imgs[0];
+    let { width: imgw, height: imgh } = img;
+    let pos = placed[img_name];
+    if (!pos) {
+      continue;
+    }
+    img.bitblt(pngout, 0, 0, imgw, imgh, pos[0] * tilesize, pos[1] * tilesize);
+  }
+
+  let outbuf = pngWrite(pngout);
+  fs.writeFileSync(`${stable_atlas_dir}/${atlas_name}.png`, outbuf);
+
+  let index = [];
+  for (let key in placed) {
+    let pos = placed[key];
+    index.push(`${key}:${pos[0] + pos[1] * bit_w}`);
+  }
+  if (fs.existsSync(`${index_file}.tmp`)) {
+    fs.unlinkSync(`${index_file}.tmp`);
+  }
+  fs.writeFileSync(`${index_file}.tmp`, index.join('\n'));
+  if (fs.existsSync(index_file)) {
+    fs.unlinkSync(index_file);
+  }
+
+  fs.renameSync(`${index_file}.tmp`, index_file);
+
+  let runtime = {};
+  for (let key in placed) {
+    if (reserved[key]) {
+      continue;
+    }
+    let pos = placed[key];
+    let posidx = pos[0] + pos[1] * bit_w;
+    runtime[posidx] = key;
+  }
+
+  job.out({
+    relative: `client/${atlas_name}.atlas_map`,
+    contents: JSON.stringify(runtime),
+  });
+}
 
 module.exports = function (opts) {
   let ignore_list = opts.ignore || [];
@@ -277,6 +454,24 @@ module.exports = function (opts) {
             if (!Array.isArray(config_data.mask_color) || config_data.mask_color.length !== 4) {
               job.error(img_file, 'mask_color must be number[4]');
               delete config_data.mask_color;
+            }
+          }
+          if (config_data.stable_atlas_tilesize) {
+            if (typeof config_data.stable_atlas_tilesize !== 'number') {
+              job.error(img_file, 'stable_atlas_tilesize must be number');
+              delete config_data.stable_atlas_tilesize;
+            }
+          }
+          if (config_data.stable_atlas_max_size) {
+            if (typeof config_data.stable_atlas_max_size !== 'number') {
+              job.error(img_file, 'stable_atlas_max_size must be number');
+              delete config_data.stable_atlas_max_size;
+            }
+          }
+          if (config_data.stable_atlas_tex_size) {
+            if (typeof config_data.stable_atlas_tex_size !== 'number') {
+              job.error(img_file, 'stable_atlas_tex_size must be number');
+              delete config_data.stable_atlas_tex_size;
             }
           }
           continue;
@@ -503,7 +698,11 @@ module.exports = function (opts) {
         for (let ii = 0; ii < out_list.length; ++ii) {
           job.out(out_list[ii]);
         }
+
         pngAllocTempReset();
+        if (config_data?.stable_atlas_tilesize) {
+          updateStableAtlas(job, atlas_name, config_data, imgs_for_packing);
+        }
       }
 
       job.log(`Read ${png_read_count} PNG files (${(png_read_size/1024/1024).toFixed(1)}MB)`);
@@ -652,6 +851,7 @@ module.exports = function (opts) {
     ],
     version: [
       buildproc,
+      updateStableAtlas,
       cmpFileKeys,
       parse9Patch,
       ignore,
