@@ -39,7 +39,7 @@ type SpotCustomNavTarget = null | // indicates the spot should do no navigation,
   undefined | // indicates navigation should target nothing (keys not consumed)
   string; // the key of a custom element
 
-type SpotCustomNav = Partial<Record<SpotNavEnum, SpotCustomNavTarget>>;
+export type SpotCustomNav = Partial<Record<SpotNavEnum, SpotCustomNavTarget>>;
 
 
 // See SPOT_DEFAULT for defaults
