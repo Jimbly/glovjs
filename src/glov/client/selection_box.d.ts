@@ -94,6 +94,7 @@ export interface SelectionBoxOptsAll {
   slider_w: number; // Only for SimpleMenus
   touch_focuses: boolean;
   scroll_area_opts: ScrollAreaOpts; // Only valid at creation time
+  nav_loop: boolean;
 }
 
 export type SelectionBoxOpts = Partial<SelectionBoxOptsAll>;
