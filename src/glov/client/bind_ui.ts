@@ -994,6 +994,7 @@ export function bindUIRun(opts: UIBox & {
   header_style?: FontStyle;
   alt_background_color?: Vec4;
 }): boolean {
+  assert(base_binds, 'bindUIStartup() never called');
   let { x, y, z, w, h, pad, bindable_cmds, label_style, header_style, alt_background_color } = opts;
   const tiny_add_new = true;
   z = z || Z.UI;
