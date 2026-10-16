@@ -173,6 +173,14 @@ export let app_state = null;
 export const border_color = vec4(0, 0, 0, 1);
 export let border_clear_color = vec4(0, 0, 0, 1);
 
+export function setBorderColor(color) {
+  v4copy(border_color, color);
+}
+
+export function setBorderClearColor(color) {
+  v4copy(border_clear_color, color);
+}
+
 let no_render = false;
 let dirty_render = false;
 let render_frames_needed = 3;
