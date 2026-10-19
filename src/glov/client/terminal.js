@@ -4,6 +4,7 @@
 
 import * as assert from 'assert';
 const { abs, floor, max, min } = Math;
+import { stripAnsi } from 'glov/common/ansi';
 import { clamp } from 'glov/common/util.js';
 import { vec4 } from 'glov/common/vmath.js';
 import { actionEdge } from './actions';
@@ -423,6 +424,13 @@ class GlovTerminal {
     this.codepage(params.codepage);
     let just_wrapped = false; // maybe should persist between print() calls?
     let text = params.text || '';
+    if (params.center && params.w && typeof text === 'string') {
+      let len = stripAnsi(text).length;
+      let pad = floor((params.w - len) / 2);
+      if (pad > 0) {
+        this.offset(pad);
+      }
+    }
     if (text && !text.length) {
       text = [text];
     }
