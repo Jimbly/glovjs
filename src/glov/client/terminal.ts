@@ -144,7 +144,7 @@ export type TerminalCodePage = 'ansi' | 'unicode';
 
 export type TerminalParams = Partial<{
   baud: number;
-  draw_cursor: JSVec2 | null;
+  draw_cursor: JSVec2 | null | false;
   sounds: boolean;
   x: number;
   y: number;
@@ -205,7 +205,7 @@ export type TerminalMenuParams = {
 class Terminal {
   baud: number;
   frame = 0;
-  draw_cursor: JSVec2 | null;
+  draw_cursor: JSVec2 | null | false;
   sounds: boolean;
   cp: TerminalCodePage = 'ansi';
   // screen buffer
