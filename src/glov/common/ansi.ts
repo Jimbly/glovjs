@@ -2,7 +2,7 @@ const ESC = '\u001b';
 
 const { floor } = Math;
 
-export type SFunc = (s: string) => string;
+export type SFunc = (s: string | number) => string;
 export type AnsiColors = 'black' |
   'red' |
   'green' |
@@ -29,10 +29,10 @@ export const ansi = { bg: {} } as (Record<AnsiColors, SFuncBright> & {
   'cyan',
   'white',
 ] as const).forEach(function (color, idx) {
-  let fn = function (str: string): string {
+  let fn = function (str: string | number): string {
     return `${ESC}[${30 + idx}m${str}${ESC}[0m`;
   } as SFuncBright;
-  fn.bright = function (str: string): string {
+  fn.bright = function (str: string | number): string {
     return `${ESC}[${30 + idx};1m${str}${ESC}[0m`;
   };
   ansi[color] = fn;
