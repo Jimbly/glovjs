@@ -6,6 +6,7 @@ import * as assert from 'assert';
 const { abs, floor, max, min } = Math;
 import { clamp } from 'glov/common/util.js';
 import { vec4 } from 'glov/common/vmath.js';
+import { actionEdge } from './actions';
 import * as engine from './engine.js';
 import * as glov_font from './font.js';
 import * as input from './input.js';
@@ -682,7 +683,7 @@ class GlovTerminal {
   }
 
   menu(params) {
-    let { x, y, items } = params;
+    let { x, y, items, allow_leftright } = params;
     let color_sel = params.color_sel || { fg: 15, bg: 8 };
     let color_unsel = params.color_unsel || { fg: 7, bg: 0 };
     let color_execute = params.color_execute || { fg: 8, bg: 0 };
@@ -698,10 +699,10 @@ class GlovTerminal {
     this.last_menu_frame = this.frame;
     this.last_menu_key = menu_key;
 
-    if (input.keyDownEdge(KEYS.DOWN) || input.keyDownEdge(KEYS.S)) {
+    if (actionEdge('down')) {
       this.menu_idx++;
     }
-    if (input.keyDownEdge(KEYS.UP) || input.keyDownEdge(KEYS.W)) {
+    if (actionEdge('up')) {
       this.menu_idx--;
     }
     if (input.keyDownEdge(KEYS.HOME)) {
@@ -762,7 +763,7 @@ class GlovTerminal {
         this.menu_idx = ii;
         ret = ii;
       }
-      if ((hotkey && hotkey === '0' || items.length === 1) && input.keyDownEdge(KEYS.ESCAPE)) {
+      if ((hotkey && hotkey === '0' || items.length === 1) && actionEdge('cancel')) {
         this.menu_idx = ii;
         ret = ii;
       }
@@ -771,11 +772,10 @@ class GlovTerminal {
     this.menu_idx = (this.menu_idx + items.length) % items.length;
 
     let left_select = false;
-    if (input.keyDownEdge(KEYS.SPACE) ||
-      input.keyDownEdge(KEYS.ENTER) ||
-      ret === -1 && (
-        input.keyDownEdge(KEYS.D) || input.keyDownEdge(KEYS.RIGHT) ||
-        (left_select = (input.keyDownEdge(KEYS.A) || input.keyDownEdge(KEYS.LEFT)))
+    if (actionEdge('accept') ||
+      ret === -1 && allow_leftright && (
+        actionEdge('right') ||
+        (left_select = actionEdge('left'))
       )
     ) {
       ret = this.menu_idx;
