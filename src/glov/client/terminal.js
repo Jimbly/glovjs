@@ -36,6 +36,7 @@ const MOD_CH = 1;
 const MOD_SCROLL = 2;
 const MOD_CLEAR = 3;
 const MOD_CLEAREOL = 4;
+const MOD_CB = 5;
 
 const ansi_to_vga = [
   0, // black
@@ -245,6 +246,11 @@ class GlovTerminal {
           this.playback.y = mod.y;
         }
       } break;
+      case MOD_CB:
+        if (mod_playback) {
+          mod.ch();
+        }
+        break;
     }
     if (mod_playback) {
       this.playback.timestamp = engine.getFrameTimestamp();
@@ -277,13 +283,13 @@ class GlovTerminal {
         char_info.attr === mod.attr
       ) {
         // no change, discard mod
-        return;
+        return null;
       }
     }
     this.domod(this.prebuffer, mod);
     if (!this.baud) {
       this.domod(this.buffer, mod);
-      return;
+      return null;
     }
     if (this.mod_tail) {
       this.mod_tail.next = mod;
@@ -291,6 +297,7 @@ class GlovTerminal {
     } else {
       this.mod_head = this.mod_tail = mod;
     }
+    return mod;
   }
 
   normal() {
@@ -367,6 +374,12 @@ class GlovTerminal {
     this.mod(MOD_CLEAREOL);
     this.x = this.w; // probably?
     this.checkwrap();
+  }
+  queueCb(cb) {
+    let mod = this.mod(MOD_CB, cb);
+    if (!mod) {
+      cb();
+    }
   }
 
   subViewPush(sub_view) {
