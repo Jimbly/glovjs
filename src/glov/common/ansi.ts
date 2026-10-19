@@ -63,6 +63,10 @@ export function padLeft(str: string, width: number): string {
   return str;
 }
 
+export function stripAnsi(str: string): string {
+  return str.replace(strip_ansi, '');
+}
+
 // eslint-disable-next-line no-control-regex
 const match_ansi = /^\u001b\[(?:[0-9;]*)[0-9A-ORZcf-nqry=><]/;
 // Word wrapping assuming `auto_crlf` and `ignore_newline_after_wrap`
