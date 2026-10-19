@@ -744,8 +744,8 @@ class GlovTerminal {
         }
       }
       let param = {
-        x: this.render_x + effx * this.char_width,
-        y: this.render_y + effy * this.char_height,
+        x: this.render_x + ((this.sub_view ? this.sub_view.x : 0) + effx) * this.char_width,
+        y: this.render_y + ((this.sub_view ? this.sub_view.y : 0) + effy) * this.char_height,
         w: max_w * this.char_width,
         h: this.char_height,
       };
