@@ -50,21 +50,6 @@ const ansi_to_vga = [
   7, // white
 ];
 
-function toch(ch) {
-  if (typeof ch === 'string') {
-    let idx = ch.charCodeAt(0);
-    if (ansi_to_unicode[idx]) {
-      return String.fromCharCode(ansi_to_unicode[idx]);
-    } else {
-      return ch;
-    }
-  }
-  if (typeof ch === 'number') {
-    return String.fromCharCode(ansi_to_unicode[ch] || ch);
-  } else {
-    return String(ch)[0] || ' ';
-  }
-}
 const ATTR = {
   BLINK: 1,
   UNDERLINE: 2, // unimplemented
@@ -119,6 +104,7 @@ class GlovTerminal {
     this.fg = 7;
     this.bg = 0;
     this.attr = 0;
+    this.codepage(params.codepage || 'ansi');
     this.saved_x = 0;
     this.saved_y = 0;
     this.playback = {
@@ -167,6 +153,26 @@ class GlovTerminal {
       }
     }
   }
+
+  tochFn(ch) {
+    if (typeof ch === 'string') {
+      if (this.cp === 'ansi') {
+        let idx = ch.charCodeAt(0);
+        if (ansi_to_unicode[idx]) {
+          return String.fromCharCode(ansi_to_unicode[idx]);
+        }
+      }
+      return ch;
+    } else if (typeof ch === 'number') {
+      if (this.cp === 'ansi') {
+        return String.fromCharCode(ansi_to_unicode[ch] || ch);
+      }
+      return String.fromCharCode(ch);
+    } else {
+      return String(ch)[0] || ' ';
+    }
+  }
+  toch = this.tochFn.bind(this);
 
   domod(buffer, mod) {
     let mod_playback = buffer === this.buffer;
@@ -316,6 +322,12 @@ class GlovTerminal {
     }
   }
 
+  codepage(codepage) {
+    if (codepage === 'ansi' || codepage === 'unicode') {
+      this.cp = codepage;
+    }
+  }
+
   moveto(x, y) {
     if (typeof x === 'number') {
       this.x = this.x0 + x;
@@ -408,6 +420,7 @@ class GlovTerminal {
   print(params) {
     this.moveto(params.x, params.y);
     this.color(params.fg, params.bg);
+    this.codepage(params.codepage);
     let just_wrapped = false; // maybe should persist between print() calls?
     let text = params.text || '';
     if (text && !text.length) {
@@ -416,7 +429,7 @@ class GlovTerminal {
     if (typeof text === 'string') {
       text = text.split('');
     }
-    text = text.map(toch).join('');
+    text = text.map(this.toch).join('');
     for (let ii = 0; ii < text.length;) {
       let ch = text[ii];
       let handled = false;
@@ -539,7 +552,7 @@ class GlovTerminal {
     let x1 = clamp(x + w, 0, eff_w);
     let y0 = clamp(y, 0, eff_h);
     let y1 = clamp(y + h, 0, eff_h);
-    let ch = toch(params.ch || ' ');
+    let ch = this.toch(params.ch || ' ');
     for (let ii = y0; ii < y1; ++ii) {
       this.moveto(x0, ii);
       for (let jj = x0; jj < x1; ++jj) {
