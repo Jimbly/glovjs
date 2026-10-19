@@ -3,19 +3,34 @@
 /*eslint no-bitwise:off */
 
 import * as assert from 'assert';
-const { abs, floor, max, min } = Math;
 import { stripAnsi } from 'glov/common/ansi';
-import { clamp } from 'glov/common/util.js';
-import { vec4 } from 'glov/common/vmath.js';
+import { clamp } from 'glov/common/util';
+import { vec4 } from 'glov/common/vmath';
 import { actionEdge } from './actions';
-import * as engine from './engine.js';
-import * as glov_font from './font.js';
-import * as input from './input.js';
-import * as ui from './ui.js';
+import {
+  getFrameDt,
+  getFrameTimestamp,
+} from './engine';
+import {
+  fontStyle,
+  intColorFromVec4Color,
+} from './font';
+import {
+  inputClick,
+  keyDownEdge,
+  KEYS,
+  mouseMoved,
+  mouseOver,
+} from './input';
+import {
+  drawRect,
+  playUISound,
+  uiGetFont,
+} from './ui';
+
+const { abs, floor, max, min } = Math;
 
 Z.BACKGROUND = Z.BACKGROUND || 1;
-
-const { KEYS } = input;
 
 const mode_regex1 = /^((?:\d+;)*\d+m)/u;
 const mode_regex2 = /(\d+)[;m]/gu;
@@ -133,13 +148,13 @@ class GlovTerminal {
     }
     this.font_styles = [];
     for (let ii = 0; ii < this.palette.length; ++ii) {
-      this.font_styles.push(glov_font.style(null, {
-        color: glov_font.intColorFromVec4Color(this.palette[ii]),
+      this.font_styles.push(fontStyle(null, {
+        color: intColorFromVec4Color(this.palette[ii]),
       }));
     }
     this.char_width = params.char_width || 9;
     this.char_height = params.char_height || 16;
-    this.font = params.font || engine.font;
+    this.font = params.font || uiGetFont();
     this.auto_scroll = params.auto_scroll ?? true;
     this.auto_crlf = params.auto_crlf ?? false;
     this.ignore_newline_after_wrap = params.ignore_newline_after_wrap ?? false;
@@ -262,7 +277,7 @@ class GlovTerminal {
         break;
     }
     if (mod_playback) {
-      this.playback.timestamp = engine.getFrameTimestamp();
+      this.playback.timestamp = getFrameTimestamp();
       if (this.playback.x >= this.w) {
         this.playback.x = 0;
         this.playback.y++;
@@ -705,7 +720,7 @@ class GlovTerminal {
   }
   sound(id) {
     if (this.sounds) {
-      ui.playUISound(id);
+      playUISound(id);
     }
   }
 
@@ -734,11 +749,11 @@ class GlovTerminal {
       this.menu_idx--;
       this.sound('rollover');
     }
-    if (input.keyDownEdge(KEYS.HOME)) {
+    if (keyDownEdge(KEYS.HOME)) {
       this.menu_idx = 0;
       this.sound('rollover');
     }
-    if (input.keyDownEdge(KEYS.END)) {
+    if (keyDownEdge(KEYS.END)) {
       this.menu_idx = items.length - 1;
       this.sound('rollover');
     }
@@ -781,19 +796,19 @@ class GlovTerminal {
         h: this.char_height,
       };
       let click;
-      if ((click = input.click(param))) {
+      if ((click = inputClick(param))) {
         if (click.button === 2) {
           this.menu_select_delta = -1;
         }
         this.menu_idx = ii;
         ret = ii;
-      } else if (input.mouseMoved() && input.mouseOver(param)) {
+      } else if (mouseMoved() && mouseOver(param)) {
         if (this.menu_idx !== ii) {
           this.menu_idx = ii;
           this.sound('rollover');
         }
       }
-      if (hotkey && input.keyDownEdge(KEYS.A + hotkey.charCodeAt(0) - 'A'.charCodeAt(0))) {
+      if (hotkey && keyDownEdge(KEYS.A + hotkey.charCodeAt(0) - 'A'.charCodeAt(0))) {
         this.menu_idx = ii;
         ret = ii;
       }
@@ -869,7 +884,7 @@ class GlovTerminal {
   }
 
   render() {
-    let dt = engine.getFrameDt();
+    let dt = getFrameDt();
     this.frame++;
 
     while (dt >= this.mod_countdown && this.mod_head) {
@@ -894,7 +909,7 @@ class GlovTerminal {
     this.mod_countdown = max(0, this.mod_countdown - dt);
 
     const { w, h, buffer, char_width, char_height, palette, draw_cursor } = this;
-    const blink = engine.getFrameTimestamp() % 1000 > 500;
+    const blink = getFrameTimestamp() % 1000 > 500;
     const x = this.render_x;
     const y = this.render_y;
     const z = this.render_z;
@@ -922,7 +937,7 @@ class GlovTerminal {
           ++jj;
         }
         text = text.join('');
-        engine.font.drawSized(this.font_styles[fg],
+        this.font.drawSized(this.font_styles[fg],
           x + jj0 * char_width, y + ii * char_height, z + 0.5,
           char_height, text);
       }
@@ -932,9 +947,9 @@ class GlovTerminal {
       let { playback } = this;
       let cx = x + (this.mod_head ? playback.x : this.x) * char_width;
       let cy = y + (this.mod_head ? playback.y : this.y) * char_height;
-      let cursor_blink = (engine.getFrameTimestamp() - playback.timestamp) % 1000 < 500;
+      let cursor_blink = (getFrameTimestamp() - playback.timestamp) % 1000 < 500;
       if (cursor_blink) {
-        ui.drawRect(cx, cy + char_height - draw_cursor[1] - 1,
+        drawRect(cx, cy + char_height - draw_cursor[1] - 1,
           cx + char_width, cy + char_height - draw_cursor[0],
           z + 0.75, palette[this.mod_head ? playback.fg : this.fg]);
       }
@@ -950,13 +965,13 @@ class GlovTerminal {
     let last_y;
     let box_color = buffer[0][0].bg;
     function flush() {
-      ui.drawRect(x + box_x0 * char_width, y + box_y0 * char_height,
+      drawRect(x + box_x0 * char_width, y + box_y0 * char_height,
         x + (last_x + 1) * char_width, y + (last_y + 1) * char_height, z, palette[box_color]);
       if (box_y0 !== last_y && last_y !== w - 1) {
         // A was draw, draw B:
         // AAABB
         // AAA..
-        ui.drawRect(x + (last_x + 1) * char_width, y + box_y0 * char_height,
+        drawRect(x + (last_x + 1) * char_width, y + box_y0 * char_height,
           x + w * char_width, y + last_y * char_height, z, palette[box_color]);
       }
     }
