@@ -1,5 +1,7 @@
 const ESC = '\u001b';
 
+const { floor } = Math;
+
 export type SFunc = (s: string) => string;
 export type AnsiColors = 'black' |
   'red' |
@@ -59,6 +61,15 @@ export function padLeft(str: string, width: number): string {
   let len = str.replace(strip_ansi, '').length;
   if (len < width) {
     str = new Array(width - len + 1).join(' ') + str;
+  }
+  return str;
+}
+
+export function center(str: string, width: number): string {
+  let len = str.replace(strip_ansi, '').length;
+  let pad = floor((width - len) / 2);
+  if (pad > 0) {
+    str = new Array(pad + 1).join(' ') + str;
   }
   return str;
 }
