@@ -1,12 +1,20 @@
-const { ansi, padRight } = require('../common/ansi.js');
-const { capitalize, clamp } = require('../common/util');
-const { actionEdge } = require('./actions');
-const engine = require('./engine.js');
-const input = require('./input.js');
-const { KEYS } = require('./input.js');
-const settings = require('./settings');
-const { settingsSet } = require('./settings');
-const { terminalCreate } = require('./terminal.js');
+import { ansi, padRight } from '../common/ansi';
+import { capitalize, clamp } from '../common/util';
+import { actionEdge } from './actions';
+import {
+  addTickFunc,
+  getViewportPostprocess,
+  setViewportPostprocess,
+} from './engine';
+import {
+  keyDownEdge,
+  KEYS,
+} from './input';
+import {
+  settingsGet,
+  settingsSet,
+} from './settings';
+import { terminalCreate } from './terminal';
 
 const { round } = Math;
 
@@ -30,7 +38,7 @@ export function terminalSettingsShow() {
 }
 
 function settingsOverlay(dt) {
-  if (input.keyDownEdge(KEYS.O)) {
+  if (keyDownEdge(KEYS.O)) {
     settings_up = !settings_up;
   }
   if (settings_up) {
@@ -55,13 +63,13 @@ function settingsOverlay(dt) {
       item('modem', `${opts.modem}: ${MODEMS[modem_idx].label}`);
     }
     if (opts.display) {
-      item('display', `${opts.display}: ${engine.getViewportPostprocess() ? 'CRT' : 'LCD'}`);
+      item('display', `${opts.display}: ${getViewportPostprocess() ? 'CRT' : 'LCD'}`);
     }
     if (opts.sound) {
-      item('sound', `${opts.sound}: ${round(settings.volume_sound * 10)}`);
+      item('sound', `${opts.sound}: ${round(settingsGet('volume_sound') * 10)}`);
     }
     if (opts.music) {
-      item('music', `${opts.music}: ${round(settings.volume_music * 10)}`);
+      item('music', `${opts.music}: ${round(settingsGet('volume_music') * 10)}`);
     }
     item('exit', `Exit ${ansi.yellow.bright('[O]')}ptions`);
     let sel = settings_terminal.menu({
@@ -82,14 +90,14 @@ function settingsOverlay(dt) {
         base_terminal.baud = MODEMS[modem_idx].baud;
         break;
       case 'display':
-        engine.setViewportPostprocess(!engine.getViewportPostprocess());
+        setViewportPostprocess(!getViewportPostprocess());
         break;
       case 'sound': {
-        let v = clamp(round(settings.volume_sound * 10) + settings_terminal.menu_select_delta, 0, 10) / 10;
+        let v = clamp(round(settingsGet('volume_sound') * 10) + settings_terminal.menu_select_delta, 0, 10) / 10;
         settingsSet('volume_sound', v);
       } break;
       case 'music': {
-        let v = clamp(round(settings.volume_music * 10) + settings_terminal.menu_select_delta, 0, 10) / 10;
+        let v = clamp(round(settingsGet('volume_music') * 10) + settings_terminal.menu_select_delta, 0, 10) / 10;
         settingsSet('volume_music', v);
       } break;
       default:
@@ -149,5 +157,5 @@ export function terminalSettingsInit(terminal, opts_in) {
     ch: '▓',
   });
 
-  engine.addTickFunc(settingsOverlay);
+  addTickFunc(settingsOverlay);
 }
