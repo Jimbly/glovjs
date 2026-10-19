@@ -14,6 +14,9 @@ let opts;
 let settings_terminal;
 let base_terminal;
 let settings_up = false;
+export function terminalSettingsVisible() {
+  return settings_up;
+}
 
 const MODEMS = [
   { baud: 2400, label: 'Hayes Smartmodem 2400bps' },
