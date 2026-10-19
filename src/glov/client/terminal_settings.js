@@ -120,6 +120,8 @@ export function terminalSettingsInit(terminal, opts_in) {
     baud: 0,
     x: 10 * terminal.char_width,
     y: 2 * terminal.char_height,
+    char_width: terminal.char_width,
+    char_height: terminal.char_height,
     z: Z.DEBUG,
     w: 38,
     h: num_items + 3,
