@@ -1,7 +1,7 @@
-import { autoResetSkippedFrames } from 'glov/client/auto_reset';
-import * as engine from 'glov/client/engine';
 import type { TSMap } from 'glov/common/types';
 import { easeOut, lerp } from 'glov/common/util';
+import { autoResetSkippedFrames } from './auto_reset';
+import * as engine from './engine';
 
 const { min } = Math;
 
