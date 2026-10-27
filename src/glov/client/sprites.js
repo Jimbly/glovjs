@@ -1068,11 +1068,11 @@ Sprite.prototype.getAspect = function () {
   if (!tex) {
     return 1;
   }
-  let aspect = tex.src_width / tex.src_height;
   if (this.uvs) {
-    aspect *= (this.uvs[2] - this.uvs[0]) / (this.uvs[3] - this.uvs[1]);
+    return (this.uvs[2] - this.uvs[0]) * tex.width / ((this.uvs[3] - this.uvs[1]) * tex.height);
+  } else {
+    return tex.src_width / tex.src_height;
   }
-  return aspect;
 };
 
 Sprite.prototype.onReInit = function (cb) {
