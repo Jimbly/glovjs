@@ -856,11 +856,13 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data, 
 
   clearGLErr();
 
-  // Resize NP2 if this is not being used for a texture array, and it is not explicitly allowed (non-mipmapped, clamped)
+  // Resize NP2 if this is not being used for a texture array, and it is not
+  //   explicitly allowed (non-mipmapped+clamped or webgl2+clamped)
   let np2_source = (!isPowerOfTwo(w) || !isPowerOfTwo(h));
   let np2_pad = np2_source &&
     !this.is_array && !this.is_cube && !data.is_raw_data && !per_mipmap_data &&
-    !(!this.mipmaps && this.wrap_s === gl.CLAMP_TO_EDGE && this.wrap_t === gl.CLAMP_TO_EDGE);
+    !(!this.mipmaps && this.wrap_s === gl.CLAMP_TO_EDGE && this.wrap_t === gl.CLAMP_TO_EDGE) &&
+    !(engine.webgl2 && this.wrap_s === gl.CLAMP_TO_EDGE && this.wrap_t === gl.CLAMP_TO_EDGE);
   if (np2_pad) {
     this.width = nextHighestPowerOfTwo(w);
     this.height = nextHighestPowerOfTwo(h);
