@@ -2,7 +2,7 @@ import { ansi, padRight } from '../common/ansi';
 import { capitalize, clamp } from '../common/util';
 import { actionEdge } from './actions';
 import {
-  addTickFunc,
+  addAppPostTick,
   getViewportPostprocess,
   setViewportPostprocess,
 } from './engine';
@@ -163,5 +163,5 @@ export function terminalSettingsInit(terminal: Terminal, opts_in?: Partial<Termi
     ch: '▓',
   });
 
-  addTickFunc(settingsOverlay);
+  addAppPostTick(settingsOverlay);
 }
