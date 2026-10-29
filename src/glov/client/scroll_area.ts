@@ -3,7 +3,7 @@
 
 import assert from 'assert';
 import { clamp, merge } from 'glov/common/util';
-import { vec2, Vec4, vec4 } from 'glov/common/vmath';
+import { JSVec2, vec2, Vec4, vec4 } from 'glov/common/vmath';
 import * as camera2d from './camera2d';
 import * as engine from './engine';
 import { renderNeeded } from './engine';
@@ -237,6 +237,17 @@ class ScrollAreaInternal implements ScrollArea {
       this.scroll_pos = max(this.scroll_pos - this.h,
         this.scroll_pos === 0 ? -this.h : 0);
       modified = true;
+    }
+
+    let pad_analog: JSVec2 = [0,0];
+    input.padGetAxes(pad_analog, 1, input.ANY);
+    if (pad_analog[1]) {
+      this.scroll_pos = clamp(this.scroll_pos - pad_analog[1] * engine.getFrameDt(),
+        -this.h, this.last_max_value + this.h);
+      modified = true;
+      // eat these events
+      input.padButtonDownEdge(PAD.RSTICK_DOWN);
+      input.padButtonDownEdge(PAD.RSTICK_UP);
     }
 
     if (modified) {
