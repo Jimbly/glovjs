@@ -481,8 +481,9 @@ function timeDelta(event: Event, origin_time: number): number {
 
 class KeyData {
   down_edge = 0;
-  // down_start = 0;
   origin_time = 0;
+  down_edge_time = 0;
+  repeating = false;
   down_time = 0;
   up_edge = 0;
   state = UP;
@@ -794,7 +795,8 @@ function onKeyDown(event: OurKeyboardEvent): void {
     ks.state = DOWN;
     ks.down_mod = modFromEvent(event);
     ks.origin_time = eventTimestamp(event);
-    // ks.down_start = ks.origin_time;
+    ks.down_edge_time = ks.origin_time;
+    ks.repeating = false;
 
     inEventHandle('keydown', event);
   }
@@ -1239,6 +1241,8 @@ type GamepadData = {
 type PadStateEntry = {
   value: number;
   down_mod: number;
+  down_edge_time: number;
+  repeating: boolean;
 };
 type PadState = PadStateEntry[];
 let pad_states: PadState[] = []; // One map per gamepad to pad button states
@@ -1262,6 +1266,8 @@ function getGamepadData(idx: number): GamepadData {
       pad_states[idx].push({
         value: 0,
         down_mod: 0,
+        down_edge_time: 0,
+        repeating: false,
       });
     }
   }
@@ -1282,6 +1288,8 @@ function updatePadState(gpd: GamepadData, ps: PadState, is_down: boolean, padcod
   if (is_down && !pse.value) {
     pse.value = DOWN_EDGE;
     pse.down_mod = gpd.button_mask & ~(1<<padcode);
+    pse.down_edge_time = engine.hrtime;
+    pse.repeating = false;
     onUserInput();
     if (touch_mode) {
       localStorageSetJSON('touch_mode', false);
@@ -1842,6 +1850,7 @@ export type KeyCheckOpts = {
   mod?: number;
   in_event_cb?: EventCallback | null; // for clicks and key presses
   peek?: boolean;
+  repeat?: boolean;
 };
 export function keyDown(keycode: ValidKeyValue, opts?: KeyCheckOpts | null): number {
   if (keycode === KEYS.CTRL) {
@@ -1875,6 +1884,8 @@ export function keyDown(keycode: ValidKeyValue, opts?: KeyCheckOpts | null): num
   }
   return ks.down_time;
 }
+const KEY_REPEAT_DELAY = 250;
+const KEY_REPEAT_RATE = 80;
 export function keyDownEdge(keycode: ValidKeyValue, opts?: KeyCheckOpts | null): number {
   if (input_eaten_kb) {
     return 0;
@@ -1899,6 +1910,14 @@ export function keyDownEdge(keycode: ValidKeyValue, opts?: KeyCheckOpts | null):
   let r = ks.down_edge;
   if (!opts || !opts.peek) {
     ks.down_edge = 0;
+  }
+  if (opts && opts.repeat) {
+    let time = engine.hrtime - ks.down_edge_time;
+    if (time > (ks.repeating ? KEY_REPEAT_RATE : KEY_REPEAT_DELAY)) {
+      ks.down_edge_time = engine.hrtime;
+      ks.repeating = true;
+      r++;
+    }
   }
   return r;
 }
@@ -1958,6 +1977,7 @@ export function padGetAxes(out: Vec2, stickindex: number, padindex?: number): vo
 export type PadCheckOpts = {
   peek?: boolean;
   mod?: number; // bitmask of 1 << ValidPadValue
+  repeat?: boolean;
 };
 type RealizedPadCheckOpts = WithRequired<PadCheckOpts, 'mod'>;
 
@@ -1981,6 +2001,14 @@ function padButtonDownEdgeInternal(
       if (!opts.peek) {
         pse.value = DOWN;
       }
+      return 1;
+    }
+  }
+  if (opts.repeat && pse.value === DOWN) {
+    let time = engine.hrtime - pse.down_edge_time;
+    if (time > (pse.repeating ? KEY_REPEAT_RATE : KEY_REPEAT_DELAY)) {
+      pse.down_edge_time = engine.hrtime;
+      pse.repeating = true;
       return 1;
     }
   }

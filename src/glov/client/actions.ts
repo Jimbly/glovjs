@@ -163,6 +163,7 @@ export type ActionOpts = {
   in_event_cb?: EventCallback | null; // for clicks and key presses
   peek?: boolean;
   flags?: number; // BIND_FLAG_NOKB, etc
+  repeat?: boolean;
 };
 
 export function actionEdge(action_key: ActionKey, opts?: ActionOpts | null): number {
