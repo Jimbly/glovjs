@@ -515,6 +515,12 @@ Texture.prototype.texStorage = function (levels, gl_internal_format, width, heig
     }
     this.handle = gl.createTexture();
     bindForced(this);
+    this.setSamplerState({
+      filter_min: this.filter_min,
+      filter_mag: this.filter_mag,
+      wrap_s: this.wrap_s,
+      wrap_t: this.wrap_t,
+    });
   }
   if (levels === null) {
     this.immutable_storage = null;
