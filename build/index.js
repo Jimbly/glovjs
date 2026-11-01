@@ -30,7 +30,7 @@ const json5 = require('./json5.js');
 const sourcemapRemap = require('./sourcemap-remap.js');
 const testRunner = require('./test-runner.js');
 const { texPackExtractPNG, texPackRecombinePNG } = require('./texpack.js');
-const texproc = require('./texproc.js');
+const { texproc, texoptFolders } = require('./texproc.js');
 const typescript = require('./typescript.js');
 const uglify = require('./uglify.js');
 const uglifyrc = require('./uglifyrc.js');
@@ -78,6 +78,8 @@ const babel_plugins_base = [
 ];
 
 const babel_preset_typescript = ['@babel/preset-typescript', { allowDeclareFields: true }];
+
+let server_process_container = {};
 
 function copy(job, done) {
   job.out(job.getFile());
@@ -239,6 +241,7 @@ gb.task({
     name: 'client_autoatlas',
     inputs: config.autoatlas_input,
     ignore: config.autoatlas_ignore,
+    async_hashed: config.autoatlas_async_hashed,
   }),
 });
 
@@ -247,8 +250,49 @@ gb.task({
   input: config.client_png,
   ...gbcache({
     key: 'alphafix',
-    version: 1,
+    version: 4,
   }, alphafix(config.client_png_alphafix)),
+});
+
+gb.task({
+  name: 'client_earlyreload_files',
+  input: [
+    'client_png:**',
+    'client_autoatlas:**.auat',
+  ],
+  type: gb.SINGLE,
+  target: 'dev',
+  func: function (job, done) {
+    let file = job.getFile();
+    job.out({
+      relative: file.relative.replace('client/', 'client/.early/'),
+      contents: file.contents,
+    });
+    done();
+  }
+});
+gb.task({
+  name: 'client_earlyreload',
+  input: [
+    // for some reason :** ignores the files in .early? globs ignoring .*?
+    'client_earlyreload_files:client/.early/**',
+  ],
+  type: gb.ALL,
+  read: false,
+  version: Date.now(), // always runs once per process, needs to get initial list of all files (to discard)
+  func: function (job, done) {
+    let user_data = job.getUserData();
+    if (!user_data.inited) {
+      user_data.inited = true;
+      return void done();
+    }
+    let updated = job.getFilesUpdated();
+    updated = updated.map((a) => a.relative);
+    if (server_process_container.proc) {
+      server_process_container.proc.send({ type: 'file_change', paths: updated });
+    }
+    done();
+  }
 });
 
 gb.task({
@@ -258,10 +302,28 @@ gb.task({
 });
 
 gb.task({
+  // outputs a single .texopt for each .png file, expanding folders.texopt to
+  //   be cache-friendly
+  name: 'texopt_folders',
+  input: [
+    'client_png:**',
+  ],
+  deps: ['client_texopt'],
+  read: false,
+  ...texoptFolders(),
+});
+
+gb.task({
   name: 'client_texproc',
   input: 'client_png:**',
-  deps: ['client_texopt'],
-  ...texproc(),
+  deps: ['texopt_folders'],
+  ...gbcache({
+    key: 'texproc',
+    version: 2,
+    gzexts: config.gzipped_textures,
+  }, texproc({
+    format_exclude: config.astc_in_dev ? [] : ['astc'],
+  })),
 });
 
 gb.task({
@@ -269,6 +331,7 @@ gb.task({
   input: [
     'client_texproc:**',
     'client_texproc:!**/*.tflag',
+    ...config.gzipped_textures.map((ext) => `client_texproc:!**/*${ext}`),
   ],
   type: gb.SINGLE,
   target: 'dev',
@@ -410,8 +473,6 @@ gb.task({
   type: gb.SINGLE,
   func: copy,
 });
-
-let server_process_container = {};
 
 const WORKER_BAN_DEPS = {
   'Cannot reference window/document from WebWorkers': [
@@ -621,9 +682,23 @@ gb.task({
   target: 'dev',
   ...gbcache({
     key: 'autosound',
-    version: 1,
+    version: 2,
   }, autosound(config.client_autosound_config)),
 });
+
+gb.task({
+  name: 'client_compress_dev',
+  input: config.gzipped_textures.map((ext) => `client_texproc:**/*${ext}`),
+  target: 'dev',
+  ...compress({
+    globs: ['**'],
+    passthrough: false,
+    brotli: false,
+    noexistcheck: true,
+    minsize: false,
+  }),
+});
+
 
 let client_tasks = [
   ...config.extra_client_tasks,
@@ -634,6 +709,7 @@ let client_tasks = [
   'client_fsdata',
   ...bundle_tasks,
   'client_html',
+  'client_compress_dev',
 ];
 
 let client_input_globs = client_tasks.map(addStarStar);
@@ -845,20 +921,6 @@ function noBundleTasks(elem) {
   return true;
 }
 
-function noTextureTask(elem) {
-  if (elem.split(':')[0] === 'client_texproc_output') {
-    return false;
-  }
-  return true;
-}
-
-function noFSData(elem) {
-  if (elem.split(':')[0] === 'client_fsdata') {
-    return false;
-  }
-  return true;
-}
-
 gb.task({
   name: 'build.prod.pngextract',
   input: [
@@ -897,6 +959,7 @@ gb.task({
 //     -> combines all source pngs from source data, generated, combined, etc, does alpha fixing
 //   client_texproc - input of client_png
 //     -> based on .texopt settings, generates compressed and packed textures plus tflags
+//     -> skips generating ASTC at this point (prod-only, does later)
 //     -> passes through other png files
 //   client_texproc_output
 //     -> filters out the tflags and outputs all these to dev
@@ -909,6 +972,8 @@ gb.task({
 //     -> compresses all PNGs (either individuals or those extracted in previous task)
 //   build.prod.pngpack
 //     -> repacks PNGs to TXPs, passes through other pngs
+//   build.prod.texproc
+//     -> outputs prod-only compressed formats (ASTC) that are too slow for dev
 //   build.prod.texfinal
 //     -> gathers all final images needed for prod zip tasks an also outputs to prod:
 //       all outputs from build.prod.pngpack
@@ -917,6 +982,16 @@ gb.task({
 //         There are not yet any of these, all `texproc()` outputs are currently PNGs or PNG-containing TXPs
 //   build.prod.client_fsdata
 //     -> embeds any small textures appropriate for embedding (sourced from minified textures)
+
+gb.task({
+  name: 'build.prod.texproc',
+  input: 'client_png:**',
+  deps: ['texopt_folders'],
+  ...texproc({
+    format_only: config.astc_in_dev ? [] : ['astc'],
+  }),
+});
+
 
 gb.task({
   name: 'build.prod.texfinal',
@@ -928,14 +1003,12 @@ gb.task({
     'client_texproc:!**/*.png',
     'client_texproc:!**/*.txp',
     'client_texproc:!**/*.tflag',
+    // all production-only compressed texture formats
+    'build.prod.texproc:**',
   ],
   type: gb.SINGLE,
   func: copy,
 });
-
-function noClientHTML(a) {
-  return !a.startsWith('client_html');
-}
 
 gb.task({
   name: 'asset_hash_prod',
@@ -971,7 +1044,11 @@ gb.task({
     ...bundle_tasks.map(addStarStarJSON), // things excluded in build.prod.uglify
     'build.prod.client_fsdata:**',
     'build.prod.texfinal:**',
-    ...client_input_globs.filter(noBundleTasks).filter(noTextureTask).filter(noFSData).filter(noClientHTML),
+    ...client_input_globs.filter(noBundleTasks)
+      .filter((a) => !a.startsWith('client_texproc_output:'))
+      .filter((a) => !a.startsWith('client_fsdata:'))
+      .filter((a) => !a.startsWith('client_html'))
+      .filter((a) => !a.startsWith('client_compress_dev:')),
   ],
   type: gb.SINGLE,
   func: copy,
@@ -1090,10 +1167,29 @@ gb.task({
   name: 'build.prod.compress',
   input: [
     'prod.posthash:**',
+    ...config.gzipped_textures.map((ext) => `prod.posthash:!**/*${ext}`),
     ...config.extra_prod_inputs,
   ],
   target: 'prod',
-  ...compress(config.compress_files),
+  ...compress({
+    globs: config.compress_files,
+    max: true,
+    passthrough: true,
+  }),
+});
+
+gb.task({
+  name: 'build.prod.compresstex',
+  input: [
+    ...config.gzipped_textures.map((ext) => `prod.posthash:**/*${ext}`),
+  ],
+  target: 'prod',
+  ...compress({
+    globs: ['**'],
+    max: true,
+    passthrough: false,
+    minsize: false,
+  }),
 });
 
 gb.task({
@@ -1109,7 +1205,13 @@ gb.task({
 
 gb.task({
   name: 'build.prod.client',
-  deps: ['build.prod.compress', 'build.prod.texfinal', 'build.zip', ...config.extra_prod_tasks],
+  deps: [
+    'build.prod.compress',
+    'build.prod.compresstex',
+    'build.prod.texfinal',
+    'build.zip',
+    ...config.extra_prod_tasks
+  ],
 });
 gb.task({
   name: 'build',
@@ -1120,6 +1222,7 @@ gb.task({
 gb.task({
   name: 'default',
   deps: [
+    'client_earlyreload',
     'build_deps',
     'run_server',
     'browser_sync',
@@ -1143,14 +1246,21 @@ function sendGBState() {
 }
 server_process_container.on_change = sendGBState;
 let last_gbstate = '';
-gb.on('done', function () {
-  let debug_state = gb.getDebugState();
+function handleGBState(in_progress) {
+  let debug_state = gb.getDebugState() || {};
+  debug_state.in_progress = in_progress;
   let state_str = JSON.stringify(debug_state);
   if (state_str !== last_gbstate) {
     gbstate = { type: 'gbstate', state: debug_state };
     last_gbstate = state_str;
     sendGBState();
   }
+}
+gb.on('start', function () {
+  handleGBState(true);
+});
+gb.on('done', function () {
+  handleGBState(false);
 });
 
 gb.go();

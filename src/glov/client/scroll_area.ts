@@ -3,7 +3,7 @@
 
 import assert from 'assert';
 import { clamp, merge } from 'glov/common/util';
-import { vec2, Vec4, vec4 } from 'glov/common/vmath';
+import { JSVec2, vec2, Vec4, vec4 } from 'glov/common/vmath';
 import * as camera2d from './camera2d';
 import * as engine from './engine';
 import { renderNeeded } from './engine';
@@ -216,6 +216,7 @@ class ScrollAreaInternal implements ScrollArea {
     this.scroll_pos = clamped_pos;
   }
 
+  just_scrolled = false;
   keyboardScroll(): void {
     if (this.was_disabled) {
       return;
@@ -238,7 +239,19 @@ class ScrollAreaInternal implements ScrollArea {
       modified = true;
     }
 
+    let pad_analog: JSVec2 = [0,0];
+    input.padGetAxes(pad_analog, 1, input.ANY);
+    if (pad_analog[1]) {
+      this.scroll_pos = clamp(this.scroll_pos - pad_analog[1] * engine.getFrameDt(),
+        -this.h, this.last_max_value + this.h);
+      modified = true;
+      // eat these events
+      input.padButtonDownEdge(PAD.RSTICK_DOWN);
+      input.padButtonDownEdge(PAD.RSTICK_UP);
+    }
+
     if (modified) {
+      this.just_scrolled = true;
       this.clampScrollPos();
     }
   }
@@ -259,6 +272,7 @@ class ScrollAreaInternal implements ScrollArea {
       // assumes the focus'd spot was in the same camera transform, if not, need to adapt to use .dom_pos instead
       this.scrollIntoFocus(focused_sub_elem.y, focused_sub_elem.y + focused_sub_elem.h + 1, this.h);
     }
+    this.just_scrolled = false;
 
     let maxvalue = max(h - this.h+1, 0);
     if (this.scroll_pos > maxvalue) {
@@ -380,7 +394,7 @@ class ScrollAreaInternal implements ScrollArea {
         y: handle_screenpos,
         w: bar_w,
         h: handle_pixel_h,
-        button: 0,
+        button: BUTTON_LEFT,
         spot_debug_ignore: true,
       };
 
@@ -537,9 +551,9 @@ class ScrollAreaInternal implements ScrollArea {
     });
     let trough_draw_pad = button_h / 2;
     let trough_draw_height = trough_height + trough_draw_pad * 2;
-    let trough_v0 = -trough_draw_pad / pixel_scale / scrollbar_trough.uidata.total_h;
-    let trough_v1 = trough_v0 + trough_draw_height / pixel_scale / scrollbar_trough.uidata.total_h;
     if (scrollbar_trough.texs[0].wrap_t === gl.REPEAT) {
+      let trough_v0 = -trough_draw_pad / pixel_scale / scrollbar_trough.uidata.total_h;
+      let trough_v1 = trough_v0 + trough_draw_height / pixel_scale / scrollbar_trough.uidata.total_h;
       scrollbar_trough.draw({
         x: bar_x0, y: this.y + trough_draw_pad, z: this.z+0.1,
         w: bar_w, h: trough_draw_height,
@@ -559,10 +573,21 @@ class ScrollAreaInternal implements ScrollArea {
       });
     }
 
-    ui.drawVBox({
-      x: bar_x0, y: handle_screenpos, z: this.z + 0.3,
-      w: bar_w, h: handle_pixel_h,
-    }, scrollbar_handle, handle_color);
+    if (scrollbar_handle.texs[0].wrap_t === gl.REPEAT) {
+      let handle_v0 = 0;
+      let handle_v1 = handle_v0 + handle_pixel_h / pixel_scale / scrollbar_handle.uidata.total_h;
+      scrollbar_handle.draw({
+        x: bar_x0, y: handle_screenpos, z: this.z+0.1,
+        w: bar_w, h: handle_pixel_h,
+        uvs: [scrollbar_handle.uvs[0], handle_v0, scrollbar_handle.uvs[2], handle_v1],
+        color: handle_color,
+      });
+    } else {
+      ui.drawVBox({
+        x: bar_x0, y: handle_screenpos, z: this.z + 0.3,
+        w: bar_w, h: handle_pixel_h,
+      }, scrollbar_handle, handle_color);
+    }
     let grabber_h = scrollbar_handle_grabber.uidata.total_h * pixel_scale;
     scrollbar_handle_grabber.draw({
       x: bar_x0, y: handle_screenpos + (handle_pixel_h - grabber_h) / 2, z: this.z + 0.4,
@@ -577,17 +602,26 @@ class ScrollAreaInternal implements ScrollArea {
     let changed = false;
     miny = max(miny, 0);
     if (miny < this.scroll_pos) {
-      this.scroll_pos = miny;
+      if (!this.just_scrolled) {
+        this.scroll_pos = miny;
+      }
       changed = true;
     }
     maxy -= h;
     if (maxy > this.scroll_pos) {
-      this.scroll_pos = maxy;
+      if (!this.just_scrolled) {
+        this.scroll_pos = maxy;
+      }
       changed = true;
     }
     if (changed) {
-      // Make it smooth/bouncy a bit
-      this.overscroll = old_scroll_pos - this.scroll_pos;
+      if (this.just_scrolled) {
+        // we keyboard scrolled and now the element is out of focus, just unfocus instead
+        spotUnfocus();
+      } else {
+        // Make it smooth/bouncy a bit
+        this.overscroll = old_scroll_pos - this.scroll_pos;
+      }
     }
     this.ignore_this_fram_drag = true;
   }

@@ -39,7 +39,7 @@ type SpotCustomNavTarget = null | // indicates the spot should do no navigation,
   undefined | // indicates navigation should target nothing (keys not consumed)
   string; // the key of a custom element
 
-type SpotCustomNav = Partial<Record<SpotNavEnum, SpotCustomNavTarget>>;
+export type SpotCustomNav = Partial<Record<SpotNavEnum, SpotCustomNavTarget>>;
 
 
 // See SPOT_DEFAULT for defaults
@@ -63,10 +63,13 @@ export interface SpotParamBase {
   hotkey: number | null; // optional keyboard hotkey
   hotkeys: number[] | null; // optional keyboard hotkeys
   hotpad: number | null; // optional gamepad button
+  hotaction: ActionKey | null; // optional action hotkey/buttons
+  hotactions: ActionKey[] | null; // optional action hotkeys/buttons
   // (silently) ensures we have the focus this frame (e.g. if dragging a slider, the slider
   // should retain focus even without mouseover)
   focus_steal: boolean;
   sticky_focus: boolean; // focus is not lost due to mouseover elsewhere
+  focus_upon_activation: boolean; // set focus if this spot is activated (e.g. on menus, not on toggle buttons)
   // optional map of SPOT_NAV_* to either:
   //   null: indicates the spot should not do navigation, but allow the caller to handle (sets param.out.nav)
   //   undefined: indicates navigation should target nothing (and those keys will not be consumed)
@@ -94,8 +97,11 @@ export const SPOT_DEFAULT = {
   hotkey: null,
   hotkeys: null,
   hotpad: null,
+  hotaction: null,
+  hotactions: null,
   focus_steal: false,
   sticky_focus: false,
+  focus_upon_activation: false,
   custom_nav: null,
 };
 
@@ -158,6 +164,7 @@ export interface SpotParam extends Partial<SpotParamBase>, Box, SpotComputedFiel
   hook?: HookList;
   url?: string;
   internal?: boolean; // For links (spots with `url`): default `true`
+  allow_modal?: boolean; // For links (spots with `url`): default `false`
   // from TooltipBoxParam
   tooltip?: TooltipValue | null;
   tooltip_width?: number;
@@ -195,19 +202,14 @@ interface SpotSubInternal extends SpotSubParam {
 
 type SpotListElem = SpotInternal | SpotSubInternal;
 
-// TODO: move to input.js when converted to TypeScript
-type MouseOverParam = {
-  peek?: boolean;
-  eat_clicks?: boolean;
-  spot_debug_ignore?: boolean;
-};
-
 import assert from 'assert';
 const { abs, max } = Math;
 import verify from 'glov/common/verify';
 import { Vec2, Vec4 } from 'glov/common/vmath.js';
+import { actionEdge, ActionKey } from './actions';
+import { BIND_FLAG_NOKB, BIND_FLAG_NOTEXT, bindLayerSet } from './binds';
 import * as camera2d from './camera2d.js';
-import { platformGetID, platformParameterGet } from './client_config';
+import { platformParameterGet } from './client_config';
 import * as engine from './engine.js';
 import {
   FontStyle,
@@ -231,8 +233,8 @@ import {
   mouseDownMidClick,
   mouseMoved,
   mouseOver,
+  MouseOverParam,
   mousePosIsTouch,
-  PAD,
   padButtonDownEdge,
 } from './input.js';
 import {
@@ -274,9 +276,15 @@ let last_frame_autofocus_spots: typeof frame_autofocus_spots = {};
 let pad_mode = false;
 let suppress_pad = false;
 let async_activate_key: string | null = null;
+// allow auto_focus to trigger a focus even in non-pad + non-touch mode, to telegraph keyboard selection
+let autofocus_non_pad = false;
 
 function isSubRect(area: SpotListElem): area is SpotSubInternal {
   return (area as SpotSubInternal).is_sub_rect;
+}
+
+export function spotSetAutofocusNonPad(value: boolean): void {
+  autofocus_non_pad = value;
 }
 
 export function spotPadMode(): boolean {
@@ -364,163 +372,35 @@ export function spotUnfocus(): void {
   pad_mode = false;
 }
 
-type SpotNavKeysEntry = {
-  keys?: number[];
-  pads?: number[];
-  shift_keys?: number[];
-  unshift_keys?: number[];
-};
-type SpotNavKeys = Record<SpotNavEnum, SpotNavKeysEntry>;
-const spot_nav_keys_base: SpotNavKeys = {
-  [SPOT_NAV_LEFT]: {
-    pads: [PAD.LEFT],
-  },
-  [SPOT_NAV_UP]: {
-    pads: [PAD.UP],
-  },
-  [SPOT_NAV_RIGHT]: {
-    pads: [PAD.RIGHT],
-  },
-  [SPOT_NAV_DOWN]: {
-    pads: [PAD.DOWN],
-  },
-  [SPOT_NAV_PREV]: {
-    shift_keys: [KEYS.TAB],
-    pads: [PAD.LEFT_BUMPER],
-  },
-  [SPOT_NAV_NEXT]: {
-    pads: [PAD.RIGHT_BUMPER],
-    unshift_keys: [KEYS.TAB],
-  },
-};
-const spot_nav_keys_simple: SpotNavKeys = {
-  [SPOT_NAV_LEFT]: {
-    keys: [KEYS.LEFT],
-    pads: spot_nav_keys_base[SPOT_NAV_LEFT].pads,
-  },
-  [SPOT_NAV_UP]: {
-    keys: [KEYS.UP],
-    pads: spot_nav_keys_base[SPOT_NAV_UP].pads,
-  },
-  [SPOT_NAV_RIGHT]: {
-    keys: [KEYS.RIGHT],
-    pads: spot_nav_keys_base[SPOT_NAV_RIGHT].pads,
-  },
-  [SPOT_NAV_DOWN]: {
-    keys: [KEYS.DOWN],
-    pads: spot_nav_keys_base[SPOT_NAV_DOWN].pads,
-  },
-  [SPOT_NAV_PREV]: spot_nav_keys_base[SPOT_NAV_PREV],
-  [SPOT_NAV_NEXT]: spot_nav_keys_base[SPOT_NAV_NEXT],
-};
-const spot_nav_keys_extended: SpotNavKeys = {
-  [SPOT_NAV_LEFT]: {
-    keys: spot_nav_keys_simple[SPOT_NAV_LEFT].keys!.concat([KEYS.A, KEYS.NUMPAD4]),
-    pads: spot_nav_keys_simple[SPOT_NAV_LEFT].pads,
-  },
-  [SPOT_NAV_UP]: {
-    keys: spot_nav_keys_simple[SPOT_NAV_UP].keys!.concat([KEYS.W, KEYS.NUMPAD8]),
-    pads: spot_nav_keys_simple[SPOT_NAV_UP].pads,
-  },
-  [SPOT_NAV_RIGHT]: {
-    keys: spot_nav_keys_simple[SPOT_NAV_RIGHT].keys!.concat([KEYS.D, KEYS.NUMPAD6]),
-    pads: spot_nav_keys_simple[SPOT_NAV_RIGHT].pads,
-  },
-  [SPOT_NAV_DOWN]: {
-    keys: spot_nav_keys_simple[SPOT_NAV_DOWN].keys!.concat([KEYS.S, KEYS.NUMPAD5, KEYS.NUMPAD2]),
-    pads: spot_nav_keys_simple[SPOT_NAV_DOWN].pads,
-  },
-  [SPOT_NAV_PREV]: spot_nav_keys_base[SPOT_NAV_PREV],
-  [SPOT_NAV_NEXT]: spot_nav_keys_base[SPOT_NAV_NEXT],
-};
-function keyDownShifted(key: number): boolean {
-  // Use Ctrl+Tab on Electron since the Steam overlay will intercept shift+tab
-  return (keyDown(KEYS.SHIFT) || platformGetID() === 'electron' && keyDown(KEYS.CTRL)) && keyDownEdge(key);
-}
-function keyDownUnshifted(key: number): boolean {
-  return !keyDown(KEYS.SHIFT) && keyDownEdge(key);
-}
-function compileSpotNavKeysEntry(entry: SpotNavKeysEntry): () => boolean {
-  let fns: ((() => boolean) | (() => number))[] = [];
-  if (entry.keys) {
-    for (let ii = 0; ii < entry.keys.length; ++ii) {
-      fns.push(keyDownEdge.bind(null, entry.keys[ii]));
-    }
-  }
-  if (entry.pads) {
-    for (let ii = 0; ii < entry.pads.length; ++ii) {
-      fns.push(padButtonDownEdge.bind(null, entry.pads[ii]));
-    }
-  }
-  if (entry.shift_keys) {
-    for (let ii = 0; ii < entry.shift_keys.length; ++ii) {
-      fns.push(keyDownShifted.bind(null, entry.shift_keys[ii]));
-    }
-  }
-  if (entry.unshift_keys) {
-    for (let ii = 0; ii < entry.unshift_keys.length; ++ii) {
-      fns.push(keyDownUnshifted.bind(null, entry.unshift_keys[ii]));
-    }
-  }
-  return function () {
-    for (let ii = 0; ii < fns.length; ++ii) {
-      if (fns[ii]()) {
-        return true;
-      }
-    }
-    return false;
-  };
-}
-type SpotNavKeysCompiled = Record<SpotNavEnum, () => boolean>;
-function compileSpotNavKeys(keys: SpotNavKeys): SpotNavKeysCompiled {
-  return {
-    [SPOT_NAV_LEFT]: compileSpotNavKeysEntry(keys[SPOT_NAV_LEFT]),
-    [SPOT_NAV_UP]: compileSpotNavKeysEntry(keys[SPOT_NAV_UP]),
-    [SPOT_NAV_RIGHT]: compileSpotNavKeysEntry(keys[SPOT_NAV_RIGHT]),
-    [SPOT_NAV_DOWN]: compileSpotNavKeysEntry(keys[SPOT_NAV_DOWN]),
-    [SPOT_NAV_PREV]: compileSpotNavKeysEntry(keys[SPOT_NAV_PREV]),
-    [SPOT_NAV_NEXT]: compileSpotNavKeysEntry(keys[SPOT_NAV_NEXT]),
-  };
-}
-const compiled_nav_base = compileSpotNavKeys(spot_nav_keys_base);
-const compiled_nav_simple = compileSpotNavKeys(spot_nav_keys_simple);
-const compiled_nav_extended = compileSpotNavKeys(spot_nav_keys_extended);
-let spot_nav_type: SpotNavtypeEnum;
-let spot_nav_keys: SpotNavKeysCompiled;
+// TODO: deprecate this and all apps just use bindLayerSet directly?
 export function spotSetNavtype(type: SpotNavtypeEnum): void {
-  spot_nav_type = type;
-  spot_nav_keys = (type === SPOT_NAVTYPE_SIMPLE) ? compiled_nav_simple : compiled_nav_extended;
+  bindLayerSet('navext', type === SPOT_NAVTYPE_EXTENDED);
 }
-spotSetNavtype(SPOT_NAVTYPE_EXTENDED);
+// spotSetNavtype(SPOT_NAVTYPE_EXTENDED); no: must be past startup
+
+let spot_nav_flags = {
+  [SPOT_NAV_LEFT]: 0,
+  [SPOT_NAV_UP]: 0,
+  [SPOT_NAV_RIGHT]: 0,
+  [SPOT_NAV_DOWN]: 0,
+  [SPOT_NAV_PREV]: 0,
+  [SPOT_NAV_NEXT]: 0,
+};
 function resetNavKeys(): void {
-  spot_nav_keys = (spot_nav_type === SPOT_NAVTYPE_SIMPLE) ? compiled_nav_simple : compiled_nav_extended;
+  spot_nav_flags[SPOT_NAV_LEFT] = 0;
+  spot_nav_flags[SPOT_NAV_RIGHT] = 0;
+  spot_nav_flags[SPOT_NAV_UP] = 0;
+  spot_nav_flags[SPOT_NAV_DOWN] = 0;
 }
 let suppress_kb_nav_this_frame = false;
 
 export function spotSuppressKBNav(left_right: boolean, up_down: boolean): void {
   suppress_kb_nav_this_frame = true;
-  assert(left_right);
-  let active = (spot_nav_type === SPOT_NAVTYPE_SIMPLE) ? compiled_nav_simple : compiled_nav_extended;
-  if (up_down) {
-    spot_nav_keys = {
-      [SPOT_NAV_LEFT]: compiled_nav_base[SPOT_NAV_LEFT],
-      [SPOT_NAV_UP]: compiled_nav_base[SPOT_NAV_UP],
-      [SPOT_NAV_RIGHT]: compiled_nav_base[SPOT_NAV_RIGHT],
-      [SPOT_NAV_DOWN]: compiled_nav_base[SPOT_NAV_DOWN],
-      [SPOT_NAV_PREV]: active[SPOT_NAV_PREV],
-      [SPOT_NAV_NEXT]: active[SPOT_NAV_NEXT],
-    };
-  } else {
-    // just left/right arrows, but still all text input keys
-    spot_nav_keys = {
-      [SPOT_NAV_LEFT]: compiled_nav_base[SPOT_NAV_LEFT],
-      [SPOT_NAV_UP]: compiled_nav_simple[SPOT_NAV_UP],
-      [SPOT_NAV_RIGHT]: compiled_nav_base[SPOT_NAV_RIGHT],
-      [SPOT_NAV_DOWN]: compiled_nav_simple[SPOT_NAV_DOWN],
-      [SPOT_NAV_PREV]: active[SPOT_NAV_PREV],
-      [SPOT_NAV_NEXT]: active[SPOT_NAV_NEXT],
-    };
-  }
+  // regardless of flags, suppressing text input
+  spot_nav_flags[SPOT_NAV_LEFT] = left_right ? BIND_FLAG_NOKB : BIND_FLAG_NOTEXT;
+  spot_nav_flags[SPOT_NAV_RIGHT] = left_right ? BIND_FLAG_NOKB : BIND_FLAG_NOTEXT;
+  spot_nav_flags[SPOT_NAV_UP] = up_down ? BIND_FLAG_NOKB : BIND_FLAG_NOTEXT;
+  spot_nav_flags[SPOT_NAV_DOWN] = up_down ? BIND_FLAG_NOKB : BIND_FLAG_NOTEXT;
 }
 
 
@@ -711,7 +591,7 @@ function spotDebug(): void {
   camera2d.push();
   camera2d.setDOMMapped();
   let show_all = keyDown(KEYS.SHIFT);
-  spotDebugList(show_all, frame_spots);
+  spotDebugList(Boolean(show_all), frame_spots);
 
   if (pad_mode || show_all) {
     for (let ii = SPOT_NAV_LEFT; ii <= SPOT_NAV_DOWN; ++ii) {
@@ -1099,11 +979,19 @@ export function spotMouseoverHook(pos_param_in: Box, param: MouseOverParam): voi
   }
 }
 
+const spot_nav_actions = {
+  [SPOT_NAV_LEFT]: 'left',
+  [SPOT_NAV_UP]: 'up',
+  [SPOT_NAV_RIGHT]: 'right',
+  [SPOT_NAV_DOWN]: 'down',
+  [SPOT_NAV_PREV]: 'prev',
+  [SPOT_NAV_NEXT]: 'next',
+} as const;
 function keyCheck(nav_dir: SpotNavEnum): boolean {
   if (suppress_pad) {
     return false;
   }
-  return spot_nav_keys[nav_dir]();
+  return Boolean(actionEdge(spot_nav_actions[nav_dir], { flags: spot_nav_flags[nav_dir] }));
 }
 
 type SpotParamWithOut = SpotParam & {
@@ -1218,7 +1106,7 @@ export function spotFocusCheck(param: SpotParam): SpotRet {
     if (!spotEntirelyObscured(param) || focused && focus_is_sticky) {
       frameSpotsPush(param);
       if (auto_focus) {
-        if (!focused && !last_frame_autofocus_spots[key] && pad_mode) {
+        if (!focused && !last_frame_autofocus_spots[key] && (pad_mode || autofocus_non_pad && !inputTouchMode())) {
           spotlog('auto_focus', key);
           // play no sound, etc, just silently steal focus
           spotFocusSetSilent(param);
@@ -1297,6 +1185,8 @@ export function spot(param: SpotParam): SpotRet {
   const touch_focuses = param.touch_focuses === undefined ? def.touch_focuses : param.touch_focuses;
   const focus_steal = param.focus_steal === undefined ? def.focus_steal : param.focus_steal;
   const custom_nav = param.custom_nav === undefined ? def.custom_nav : param.custom_nav;
+  const focus_upon_activation = param.focus_upon_activation === undefined ? def.focus_upon_activation :
+    param.focus_upon_activation;
 
   spotParamAddOut(param);
   let out = param.out;
@@ -1427,7 +1317,7 @@ export function spot(param: SpotParam): SpotRet {
     }
     if (is_button && !disabled && kb_focused && !suppress_pad) {
       let key_opts = in_event_cb ? { in_event_cb } : null;
-      if (keyDownEdge(KEYS.SPACE, key_opts) || keyDownEdge(KEYS.RETURN, key_opts) || padButtonDownEdge(PAD.A)) {
+      if (actionEdge('accept', key_opts)) {
         button_activate = true;
       }
     }
@@ -1435,23 +1325,33 @@ export function spot(param: SpotParam): SpotRet {
   if (!disabled) {
     const hotkey = param.hotkey === undefined ? def.hotkey : param.hotkey;
     const hotkeys = param.hotkeys === undefined ? def.hotkeys : param.hotkeys;
+    const hotaction = param.hotaction === undefined ? def.hotaction : param.hotaction;
+    const hotactions = param.hotactions === undefined ? def.hotactions : param.hotactions;
     const hotpad = param.hotpad === undefined ? def.hotpad : param.hotpad;
-    if (hotkey || hotkeys) {
-      let key_opts = in_event_cb ? { in_event_cb } : null;
-      if (hotkey && keyDownEdge(hotkey, key_opts)) {
-        button_activate = true;
-      }
-      if (hotkeys) {
-        for (let ii = 0; ii < hotkeys.length; ++ii) {
-          if (keyDownEdge(hotkeys[ii], key_opts)) {
-            button_activate = true;
-          }
+    let key_opts = in_event_cb ? { in_event_cb } : null;
+    if (hotkey && keyDownEdge(hotkey, key_opts)) {
+      button_activate = true;
+    }
+    if (hotkeys) {
+      for (let ii = 0; ii < hotkeys.length; ++ii) {
+        if (keyDownEdge(hotkeys[ii], key_opts)) {
+          button_activate = true;
         }
       }
     }
     if (hotpad !== null) {
       if (padButtonDownEdge(hotpad)) {
         button_activate = true;
+      }
+    }
+    if (hotaction && actionEdge(hotaction, key_opts)) {
+      button_activate = true;
+    }
+    if (hotactions) {
+      for (let ii = 0; ii < hotactions.length; ++ii) {
+        if (actionEdge(hotactions[ii], key_opts)) {
+          button_activate = true;
+        }
       }
     }
     if (async_activate_key === param.key_computed) {
@@ -1475,6 +1375,10 @@ export function spot(param: SpotParam): SpotRet {
     spotSignalRet(param);
     out.button = 0;
     out.pos = null;
+    if (allow_focus && focus_upon_activation) {
+      spotFocusSet(param, false, false, 'button_activate');
+      // don't do this, it triggers a 1-frame tooltip flicker: focused = true;
+    }
   }
 
   out.focused = focused;

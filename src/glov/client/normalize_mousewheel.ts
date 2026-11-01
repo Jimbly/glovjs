@@ -115,7 +115,7 @@ const PAGE_HEIGHT = 800;
  *         Firefox v4/Win7  |     undefined    |       3
  *
  */
-type WheelEvent = {
+export type WheelEvent = {
   detail?: number;
   wheelDelta?: number;
   wheelDeltaX?: number;

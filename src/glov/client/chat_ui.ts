@@ -28,10 +28,12 @@ import {
   deprecate,
 } from 'glov/common/util';
 import {
+  ROVec4,
   v3copy,
   vec4,
 } from 'glov/common/vmath';
 import { asyncParallel } from 'glov-async';
+import { bindDispatch, bindKB } from './binds';
 import * as camera2d from './camera2d';
 import { getAbilityChat } from './client_config';
 import { cmdAutoComplete } from './cmd_auto_complete';
@@ -48,10 +50,16 @@ import {
   FontStyle,
   fontStyleAlpha,
   fontStyleColored,
+  fontStyleGetParam,
   Text,
+  vec4ColorFromIntColor,
 } from './font';
 import type { Box } from './geom_types';
 import * as input from './input';
+import {
+  BUTTON_LEFT,
+  pointerLockEnter,
+} from './input';
 import {
   getStoragePrefix,
   localStorageGetJSON,
@@ -131,6 +139,8 @@ Z.CHAT_FOCUSED = Z.CHAT_FOCUSED || Z.CHAT;
 
 const color_user_rollover = vec4(1, 1, 1, 0.5);
 const color_same_user_rollover = vec4(1, 1, 1, 0.25);
+
+const default_background_color = vec4(0.3,0.3,0.3,0.8);
 
 const MAX_PER_STYLE_DEFAULT: TSMap<number> = {
   join_leave: 3,
@@ -339,12 +349,23 @@ function conciseDate(dt: Date): string {
 }
 
 let help_font_style = fontStyleColored(null, 0x000000ff);
+let help_rollover_color = vec4(0, 0, 0, 0.25);
+let help_rollover_color2 = vec4(0, 0, 0, 0.125);
 let help_font_style_cmd = fontStyle(help_font_style, {
   outline_width: 0.5,
   outline_color: 0x000000FF,
 });
-let help_rollover_color = vec4(0, 0, 0, 0.25);
-let help_rollover_color2 = vec4(0, 0, 0, 0.125);
+export function chatUISetFontStyles(font_style: FontStyle, font_style_cmd?: FontStyle): void {
+  help_font_style = font_style;
+  help_font_style_cmd = font_style_cmd || fontStyle(help_font_style, {
+    outline_width: 0.5,
+    outline_color: fontStyleGetParam(help_font_style).color,
+  });
+  // Use font color as background highlight color (default black)
+  vec4ColorFromIntColor(help_rollover_color, fontStyleGetParam(help_font_style).color);
+  help_rollover_color[3] = 0.25;
+  v3copy(help_rollover_color2, help_rollover_color);
+}
 const TOOLTIP_MIN_PAGE_SIZE = 20;
 let tooltip_page = 0;
 let tooltip_last = '';
@@ -380,6 +401,9 @@ function drawHelpTooltip(param: {
   }
   let w = param.tooltip_width;
   let x = param.x;
+  if (x + w > camera2d.x1()) {
+    x = camera2d.x1() - w;
+  }
   let z = param.z || (Z.TOOLTIP + 5);
   let text_x = x + eff_tooltip_pad;
   let text_w = w - eff_tooltip_pad * 2;
@@ -479,6 +503,8 @@ function urlKeyEscape(str: string): string {
 
 const NOT_WRAP = ~ALIGN.HWRAP;
 class MDRChatURL implements MDLayoutBlock, MDDrawBlock {
+  break_pre = true;
+  break_post = true;
   msg_url: string;
   constructor(
     private url_label: string,
@@ -552,6 +578,8 @@ class MDRChatURL implements MDLayoutBlock, MDDrawBlock {
 }
 
 class MDRChatSource implements MDLayoutBlock, MDDrawBlock {
+  break_pre = false;
+  break_post = false;
   constructor(
     private msg: ChatMessageUser,
     private parent: ChatUI,
@@ -607,7 +635,7 @@ class MDRChatSource implements MDLayoutBlock, MDDrawBlock {
       assert(msg.id);
       assert(msg.display_name);
       let pos_param = {
-        x, y, w: dims.w, h: dims.h, button: 0,
+        x, y, w: dims.w, h: dims.h, button: BUTTON_LEFT,
         z: z + 0.5,
         peek: false,
         color: color_user_rollover,
@@ -688,6 +716,7 @@ export type ChatUIParam = {
   channel_join_message?: Text;
   max_per_style?: TSMap<number>;
 
+  background_color?: ROVec4 | null;
   inner_width_adjust?: number;
   border?: number;
   volume_join_leave?: number;
@@ -716,6 +745,7 @@ export type ChatUIParam = {
 export type ChatUIRunParam = Partial<{
   x: number;
   y: number;
+  w: number; // temporary override doesn't change ChatUI::w
   hide: boolean;
   hide_input: boolean; // if hide=false, hide unfocused text input anyway
   border: number;
@@ -726,7 +756,7 @@ export type ChatUIRunParam = Partial<{
 }>;
 
 class ChatUI {
-  private w: number;
+  readonly w: number;
   readonly h: number;
   private edit_text_entry: EditBox;
   channel: ClientChannelWorker | null = null;
@@ -742,6 +772,7 @@ class ChatUI {
   private channel_join_message: Text | null;
   private max_per_style: TSMap<number>;
   private inner_width_adjust: number;
+  private background_color: ROVec4 | null;
   private border?: number;
   private volume_join_leave: number;
   private volume_in: number;
@@ -822,6 +853,7 @@ class ChatUI {
     this.w = params.w || engine.game_width / 2;
     this.h = params.h || engine.game_height / 2;
     this.inner_width_adjust = params.inner_width_adjust || 0;
+    this.background_color = params.background_color === undefined ? default_background_color : params.background_color;
     this.border = params.border || undefined;
     this.volume_join_leave = params.volume_join_leave || 0.15;
     this.volume_in = params.volume_in || 0.5;
@@ -1178,15 +1210,11 @@ class ChatUI {
   did_run_late = false;
   runLate(): void {
     this.did_run_late = true;
-    if (getAbilityChat() && input.keyDownEdge(input.KEYS.RETURN)) {
-      this.focus();
-    }
-    if (input.keyDownEdge(input.KEYS.SLASH) ||
-      input.keyDownEdge(input.KEYS.NUMPAD_DIVIDE)
-    ) {
-      this.focus();
-      this.edit_text_entry.setText('/');
-    }
+
+    bindDispatch({
+      level: 0, // run all binds that were not yet dispatched
+      handler: this.cmdParse.bind(this),
+    });
   }
 
   addChatError(err: unknown): void {
@@ -1226,7 +1254,7 @@ class ChatUI {
       } :
       this.handle_cmd_parse;
     cmd_parse.handle(this.getAccessObj(), str, function (err?: string | null, resp?: unknown) {
-      if (err && cmd_parse.was_not_found) {
+      if (err && cmd_parse.was_not_found && netSubs()) {
         // forward to server
         netSubs().sendCmdParse(str, handleResult);
       } else {
@@ -1393,7 +1421,7 @@ class ChatUI {
     const y1 = y0 + this.h;
     let x = x0 + border;
     let y = y1;
-    let outer_w = this.w;
+    let outer_w = opts.w || this.w;
     let was_focused = this.isFocused();
     let z = this.z_override || (was_focused ? Z.CHAT_FOCUSED : Z.CHAT);
     this.z_override = null;
@@ -1404,6 +1432,7 @@ class ChatUI {
       !was_focused ?
       1 : // must be numerical, used to index fade values
       0;
+
     let hide_text_input = isMenuUp() || hide_light;
     if (!hide_text_input && was_focused && input.touch_mode) {
       // expand chat when focused on touch devices
@@ -1743,7 +1772,7 @@ class ChatUI {
       input.mouseDownEdge({ x: x0, y: y - border, w: outer_w, h: y1 - y + border });
       // But a click should dismiss it (important on fullscreen touch UI!)
       if (input.mouseUpEdge({ x: x0, y: y - border, w: outer_w, h: y1 - y + border,
-        in_event_cb: opts.pointerlock ? input.pointerLockEnter : null })
+        in_event_cb: opts.pointerlock ? pointerLockEnter.bind(null, 'chatui click off') : null })
       ) {
         spotUnfocus();
         is_focused = false;
@@ -1764,7 +1793,7 @@ class ChatUI {
       viewport = {
         x,
         y: y - max_h,
-        w: this.w,
+        w: outer_w,
         h: max_h,
       };
       for (let ii = 0; ii < this.msgs.length; ++ii) {
@@ -1797,7 +1826,9 @@ class ChatUI {
     if (!anything_visible && (isMenuUp() || hide_light)) {
       return;
     }
-    drawRect(x0, y - border, x0 + outer_w, y1, z, [0.3,0.3,0.3,0.8]);
+    if (this.background_color) {
+      drawRect(x0, y - border, x0 + outer_w, y1, z, this.background_color);
+    }
   }
 
   setChannel(channel: ClientChannelWorker | null): void {
@@ -1948,6 +1979,22 @@ class ChatUI {
       set: (v: number) => (this.volume_out = v),
       store: true,
     });
+
+    cmd_parse.register({
+      cmd: 'enter_chat',
+      help: 'Focuses chat with optional initial contents',
+      prefix_usage_with_help: true,
+      usage: 'Usage: /enter_chat [msg]',
+      func: (param: string, resp_func: CmdRespFunc) => {
+        if (!param && !getAbilityChat()) {
+          return;
+        }
+        this.focus();
+        if (param) {
+          this.edit_text_entry.setText(param);
+        }
+      }
+    });
   }
 }
 export type { ChatUI };
@@ -2048,6 +2095,19 @@ export function chatUICreate(params: ChatUIParam): ChatUI {
       pak.writeAnsiString(desired_client_id);
       pak.send(resp_func);
     }
+  });
+
+  bindKB({
+    key: 'ENTER',
+    cmd: 'enter_chat',
+    action: 'cmd',
+    modifiers: 0,
+  });
+  bindKB({
+    key: 'SLASH',
+    cmd: 'enter_chat /',
+    action: 'cmd',
+    modifiers: 0,
   });
 
   return chat_ui;

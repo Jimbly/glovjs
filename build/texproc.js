@@ -1,24 +1,46 @@
 const assert = require('assert');
+const fs = require('fs');
+const os = require('os');
 const path = require('path');
+const parseDDS = require('@jimbly/parse-dds');
+const { pack } = require('@jimbly/texture-compressor');
+const { asyncEachSeries, asyncSeries } = require('glov-async');
 const gb = require('glov-build');
+const texconv = require('texconv');
 const {
+  FORMAT_ASTC,
   FORMAT_PACK,
   FORMAT_PNG,
+  FORMAT_DXT,
+  TEXPROC_COMPRESSED_HEADER,
 } = require('../src/glov/common/texpack_common');
 const {
   drawImageBilinear,
   pngAlloc,
   pngRead,
   pngWrite,
-} = require('./png.js');
+} = require('./pngnative');
 const { texPackMakeTXP } = require('./texpack');
 
-const { floor } = Math;
+const { max, min, floor, random } = Math;
 
-module.exports = function () {
-  function findTexOpt(job, base_name, next) {
-    function searchFolder(filename) {
-      let folder = path.dirname(filename);
+function texoptFolders() {
+  function texoptFoldersJob(job, done) {
+    let filename = job.getFile().relative;
+    let name_no_ext = filename.slice(0, -path.extname(filename).length);
+    function next(texopt) {
+      if (texopt) {
+        job.out({
+          relative: `${name_no_ext}.texopt`,
+          contents: JSON.stringify(texopt),
+        });
+      }
+      done();
+    }
+
+    let file_base_name = path.basename(name_no_ext);
+    function searchFolder(searchname) {
+      let folder = path.dirname(searchname);
       if (!folder || folder === '.') {
         return void next(null);
       }
@@ -26,18 +48,375 @@ module.exports = function () {
         if (!err && file) {
           assert(file.contents);
           let obj = JSON.parse(file.contents);
-          return void next(obj);
+          if (obj.rules) {
+            for (let key in obj.rules) {
+              if (file_base_name.match(new RegExp(`^(${key})$`))) {
+                return void next(obj.rules[key]);
+              }
+            }
+          } else {
+            return void next(obj);
+          }
         }
         searchFolder(folder);
       });
     }
-    job.depAdd(`client_texopt:${base_name}.texopt`, function (err, file) {
+    job.depAdd(`client_texopt:${name_no_ext}.texopt`, function (err, file) {
       if (!err && file) {
         assert(file.contents);
         let obj = JSON.parse(file.contents);
         return void next(obj);
       }
-      searchFolder(base_name);
+      searchFolder(name_no_ext);
+    });
+  }
+  return {
+    type: gb.SINGLE,
+    func: texoptFoldersJob,
+    version: [
+      texoptFoldersJob,
+      texoptFolders,
+    ],
+  };
+}
+
+function texproc(opts) {
+  const { format_exclude, format_only } = opts;
+  function tempPngName() {
+    let temp_dir = fs.realpathSync(os.tmpdir());
+    return `${path.join(temp_dir, `texproc-${String(random()).slice(2, 8)}`)}.png`;
+  }
+  function passThrough(file_data, has_alpha, next) {
+    return next(null, file_data.data);
+  }
+
+  const HEADER_OFFS_WIDTH = 12;
+  const HEADER_OFFS_HEIGHT = 16;
+  const HEADER_SIZE = 5*4;
+
+  function ktxToImages(debug, buf, orig_file_data, next) {
+    const KTX_HEADER = [0xAB, 0x4B, 0x54, 0x58, 0x20, 0x31, 0x31, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A];
+    let idx = 0;
+    for (let ii = 0; ii < KTX_HEADER.length; ++ii) {
+      if (buf[idx++] !== KTX_HEADER[ii]) {
+        return void next(`${debug}: Unexpected KTX header (${buf.slice(0, 5).toString('utf8')}) expected "KTX11"`);
+      }
+    }
+    let endian = buf.readUint32LE(idx);
+    let file_big_endian = false;
+    if (endian === 0x04030201) {
+      // good
+    } else if (endian === 0x01020304) {
+      file_big_endian = true;
+    } else {
+      return void next(`${debug}: unknown endian value 0x${endian.toString(16)})`);
+    }
+    function readInt() {
+      let r = file_big_endian ? buf.readUint32BE(idx) : buf.readUint32LE(idx);
+      idx += 4;
+      return r;
+    }
+    let ints = [];
+    for (let ii = 0; ii < 13; ++ii) {
+      ints.push(readInt());
+    }
+    let err;
+    function check(val, expected, msg) {
+      if (!err && val !== expected) {
+        // fs.writeFileSync('c:/temp/temp.ktx', buf);
+        err = `${debug}: ${msg} (expected 0x${expected.toString(16)} found 0x${val.toString(16)})`;
+      }
+    }
+    check(ints[0], 0x04030201, 'wrong endianness');
+    check(ints[1], 0, 'glType - must be compressed texture');
+    // let gl_type_size = ints[2]; // for endian swapping
+    check(ints[3], 0, 'glFormat - must be compressed texture');
+    let gl_internal_format = ints[4]; // e.g. gl.COMPRESSED_RGBA_S3TC_DXT5_EXT
+    let gl_base_internal_format = ints[5]; // gl.RGBA or gl.RGB
+    let tex_width = max(1, ints[6]);
+    assert(tex_width);
+    let tex_height = max(1, ints[7]);
+    assert(tex_height);
+    if (tex_width < orig_file_data.width ||
+      tex_width > orig_file_data.width + 12 ||
+      tex_height < orig_file_data.height ||
+      tex_height > orig_file_data.height + 12
+    ) {
+      check(tex_width, orig_file_data.width, 'encoded image not the expected size');
+      check(tex_height, orig_file_data.height, 'encoded image not the expected size');
+    }
+    check(ints[8], 0, 'pixelDepth - 3D texture not supported');
+    check(ints[9], 0, 'numberOfArrayElements - 3D texture not supported');
+    check(ints[10], 1, 'numberOfFaces - cube maps not supported');
+    check(ints[11], 1, 'numberOfMipmapLevels - premade mips not expected'); // TODO: maybe support
+    let keyvalue_size = ints[12];
+    if (err) {
+      return void next(err);
+    }
+    idx += keyvalue_size; // skip keyvalue data if there is any
+    let imgs = [];
+
+    let size = readInt();
+    imgs.push(buf.slice(idx, idx + size));
+    idx += (size + 3) & ~3;
+    assert.equal(idx, buf.length);
+    let header = Buffer.alloc(HEADER_SIZE);
+    header.writeUInt32LE(TEXPROC_COMPRESSED_HEADER, 0);
+    header.writeUInt32LE(gl_internal_format, 4);
+    header.writeUInt32LE(gl_base_internal_format, 8);
+    header.writeUInt32LE(tex_width, HEADER_OFFS_WIDTH);
+    header.writeUInt32LE(tex_height, HEADER_OFFS_HEIGHT);
+    let out = Buffer.concat([header, imgs[0]]);
+    next(null, out);
+  }
+
+  function ddsToImages(compression, buf, orig_file_data, next) {
+    let u8 = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength).slice();
+    let dds = parseDDS(u8.buffer);
+    let gl_internal_format;
+    let gl_base_internal_format;
+    const GL_RGBA = 0x1908;
+    const GL_RGB = 0x1907;
+    switch (compression) {
+      case 'DXT1':
+        gl_internal_format = 0x83f0; // RGB_S3TC_DXT1
+        gl_base_internal_format = GL_RGB;
+        break;
+      case 'DXT1A':
+        gl_internal_format = 0x83f1; // RGBA_S3TC_DXT1
+        gl_base_internal_format = GL_RGBA;
+        break;
+      case 'DXT3':
+        gl_internal_format = 0x83f2; // RGBA_S3TC_DXT3
+        gl_base_internal_format = GL_RGBA;
+        break;
+      case 'DXT5':
+        gl_internal_format = 0x83f3; // RGBA_S3TC_DXT5
+        gl_base_internal_format = GL_RGBA;
+        break;
+      default:
+        return void next(`Unknown texture compression type ${compression}`);
+    }
+    assert.equal(dds.format, compression.toLowerCase());
+    assert.equal(dds.shape[0], orig_file_data.width);
+    assert.equal(dds.shape[1], orig_file_data.height);
+    assert.equal(dds.images.length, 1);
+    let imgdata = dds.images[0];
+    let body = u8.slice(imgdata.offset, imgdata.offset + imgdata.length);
+
+    let header = Buffer.alloc(HEADER_SIZE);
+    header.writeUInt32LE(TEXPROC_COMPRESSED_HEADER, 0);
+    header.writeUInt32LE(gl_internal_format, 4);
+    header.writeUInt32LE(gl_base_internal_format, 8);
+    header.writeUInt32LE(imgdata.shape[0], HEADER_OFFS_WIDTH);
+    header.writeUInt32LE(imgdata.shape[1], HEADER_OFFS_HEIGHT);
+    let out = Buffer.concat([header, body]);
+    next(null, out);
+  }
+
+  function compressedWrite(job, file_data, param, next) {
+    let temp_file = tempPngName();
+    let out_file = temp_file.replace(/\.png$/, '.ktx');
+    function cleanup() {
+      fs.unlink(temp_file, function () {
+        // ignore errors
+      });
+      fs.unlink(out_file, function () {
+        // ignore errors
+      });
+    }
+    fs.writeFile(temp_file, file_data.data, function (err) {
+      if (err) {
+        cleanup();
+        return void next(err);
+      }
+
+      let pack_start = Date.now();
+      pack({
+        ...param,
+        input: temp_file,
+        output: out_file,
+        square: 'no',
+        pot: 'no',
+        verbose: false,
+      }).then(function () {
+        let dt = Date.now() - pack_start;
+        if (dt > 5000) {
+          job.log(`Texture compression (${param.type}) took ${(dt/1000).toFixed(1)}s`);
+        }
+        fs.readFile(out_file, function (err, data) {
+          cleanup();
+          if (err) {
+            return void next(err);
+          }
+          // parse KTX data and return just the astc/dxt data
+          ktxToImages(param.compression, data, file_data, next);
+        });
+      }, function (err) {
+        cleanup();
+        job.error(`Failure during ${param.type} compression: ${err}`);
+        next(err);
+      });
+    });
+  }
+
+  function astcWrite(astcmode, quality, job, file_data, has_alpha, next) {
+    astcmode = (astcmode || '4x4').toLowerCase();
+    quality = [
+      null,
+      'astcveryfast',
+      'astcfast',
+      'astcmedium',
+      'astcthorough',
+      'astcexhaustive',
+    ][quality || 3];
+    compressedWrite(job, file_data, {
+      type: 'astc',
+      compression: `ASTC_${astcmode}`,
+      //  ASTC_4x4, ASTC_5x4, ASTC_5x5, ASTC_6x5, ASTC_6x6, ASTC_8x5, ASTC_8x6,
+      //  ASTC_8x8, ASTC_10x5, ASTC_10x6, ASTC_10x8, ASTC_10x10, ASTC_12x10, ASTC_12x12,
+      quality,
+      flags: ['shh'],
+    }, next);
+  }
+  function dxtWrite(texopt, job, file_data, has_alpha, next) {
+    let { dxtmode } = texopt;
+    // DXT1 = no alpha; DXT1A = alpha cutout, 4bpp; DXT5 = 1+smoothalpha, 8bpp; DXT3=4-bit alpha
+    dxtmode = (dxtmode || 'auto').toUpperCase();
+    // note: quality is ignored
+    let compression =
+      (dxtmode === 'AUTO') ? has_alpha ? 'DXT5' : 'DXT1' : dxtmode.toUpperCase();
+
+    let compress_options = {
+      in: file_data.data,
+      f: compression === 'DXT1A' ? 'DXT1' : compression,
+      ft: 'DDS',
+      m: 1, // no mipmaps
+    };
+
+    let pack_start = Date.now();
+    texconv(compress_options, function (err, dds_data) {
+      let dt = Date.now() - pack_start;
+      if (dt > 5000) {
+        job.log(`Texture compression (${compression}) took ${(dt/1000).toFixed(1)}s`);
+      }
+      if (err) {
+        return void next(err);
+      }
+      // parse DDS data and return just the dxt data
+      ddsToImages(compression, dds_data, file_data, next);
+    });
+  }
+
+  function dxtWriteCrunch(texopt, job, file_data, has_alpha, next) {
+    let { dxtmode, quality } = texopt;
+    // DXT1 = no alpha; DXT1A = alpha cutout, 4bpp; DXT5 = 1+smoothalpha, 8bpp; DXT3=4-bit alpha
+    dxtmode = (dxtmode || 'auto').toUpperCase();
+    quality = [
+      null,
+      'superfast',
+      'fast',
+      'normal',
+      'better',
+      'uber',
+    ][quality || 3];
+    let compression =
+      (dxtmode === 'AUTO') ? has_alpha ? 'DXT5' : 'DXT1' : dxtmode.toUpperCase();
+
+    let compress_options = {
+      type: 's3tc',
+      compression,
+      quality,
+    };
+    // if (cacheable) {
+    //   // produces deterministic output, but much slower
+    //   // Nope!  Sometimes even with this it does not produce identical outputs.
+    //   compress_options.flags = ['helperThreads 0'];
+    // }
+    if (file_data.width <= 4096 && file_data.height <= 4096) {
+      // works, just do it
+      compressedWrite(job, file_data, compress_options, next);
+      return;
+    }
+    // over 4K, `crunch` will not handle it, do it in chunks
+    assert(file_data.uncompressed);
+    let chunks = [];
+    for (let xx = 0; xx < file_data.width; xx += 4096) {
+      for (let yy = 0; yy < file_data.height; yy += 4096) {
+        chunks.push({
+          x: xx,
+          y: yy,
+          width: min(file_data.width - xx, 4096),
+          height: min(file_data.height - yy, 4096),
+        });
+      }
+    }
+    let png = pngAlloc({ width: 4096, height: 4096, byte_depth: 4 });
+    let img_data;
+    asyncSeries([
+      function (next) {
+        // compress each 4K chunk
+        asyncEachSeries(chunks, function (chunk, next) {
+          let src = file_data.uncompressed.data;
+          let dst = png.data;
+          let row_size = chunk.width * 4;
+          let src_stride = file_data.width * 4;
+          for (let yy = 0; yy < chunk.height; ++yy) {
+            let source_start = (chunk.y + yy) * src_stride + chunk.x * 4;
+            src.copy(dst, yy * row_size, source_start, source_start + row_size);
+          }
+          png.width = chunk.width;
+          png.height = chunk.height;
+          compressedWrite(job, {
+            width: chunk.width,
+            height: chunk.height,
+            data: pngWrite(png),
+          }, compress_options, function (err, data) {
+            if (err) {
+              return void next(err);
+            }
+            chunk.compressed = data;
+            next();
+          });
+        }, next);
+      },
+      function (next) {
+        // combine into a single compressed chunk
+        let bpp = compression === 'DXT5' ? 8 : 4;
+        let chunk_size_bytes = bpp * 16 / 8;
+        let img = Buffer.alloc(file_data.width * file_data.height * bpp / 8);
+
+        chunks.forEach(function (chunk) {
+          let src = chunk.compressed;
+          let src_chunkrow_size = chunk.width / 4 * chunk_size_bytes;
+          let dst_chunkrow_size = file_data.width / 4 * chunk_size_bytes;
+          for (let yy = 0; yy < chunk.height; yy+=4) {
+            let source_offs = yy/4 * src_chunkrow_size + HEADER_SIZE;
+            let target_offs = (chunk.y + yy)/4 * dst_chunkrow_size +
+              chunk.x / 4 * chunk_size_bytes;
+            src.copy(img, target_offs, source_offs, source_offs + src_chunkrow_size);
+          }
+        });
+
+        let header = chunks[0].compressed.slice(0, HEADER_SIZE);
+        header.writeUInt32LE(file_data.width, HEADER_OFFS_WIDTH);
+        header.writeUInt32LE(file_data.height, HEADER_OFFS_HEIGHT);
+        img_data = Buffer.concat([header, img]);
+        next();
+      },
+    ], function (err) {
+      next(err, img_data);
+    });
+  }
+
+  function findTexOpt(job, base_name, next) {
+    job.depAdd(`texopt_folders:${base_name}.texopt`, function (err, file) {
+      if (!err && file) {
+        assert(file.contents);
+        let obj = JSON.parse(file.contents);
+        return void next(obj);
+      }
+      next(null);
     });
   }
   function makeMipmapsArray(img) {
@@ -68,98 +447,214 @@ module.exports = function () {
     }
     return ret;
   }
-  function texproc(job, done) {
+  function makeMipmapsFlat(img) {
+    let { width, height } = img;
+    let last_w = width;
+    let last_h = height;
+    let ret = [];
+    while (last_w > 1 || last_h > 1) {
+      let next_w = max(1, floor(last_w/2));
+      let next_h = max(1, floor(last_h/2));
+
+      let dest2 = pngAlloc({ width: next_w, height: next_h, byte_depth: 4 });
+      ret.push(dest2);
+
+      drawImageBilinear(dest2, 4, 0, 0, next_w, next_h,
+        img, 4, 0, 0, last_w, last_h, 0xF);
+
+      last_w = next_w;
+      last_h = next_h;
+      img = dest2;
+    }
+    return ret;
+  }
+  function texprocJob(job, done) {
     let file = job.getFile();
     let filename = file.relative;
     let base_name = filename.slice(0, -path.extname(filename).length);
     findTexOpt(job, base_name, function (texopt) {
       if (!texopt) {
-        job.out(file);
+        if (!format_only) {
+          job.out(file);
+        }
         return void done();
       }
       let flags = 0;
       if (texopt.packed_mipmaps) {
         flags |= FORMAT_PACK;
-      } else {
-        // no mipmaps?  does nothing currently
-        return void done('Unknown texopt format: expected packed_mipmaps: true');
+      } else if (texopt.packed_mipmaps !== false && (
+        texopt.formats && (texopt.formats.includes('astc') || texopt.formats.includes('dxt'))
+      )) {
+        // a compressed format can never auto-generate mipmaps, so, pack them in here
+        flags |= FORMAT_PACK;
+      }
+      if (!flags && !texopt.formats) {
+        // no valid options?  does nothing currently
+        return void done('Unknown texopt format: expected packed_mipmaps: true or formats');
       }
       let formats = texopt.formats || ['png'];
+      let need_uncompressed = false;
       let out_by_format = [];
       for (let ii = 0; ii < formats.length; ++ii) {
         let format = formats[ii];
         let out_elem = {
+          txp_flags: flags & FORMAT_PACK,
+          format,
           out: [],
         };
         out_by_format.push(out_elem);
         if (format === 'png') {
           flags |= FORMAT_PNG;
-          out_elem.out.push(file.contents);
-          out_elem.writer = pngWrite;
+          out_elem.writer = passThrough;
           out_elem.ext = 'png';
           out_elem.packext = 'txp';
+          out_elem.txp_flags |= FORMAT_PNG;
+        } else if (format === 'astc') {
+          flags |= FORMAT_ASTC;
+          out_elem.writer = astcWrite.bind(null, texopt.astcmode, texopt.quality, job);
+          out_elem.ext = 'astc';
+          out_elem.packext = 'txp-astc';
+          out_elem.txp_flags |= FORMAT_ASTC;
+        } else if (format === 'dxt') {
+          need_uncompressed = true;
+          flags |= FORMAT_DXT;
+          out_elem.writer = (texopt.crunch ? dxtWriteCrunch : dxtWrite).bind(null, texopt, job);
+          out_elem.ext = 'dxt';
+          out_elem.packext = 'txp-dxt';
+          out_elem.txp_flags |= FORMAT_DXT;
         } else {
           return void done(`Unknown texopt format: "${format}"`);
         }
       }
 
-      job.out({
-        contents: JSON.stringify(flags),
-        relative: `${base_name}.tflag`,
-      });
+      if (!format_only) {
+        job.out({
+          contents: JSON.stringify(flags),
+          relative: `${base_name}.tflag`,
+        });
+      }
+
+      if (format_exclude || format_only) {
+        if (format_exclude) {
+          out_by_format = out_by_format.slice(0).filter(function (elem) {
+            return !format_exclude.includes(elem.format);
+          });
+        }
+        if (format_only) {
+          out_by_format = out_by_format.slice(0).filter(function (elem) {
+            return format_only.includes(elem.format);
+          });
+        }
+        if (!out_by_format.length) {
+          // all excluded
+          return void done();
+        }
+      }
 
       let { err, img } = pngRead(file.contents);
       if (err) {
         return void done(err);
       }
 
-      if (texopt.packed_mipmaps) {
+      if (flags & (FORMAT_DXT | FORMAT_ASTC)) {
+        if ((img.width % 4) || (img.height % 4)) {
+          return void done(`Compressed texture dimensions must be multiples of 4 (was ${img.width}x${img.height})`);
+        }
+      }
+
+      if (img.width <= 4096 && img.height <= 4096) {
+        need_uncompressed = false;
+      }
+
+      let subfile_data = [];
+      subfile_data.push({
+        width: img.width,
+        height: img.height,
+        data: file.contents,
+        uncompressed: need_uncompressed ? img : undefined,
+      });
+
+      let has_alpha = false;
+      for (let ii = 3; ii < img.data.length; ii += 4) {
+        if (img.data[ii] !== 255) {
+          has_alpha = true;
+          break;
+        }
+      }
+
+      if (flags & FORMAT_PACK) {
         let is_array = filename.includes('.array.');
         let mipmaps;
         if (is_array) {
           mipmaps = makeMipmapsArray(img);
           assert(mipmaps.length);
         } else {
-          assert(!'TODO');
+          mipmaps = makeMipmapsFlat(img);
+          assert(mipmaps.length);
         }
+        for (let ii = 0; ii < mipmaps.length; ++ii) {
+          let png = mipmaps[ii];
+          subfile_data.push({
+            width: png.width,
+            height: png.height,
+            data: pngWrite(png),
+            uncompressed: need_uncompressed ? png : undefined,
+          });
+        }
+      }
+      asyncEachSeries(out_by_format, function (out_elem, next) {
+        asyncEachSeries(subfile_data, function (subfile, next, idx) {
+          out_elem.writer(subfile, has_alpha, function (err, outdata) {
+            out_elem.out[idx] = outdata;
+            next(err);
+          });
+        }, function (err) {
+          next(err);
+        });
+      }, function (err) {
+        if (err) {
+          return void done(err);
+        }
+
         for (let jj = 0; jj < out_by_format.length; ++jj) {
           let out_elem = out_by_format[jj];
-          for (let ii = 0; ii < mipmaps.length; ++ii) {
-            out_elem.out.push(out_elem.writer(mipmaps[ii]));
+          let { out, ext, packext, txp_flags } = out_elem;
+          let num_files = out.length;
+          if (flags & FORMAT_PACK) {
+            assert(num_files > 1);
+            job.out({
+              relative: `${base_name}.${packext}`,
+              contents: texPackMakeTXP(txp_flags, out),
+            });
+          } else {
+            assert.equal(num_files, 1);
+            job.out({
+              relative: `${base_name}.${ext}`,
+              contents: out[0],
+            });
           }
         }
-      }
 
-      for (let jj = 0; jj < out_by_format.length; ++jj) {
-        let out_elem = out_by_format[jj];
-        let { out, ext, packext } = out_elem;
-        let num_files = out.length;
-        if (flags & FORMAT_PACK) {
-          assert(num_files > 1);
-          job.out({
-            relative: `${base_name}.${packext}`,
-            contents: texPackMakeTXP(flags, out),
-          });
-        } else {
-          assert.equal(num_files, 1);
-          job.out({
-            relative: `${base_name}.${ext}`,
-            contents: out[0],
-          });
-        }
-      }
+        done();
+      });
 
-      done();
     });
 
   }
   return {
     type: gb.SINGLE,
-    func: texproc,
+    func: texprocJob,
     version: [
-      texproc,
+      opts,
+      texprocJob,
       findTexOpt,
       makeMipmapsArray,
+      texproc,
     ],
   };
+}
+
+module.exports = {
+  texoptFolders,
+  texproc,
 };

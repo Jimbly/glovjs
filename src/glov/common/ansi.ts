@@ -1,6 +1,8 @@
 const ESC = '\u001b';
 
-export type SFunc = (s: string) => string;
+const { floor } = Math;
+
+export type SFunc = (s: string | number) => string;
 export type AnsiColors = 'black' |
   'red' |
   'green' |
@@ -27,10 +29,10 @@ export const ansi = { bg: {} } as (Record<AnsiColors, SFuncBright> & {
   'cyan',
   'white',
 ] as const).forEach(function (color, idx) {
-  let fn = function (str: string): string {
+  let fn = function (str: string | number): string {
     return `${ESC}[${30 + idx}m${str}${ESC}[0m`;
   } as SFuncBright;
-  fn.bright = function (str: string): string {
+  fn.bright = function (str: string | number): string {
     return `${ESC}[${30 + idx};1m${str}${ESC}[0m`;
   };
   ansi[color] = fn;
@@ -61,6 +63,19 @@ export function padLeft(str: string, width: number): string {
     str = new Array(width - len + 1).join(' ') + str;
   }
   return str;
+}
+
+export function center(str: string, width: number): string {
+  let len = str.replace(strip_ansi, '').length;
+  let pad = floor((width - len) / 2);
+  if (pad > 0) {
+    str = new Array(pad + 1).join(' ') + str;
+  }
+  return str;
+}
+
+export function stripAnsi(str: string): string {
+  return str.replace(strip_ansi, '');
 }
 
 // eslint-disable-next-line no-control-regex

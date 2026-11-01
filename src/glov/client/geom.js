@@ -460,9 +460,11 @@ function GeomMultiQuads(format, verts) {
   let ec = format_info.elem_count;
   let vert_count = verts.length / ec;
   this.geoms = [];
+  let Ctor = verts instanceof Uint8Array ? Uint8Array : Float32Array;
+  let bpe = verts instanceof Uint8Array ? 1 : 4;
   for (let idx = 0; idx < vert_count; idx += MAX_VERT_COUNT) {
     let num_sub_verts = min(vert_count - idx, MAX_VERT_COUNT);
-    let sub_data = new Uint8Array(verts.buffer, idx * ec, num_sub_verts * ec);
+    let sub_data = new Ctor(verts.buffer, idx * ec * bpe, num_sub_verts * ec);
     this.geoms.push(new Geom(format, sub_data, null, QUADS));
   }
 }
@@ -499,9 +501,11 @@ export function geomCreate(format, verts, idxs, mode) {
 
 export function geomCreateQuads(format, verts, fixed_size) {
   let format_info = formatInfo(format);
-  assert(fixed_size || verts instanceof Uint8Array); // only one handled by GeomMultiQuads for now
+  assert(fixed_size || verts instanceof Uint8Array || verts instanceof Float32Array);
   let vert_count = verts.length / format_info.elem_count;
-  if (vert_count > MAX_VERT_COUNT) {
+  let oversized = vert_count > MAX_VERT_COUNT;
+  if (oversized) {
+    assert(verts instanceof Uint8Array || verts instanceof Float32Array);
     return new GeomMultiQuads(format, verts);
   }
   return new Geom(format, verts, null, QUADS);

@@ -131,7 +131,7 @@ export function defaultsDeep<A, B>(dest: A, src: B): A & B {
     } else {
       let vd = (dest as DataObject)[f];
       let vs = src[f];
-      if (typeof vd === 'object' && !Array.isArray(vd) && typeof vs === 'object' && !Array.isArray(vs)) {
+      if (vd && typeof vd === 'object' && !Array.isArray(vd) && vs && typeof vs === 'object' && !Array.isArray(vs)) {
         defaultsDeep(vd, src[f]);
       }
     }
@@ -469,6 +469,7 @@ export function toArray(array_like: Float32Array | Int32Array | Uint8Array): num
 
 export function arrayToSet(array: Readonly<number[]>): Partial<Record<number, true>>;
 export function arrayToSet(array: Readonly<string[]>): Partial<Record<string, true>>;
+export function arrayToSet<T extends string | number>(array: Readonly<T[]>): Partial<Record<T, true>>;
 export function arrayToSet<T extends string | number>(array: Readonly<T[]>): Partial<Record<T, true>> {
   let ret = Object.create(null);
   for (let ii = 0; ii < array.length; ++ii) {
@@ -816,6 +817,10 @@ export function cmpNumericSmart(a: string, b: string): number {
   } else {
     return 0;
   }
+}
+
+export function cmpNumberStrings(a: string, b: string): number {
+  return Number(a) - Number(b);
 }
 
 export function mdEscape(text: string): string {

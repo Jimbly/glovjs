@@ -4,6 +4,7 @@ import type { Packet } from './packet';
 export type VoidFunc = () => void;
 
 export type TSMap<T> = Partial<Record<string, T>>;
+export type Rec<K extends string|number, V> = Partial<Record<K, V>>;
 
 export type ERR = string | undefined | null;
 

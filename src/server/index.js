@@ -4,7 +4,7 @@ import * as http from 'http';
 import * as https from 'https';
 import * as path from 'path';
 import * as express from 'express';
-import * as express_static_gzip from 'express-static-gzip';
+import * as express_caching_gzip from 'express-caching-gzip';
 import { platformFallbackSet } from 'glov/common/platform';
 import { permTokenWorkerInit } from 'glov/server/perm_token_worker';
 import {
@@ -57,12 +57,12 @@ if (argv.dev) {
   });
 }
 
-app.use(express_static_gzip(path.join(__dirname, '../client/'), {
+app.use(express_caching_gzip(path.join(__dirname, '../client/'), null, {
   enableBrotli: true,
   orderPreference: ['br'],
 }));
 
-app.use(express_static_gzip('data_store/public', {
+app.use(express_caching_gzip('data_store/public', null, {
   enableBrotli: true,
   orderPreference: ['br'],
 }));

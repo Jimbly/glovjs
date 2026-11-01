@@ -1,6 +1,6 @@
 /* eslint-disable @stylistic/max-len */
 const assert = require('assert');
-const { pngAlloc } = require('./png');
+const { pngAlloc } = require('./pngnative');
 
 function parse9Patch(job, img, img_name, ignore_pad) {
   let did_error = false;

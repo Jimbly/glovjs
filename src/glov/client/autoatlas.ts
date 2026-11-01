@@ -11,6 +11,7 @@ import {
   vec4,
 } from 'glov/common/vmath';
 import { engineStartupFunc } from './engine';
+import { fetch } from './fetch';
 import { filewatchOn } from './filewatch';
 import {
   Sprite,
@@ -19,7 +20,7 @@ import {
   Texture,
   TextureOptions,
 } from './sprites';
-import { textureError, textureLoad } from './textures';
+import { textureError, textureLoad, textureZero } from './textures';
 import { webFSGetFile, webFSOnReady } from './webfs';
 
 type AutoAtlasBuildData = [string, number, number, number[], number[], number[] | undefined, number[] | undefined];
@@ -34,6 +35,7 @@ type AutoAtlasBuildDataRoot = {
 export type SpriteWithUIData = WithRequired<Sprite, 'uidata'>;
 
 let load_opts: TSMap<TextureOptions> = {};
+let extra_textures: TSMap<(Texture|undefined)[]> = {};
 let hit_startup = false;
 
 const uidata_error: SpriteUIData = {
@@ -73,6 +75,11 @@ function saveOrig(sprite: AutoAtlasSprite): void {
   }
 }
 
+let no_warn = false;
+export function autoAtlasNoWarn(new_value: boolean): void {
+  no_warn = new_value;
+}
+
 class AutoAtlasImp {
   sprites: TSMap<AutoAtlasSprite> = {};
 
@@ -100,9 +107,10 @@ class AutoAtlasImp {
   }
 
   atlas_data?: AutoAtlasBuildDataRoot;
-  doInit(): void {
+  doInit(atlas_data_override?: AutoAtlasBuildDataRoot): void {
     let { sprites, atlas_name, texs } = this;
-    let atlas_data = this.atlas_data = webFSGetFile(`${atlas_name}.auat`, 'jsobj') as AutoAtlasBuildDataRoot;
+    let atlas_data = this.atlas_data = atlas_data_override ||
+      webFSGetFile(`${atlas_name}.auat`, 'jsobj') as AutoAtlasBuildDataRoot;
     // Root default sprite, with frame-indexing
     let root_sprite = sprites.def = (sprites.def || this.prealloc());
     let root_rects = [] as unknown as Vec4[] & TSMap<Vec4>;
@@ -229,13 +237,27 @@ class AutoAtlasImp {
       for (let ii = 0; ii < texs.length; ++ii) {
         texs[ii].onLoad(this.checkLoaded.bind(this));
       }
+      let extra_tex_list = extra_textures[atlas_name];
+      if (extra_tex_list) {
+        while (texs.length < extra_tex_list.length) {
+          texs.push(textureZero());
+        }
+        for (let ii = 0; ii < extra_tex_list.length; ++ii) {
+          let tex = extra_tex_list[ii];
+          if (tex) {
+            texs[ii] = tex;
+          }
+        }
+      }
       this.verifySprites(seen);
     });
   }
 
   applySwaps(): void {
     let dst_name = atlas_swaps[this.atlas_name];
-    let dst = dst_name && atlases[dst_name];
+    // some chance of infinite recursion here if looping swaps?
+    // eslint-disable-next-line @typescript-eslint/no-use-before-define
+    let dst = dst_name && autoAtlasGet(dst_name);
 
     let sprites_src = this.sprites;
     let texs_src = this.texs;
@@ -293,6 +315,7 @@ class AutoAtlasImp {
       let tile_uvs = src_sprite.uvs as Vec4;
       v4copy(tile_uvs, dst_sprite.uvs as Vec4);
       src_sprite.uidata.rects = dst_sprite.uidata.rects;
+      src_sprite.uidata.aspect = dst_sprite.uidata.aspect;
       root_rects[tile_id] = tile_uvs;
       root_rects[tile_name] = tile_uvs;
 
@@ -334,12 +357,14 @@ class AutoAtlasImp {
     let ret = this.sprites[img_name];
     if (!ret) {
       ret = this.sprites[img_name] = this.prealloc();
-      if (hit_startup) {
+      if (hit_startup && !no_warn) {
         dataError(`AutoAtlas "${this.atlas_name}" does not contain image "${img_name}"`);
         spriteMakeError(ret);
       }
     }
-    ret.autoatlas_used = true;
+    if (!no_warn) {
+      ret.autoatlas_used = true;
+    }
     return ret;
   }
 
@@ -350,15 +375,8 @@ class AutoAtlasImp {
   }
 }
 
-function autoAtlasReload(filename: string): void {
-  filename = filename.slice(0, -5);
-  let atlas = atlases[filename];
-  if (!atlas) {
-    // bundled in app, but not loaded? what a waste, but, I guess, maybe fine?
-    // will happen when doing git updates on atlases that are not currently active
-    return;
-  }
-  atlas.doInit();
+function doInitOnReload(atlas: AutoAtlasImp, filename: string, atlas_data_override?: AutoAtlasBuildDataRoot): void {
+  atlas.doInit(atlas_data_override);
   for (let key in atlas_swaps) {
     if (key === filename || atlas_swaps[key] === filename) {
       let other = atlases[key];
@@ -367,6 +385,40 @@ function autoAtlasReload(filename: string): void {
       }
     }
   }
+}
+
+function autoAtlasReloadEarly(filename: string): void {
+  let basename = filename.slice('.early/'.length);
+  basename = basename.slice(0, -5);
+  let atlas = atlases[basename];
+  if (!atlas) {
+    // bundled in app, but not loaded? what a waste, but, I guess, maybe fine?
+    // will happen when doing git updates on atlases that are not currently active
+    return;
+  }
+  // It's not in WebFS yet, reload raw from .early/ endpoint
+  fetch({
+    url: filename,
+    response_type: 'json',
+  }, function (err: string | null, obj: AutoAtlasBuildDataRoot) {
+    if (!err) {
+      doInitOnReload(atlas, basename, obj);
+    }
+  });
+}
+
+function autoAtlasReload(filename: string): void {
+  if (filename.startsWith('.early/')) {
+    return autoAtlasReloadEarly(filename);
+  }
+  filename = filename.slice(0, -5);
+  let atlas = atlases[filename];
+  if (!atlas) {
+    // bundled in app, but not loaded? what a waste, but, I guess, maybe fine?
+    // will happen when doing git updates on atlases that are not currently active
+    return;
+  }
+  doInitOnReload(atlas, filename);
 }
 
 export function autoAtlasTextureOpts(atlas_name: string, opts: TextureOptions): void {
@@ -391,6 +443,20 @@ function autoAtlasGet(atlas_name: string): AutoAtlasImp {
   return atlas;
 }
 
+export function autoAtlasBindExtraTexture(atlas_name: string, index: number, texture: Texture): void {
+  extra_textures[atlas_name] = extra_textures[atlas_name] || [];
+  extra_textures[atlas_name][index] = texture;
+  if (atlases) {
+    let atlas = atlases[atlas_name];
+    if (atlas) {
+      while (atlas.texs.length < index) {
+        atlas.texs.push(textureZero());
+      }
+      atlas.texs[index] = texture;
+    }
+  }
+}
+
 export function autoAtlasOnImage(atlas_name: string, cb: (img_name: string) => void): void {
   autoAtlasGet(atlas_name).onImage(cb);
 }
@@ -399,9 +465,16 @@ export function autoAtlas(atlas_name: string, img_name: string): SpriteWithUIDat
   return autoAtlasGet(atlas_name).get(img_name);
 }
 
+// will return false while loading
+export function autoAtlasContains(atlas_name: string, img_name: string): boolean {
+  return Boolean(autoAtlasGet(atlas_name).sprites[img_name]);
+}
+
 export function autoAtlasSwap(src: string, dest: string): void {
   if (atlas_swaps[src] !== dest) {
-    autoAtlasGet(dest);
+    if (atlases[src]) {
+      autoAtlasGet(dest);
+    }
     if (dest === src || !dest) {
       delete atlas_swaps[src];
     } else {

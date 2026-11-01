@@ -11,14 +11,12 @@ exports.create = simpleMenuCreate; // eslint-disable-line @typescript-eslint/no-
 const assert = require('assert');
 const { clamp } = require('glov/common/util.js');
 const { vec4 } = require('glov/common/vmath.js');
+const { actionEdge } = require('./actions');
 const camera2d = require('./camera2d.js');
 const engine = require('./engine.js');
 const {
   KEYS,
-  PAD,
   keyDown,
-  keyDownEdge,
-  padButtonDownEdge,
 } = require('./input.js');
 const { selectionBoxCreate } = require('./selection_box.js');
 const { slider, sliderIsFocused } = require('./slider.js');
@@ -84,7 +82,14 @@ class GlovSimpleMenu {
   run(params) {
     let { sel_box } = this;
     sel_box.applyParams(params); // Apply new list of items, positions, etc
-    sel_box.items[0].auto_focus = true;
+    if (params.initial_selection === undefined) {
+      sel_box.items[0].auto_focus = true;
+    } else {
+      for (let ii = 0; ii < sel_box.items.length; ++ii) {
+        sel_box.items[ii].auto_focus = false;
+      }
+      sel_box.items[params.initial_selection].auto_focus = true;
+    }
 
     const { items, x, z } = sel_box;
     const y0 = sel_box.y;
@@ -127,12 +132,12 @@ class GlovSimpleMenu {
         // slider_sound_release = this.sound_accept;
         let slider_width = sel_box.slider_w || 160;
         let slider_x = x + sel_box.width - slider_width - display.xpad;
-        let color = display.style_default.color_vec4;
+        let color = display.color_default;
         // if (display.style_default.color_mode == glov_font.COLOR_MODE.GRADIENT) {
         //   color = colorIntLerp(display.style_default.color_vec4, display.style_default.colorLR, 0.5);
         // }
         if (menu_item.disabled) {
-          color = display.style_disabled.color;
+          color = display.color_disabled;
         }
         menu_item.value = slider(menu_item.value, {
           x: slider_x,
@@ -199,10 +204,7 @@ class GlovSimpleMenu {
     y += sel_box.run();
 
     let selected=-1;
-    if (exit_index !== -1 && (
-      keyDownEdge(KEYS.ESC) ||
-      !items[exit_index].no_controller_exit && padButtonDownEdge(PAD.CANCEL)
-    )) {
+    if (exit_index !== -1 && actionEdge('cancel')) {
       this.execItem(exit_index, 1);
       selected = exit_index;
     }

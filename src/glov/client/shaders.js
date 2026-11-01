@@ -247,7 +247,7 @@ Shader.prototype.compile = function () {
     this.samplers.forEach((v) => {
       let num = Number(v.slice(-1));
       assert(!isNaN(num));
-      assert(!found[num]);
+      assert(!found[num], `sampler2D tex${num} found twice`);
       found[num] = true;
     });
   }

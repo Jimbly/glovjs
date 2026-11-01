@@ -9,6 +9,7 @@ const engine = require('./engine.js');
 const { renderWidth, renderHeight } = engine;
 const { framebufferEnd, framebufferStart, framebufferTopOfFrame } = require('./framebuffer.js');
 const geom = require('./geom.js');
+const { glDepthTest } = require('./glstate');
 const {
   SEMANTIC,
   shaderCreate,
@@ -653,15 +654,15 @@ export function applyColorMatrix(params) {
 // }
 
 export function clearAlpha() {
-  let old_dt = gl.getParameter(gl.DEPTH_TEST);
+  let old_dt = glDepthTest();
   if (old_dt) {
-    gl.disable(gl.DEPTH_TEST);
+    glDepthTest(false);
   }
   gl.colorMask(false, false, false, true);
   applyCopy({ source: textureWhite(), no_framebuffer: true });
   gl.colorMask(true, true, true, true);
   if (old_dt) {
-    gl.enable(gl.DEPTH_TEST);
+    glDepthTest(true);
   }
 }
 

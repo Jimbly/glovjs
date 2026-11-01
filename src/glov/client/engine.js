@@ -14,6 +14,13 @@ exports.require = require; // For browser console debugging
 
 const assert = require('assert');
 const {
+  internal: {
+    actionStartup,
+    actionTopOfFrame,
+  },
+} = require('./actions');
+const { internal: { bindsTopOfFrame }, bindDispatch } = require('./binds');
+const {
   is_android,
   is_ios,
   is_ios_chrome,
@@ -40,7 +47,18 @@ const glov_font = require('./font.js');
 const { fontTick } = glov_font;
 const { framebufferStart, framebufferEndOfFrame } = require('./framebuffer.js');
 const { geomResetState, geomStartup } = require('./geom.js');
-const input = require('./input.js');
+const {
+  glDepthTest,
+  glScissorTest,
+} = require('./glstate');
+const {
+  internal: {
+    inputEndFrame,
+    inputStartup,
+    inputTick,
+    inputTickInactive,
+  }
+} = require('./input.js');
 const { inputAllowAllEvents } = require('./input.js');
 const local_storage = require('./local_storage.js');
 const mat3FromMat4 = require('gl-mat3/fromMat4');
@@ -107,7 +125,6 @@ const { profanityStartupLate } = require('./words/profanity.js');
 
 export let canvas;
 export let webgl2;
-export let glov_particles;
 
 export let width;
 export let height;
@@ -156,6 +173,14 @@ export let app_state = null;
 export const border_color = vec4(0, 0, 0, 1);
 export let border_clear_color = vec4(0, 0, 0, 1);
 
+export function setBorderColor(color) {
+  v4copy(border_color, color);
+}
+
+export function setBorderClearColor(color) {
+  v4copy(border_clear_color, color);
+}
+
 let no_render = false;
 let dirty_render = false;
 let render_frames_needed = 3;
@@ -171,6 +196,10 @@ export function disableRender(new_value) {
   if (no_render) {
     cleanupDOMElems();
   }
+}
+
+export function isWebGL2() {
+  return webgl2;
 }
 
 let view_space_globals = [];
@@ -237,12 +266,16 @@ export function setGameDims(w, h) {
 
 // Didn't need this for a while, but got slow on iOS recently :(
 // Better when using FBOs for postprocessing now, though!
-const postprocessing_reset_version = '6';
-let postprocessing_allow_disable = true;
+// It's been a while since these iOS devices were common though, disabling this feature until proven needed again
+const postprocessing_reset_version = '7';
+let postprocessing_allow_disable = false;
 export let postprocessing = local_storage.get('glov_no_postprocessing') !== postprocessing_reset_version || true;
-export function postprocessNeverDisable() {
+export function postprocessNeverDisable() { // now the default
   postprocessing_allow_disable = false;
   postprocessing = true;
+}
+export function postprocessAutoDisable() {
+  postprocessing_allow_disable = true;
 }
 export function postprocessingAllow(allow) {
   if (postprocessing_allow_disable) {
@@ -381,6 +414,11 @@ export function getFrameDt() {
   return frame_dt;
 }
 
+let frame_dt_hr = 0;
+export function getFrameDtHr() {
+  return frame_dt_hr;
+}
+
 export let hrtime = 0;
 
 // Wall time, may contain large jumps, may be 0 or negative
@@ -479,6 +517,11 @@ export function removeTickFunc(cb) {
     return true;
   }
   return false;
+}
+
+let app_post_tick_functions = [];
+export function addAppPostTick(cb) {
+  app_post_tick_functions.push(cb);
 }
 
 let pre_tick = [];
@@ -828,6 +871,13 @@ export function start3DRendering(opts) {
   opts = opts || {};
   if (opts.width) {
     set3DRenderResolution(opts.width, opts.height);
+    if (opts.render_aspect) {
+      render_aspect = opts.render_aspect;
+    }
+  } else if (!render_width) {
+    set3DRenderResolution(width, height);
+    // if rendering without a viewport, assume we want the FOV applied to the game aspect
+    render_aspect = game_width / game_height;
   }
   setFOV(opts.fov || (settings.fov * PI / 180));
   had_3d_this_frame = true;
@@ -838,7 +888,7 @@ export function start3DRendering(opts) {
   }
   blendModeReset(true);
   gl.enable(gl.BLEND);
-  gl.enable(gl.DEPTH_TEST);
+  glDepthTest(true);
   gl.depthMask(true);
   let backbuffer_width = width_3d;
   let backbuffer_height = height_3d;
@@ -868,7 +918,7 @@ export function start3DRendering(opts) {
 
 function renderScaleFinish() {
   if (defines.NOCOPY) {
-    gl.disable(gl.SCISSOR_TEST);
+    glScissorTest(false);
     v4set(viewport, 0, 0, width, height);
     gl.viewport(viewport[0], viewport[1], viewport[2], viewport[3]);
   } else {
@@ -885,7 +935,7 @@ export function startSpriteRendering() {
   gl.disable(gl.CULL_FACE);
   blendModeReset(true);
   gl.enable(gl.BLEND);
-  gl.disable(gl.DEPTH_TEST);
+  glDepthTest(false);
   gl.depthMask(false);
   spriteDrawReset();
 }
@@ -934,16 +984,14 @@ function resetState() {
   blendModeReset(true);
   // gl.disable(gl.BLEND);
   gl.enable(gl.BLEND);
-  // gl.disable(gl.DEPTH_TEST);
-  gl.enable(gl.DEPTH_TEST);
+  glDepthTest(true);
   // gl.depthMask(false);
   gl.depthMask(true);
   // gl.disable(gl.CULL_FACE);
   gl.enable(gl.CULL_FACE);
   // gl.depthFunc(gl.GEQUAL);
   gl.depthFunc(gl.LEQUAL);
-  // gl.enable(gl.SCISSOR_TEST);
-  gl.disable(gl.SCISSOR_TEST);
+  glScissorTest(false);
   // gl.cullFace(gl.FRONT);
   gl.cullFace(gl.BACK);
   gl.viewport(0, 0, width, height);
@@ -998,7 +1046,7 @@ function tick(timestamp) {
   }
   if (dirty_render && !render_frames_needed) {
     resetEffects();
-    input.tickInputInactive();
+    inputTickInactive();
     last_tick_cpu = 0;
     for (let ii = post_tick.length - 1; ii >= 0; --ii) {
       if (post_tick[ii].inactive && !--post_tick[ii].ticks) {
@@ -1023,6 +1071,7 @@ function tick(timestamp) {
   // }
 
   let dt_raw = hrtime - last_tick_hr;
+  frame_dt_hr = min(max(dt_raw, 0.01), 250);
   last_tick_hr = hrtime;
   let last_raw_tick_index_use = last_raw_tick_index;
   last_raw_tick_times[last_raw_tick_index_use] = dt_raw;
@@ -1092,7 +1141,7 @@ function tick(timestamp) {
 
   if (document.hidden || document.webkitHidden || no_render) {
     resetEffects();
-    input.tickInputInactive();
+    inputTickInactive();
     last_tick_cpu = 0;
     for (let ii = post_tick.length - 1; ii >= 0; --ii) {
       if (post_tick[ii].inactive && !--post_tick[ii].ticks) {
@@ -1146,7 +1195,9 @@ function tick(timestamp) {
   profilerStopStart('mid');
 
   soundTick(dt);
-  input.tickInput();
+  inputTick();
+  actionTopOfFrame();
+  bindsTopOfFrame();
   uiTick(dt);
 
   if (need_repos) {
@@ -1184,8 +1235,12 @@ function tick(timestamp) {
   }
 
   profilerStopStart('bottom');
+  bindDispatch();
   spotEndInput();
-  glov_particles.tick(dt); // *after* app_tick, so newly added/killed particles can be queued into the draw list
+  // *after* app_tick, so newly added/killed particles can be queued into the draw list
+  for (let ii = 0; ii < app_post_tick_functions.length; ++ii) {
+    app_post_tick_functions[ii](dt);
+  }
 
   if (had_3d_this_frame) {
     if (had_render_scale_3d_this_frame) {
@@ -1246,7 +1301,7 @@ function tick(timestamp) {
     }
   }
 
-  input.endFrame();
+  inputEndFrame();
   resetEffects();
   textureTick();
 
@@ -1295,6 +1350,11 @@ export function setPixelyStrict(on) {
     render_width = undefined;
     render_height = undefined;
   }
+}
+// Must be called out-of-frame (use setTimeout or addPreTickFunc) if not at startup
+export function setRenderDims(w, h) {
+  render_width = w;
+  render_height = h;
 }
 
 export function setPixelPerfect(pixel_perfect) {
@@ -1467,7 +1527,7 @@ export function startup(params) {
   render_pixel_perfect = params.pixel_perfect || 0;
 
   gl.depthFunc(gl.LEQUAL);
-  // gl.enable(gl.SCISSOR_TEST);
+  // glScissorTest(true);
   gl.cullFace(gl.BACK);
   gl.clearColor(0, 0.1, 0.2, 1);
   gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1); // Allow RGB texture data with non-mult-4 widths
@@ -1477,14 +1537,12 @@ export function startup(params) {
   addViewSpaceGlobal('light_dir');
   camera2d.startup();
   spriteStartup();
-  input.startup(canvas, params);
+  inputStartup(canvas, params);
+  actionStartup();
   modelStartup();
 
   window.addEventListener('blur', onBlur, false);
   window.addEventListener('focus', onFocus, false);
-
-  /* eslint-disable n/global-require */
-  glov_particles = require('./particles.js').create();
 
   if (is_pixely) {
     textureDefaultFilters(gl.NEAREST, gl.NEAREST);

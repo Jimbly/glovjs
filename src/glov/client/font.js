@@ -20,6 +20,7 @@ export const ALIGN = {
 
   HFIT: 1 << 4,
   HWRAP: 1 << 5,
+  MANUALWRAP: 1 << 6, // just for Markdown - basically a workaround for insufficient HVCENTERFIT logic
 
   HCENTERFIT: 1 | (1 << 4),
   HRIGHTFIT: 2 | (1 << 4),
@@ -264,6 +265,10 @@ export function fontStyleHash(style) {
   return style.hash;
 }
 
+export function fontStyleGetParam(style) {
+  return style;
+}
+
 
 let tech_params = null;
 let tech_params_dirty = false;
@@ -372,13 +377,13 @@ function techParamsGet() {
 function GlovFont(font_info, texture_name) {
   assert(font_info.font_size !== 0); // Got lost somewhere
 
-  this.texture = textureLoad({
+  this.texture = typeof texture_name === 'string' ? textureLoad({
     url: `img/${texture_name}.png`,
     filter_min: font_info.noFilter ? gl.NEAREST : gl.LINEAR,
     filter_mag: font_info.noFilter ? gl.NEAREST : gl.LINEAR,
     wrap_s: gl.CLAMP_TO_EDGE,
     wrap_t: gl.CLAMP_TO_EDGE,
-  });
+  }) : texture_name;
   this.textures = [this.texture];
   this.integral = Boolean(font_info.noFilter); // TODO: often only want this for pixely = strict modes?
   this.hard_cutoff = this.integral; // Maybe only if also pixely-strict?
@@ -1325,6 +1330,10 @@ function fontShadersInit() {
   shadersPrelink(sprites.sprite_vshader, font_shaders.font_aa_glow);
   shadersPrelink(sprites.sprite_vshader, font_shaders.font_aa_outline);
   shadersPrelink(sprites.sprite_vshader, font_shaders.font_aa_outline_glow);
+}
+
+export function fontTestInit() {
+  font_shaders.font_aa = true;
 }
 
 export function fontCreate(font_info, texture_name) {

@@ -2,6 +2,16 @@ const gb = require('glov-build');
 const yamlproc = require('./yamlproc.js');
 
 module.exports = function (config) {
+  config.extra_index.push({
+    // example .zip for itch.io publishing
+    name: 'itch',
+    defines: {
+      ...config.default_defines,
+      PLATFORM: 'web',
+    },
+    zip: true,
+  });
+
   // Spine support
   // Note: Runtime requires a Spine license to use in any product.
   config.client_fsdata.push(

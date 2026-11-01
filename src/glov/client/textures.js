@@ -15,10 +15,14 @@ export const TEXTURE_FORMAT = {
 };
 
 import * as assert from 'assert';
+import { dataError } from 'glov/common/data_error';
 import {
+  FORMAT_ASTC,
+  FORMAT_DXT,
   FORMAT_PACK,
   FORMAT_PNG,
   TEXPACK_MAGIC,
+  TEXPROC_COMPRESSED_HEADER,
 } from 'glov/common/texpack_common';
 import {
   callbackify,
@@ -27,8 +31,15 @@ import {
   nextHighestPowerOfTwo,
   ridx,
 } from 'glov/common/util';
+import { vec4 } from 'glov/common/vmath';
 import { asyncParallel, asyncSeries } from 'glov-async';
+import { is_firefox, is_ios_safari } from './browser';
+import { buildUIActiveReload } from './build_ui';
 import * as engine from './engine';
+import {
+  isLoading,
+  postTick,
+} from './engine';
 import { fetch } from './fetch';
 import { filewatchOn } from './filewatch';
 import {
@@ -41,18 +52,40 @@ import { shadersSetGLErrorReportDetails } from './shaders';
 import * as urlhash from './urlhash';
 import { webFSExists, webFSGetFile } from './webfs';
 
-const { floor } = Math;
+const { ceil, floor, min } = Math;
 
 const TEX_UNLOAD_TIME = 5 * 60 * 1000; // for textures loaded (each frame) with auto_unload: true
+
+const ASYNC_TEXTURE_SIZE = 4*1024*1024; // anything bigger than this many bytes gets cut into chunks uploaded each frame
 
 const textures = {};
 let load_count = 0;
 export function textureLoadCount() {
   return load_count;
 }
+
+let texture_loading_state = false;
+export function textureSetIsLoading(value) {
+  texture_loading_state = value;
+}
+
+function textureIsLoading() {
+  return texture_loading_state || isLoading();
+}
+
+let texture_stream_delay = 0;
+export function texturesDelayStreamingPostLoad() {
+  if (!textureLoadCount()) {
+    texture_stream_delay = 500;
+  }
+}
+
 let aniso = 4;
 let max_aniso = 0;
+let max_texture_size = 1024;
 let aniso_enum;
+let dxt_supported = false;
+let astc_supported = false;
 
 let default_filter_min;
 let default_filter_mag;
@@ -66,14 +99,17 @@ const cube_faces = [
   { target: 'TEXTURE_CUBE_MAP_POSITIVE_Z', pos: [2,1] },
 ];
 
-export function textureDefaultFilters(min, mag) {
-  default_filter_min = min;
-  default_filter_mag = mag;
+export function textureDefaultFilters(filter_min, filter_mag) {
+  default_filter_min = filter_min;
+  default_filter_mag = filter_mag;
 }
 
 export function textureDefaultIsNearest() {
   return default_filter_mag === gl.NEAREST;
 }
+
+const supports_cib = Boolean(window.createImageBitmap); // iOS 12 at least doesn't
+const createImageBitmap = callbackify(window.createImageBitmap);
 
 let bound_unit = null;
 let bound_tex = [];
@@ -112,6 +148,12 @@ export function textureGetAll() {
 
 export function textureWhite() {
   return textures.white;
+}
+export function textureBlack() {
+  return textures.black;
+}
+export function textureZero() {
+  return textures.invisible;
 }
 export function textureError() {
   return textures.error;
@@ -213,6 +255,7 @@ function Texture(params) {
   }
   this.handle = gl.createTexture();
   this.eff_handle = handle_loading;
+  this.mipmaps_allowed = true; // assume true until otherwise known
   this.setSamplerState(params);
   this.src_width = this.src_height = 1;
   this.width = this.height = 1;
@@ -229,15 +272,19 @@ function Texture(params) {
     auto_unload_textures.push(this);
   }
   this.load_filter = params.load_filter || null;
+  this.load_time_total = -1;
+  this.load_time_upload = -1;
+  this.actual_url = '?';
 
   this.format = params.format || TEXTURE_FORMAT.RGBA8;
 
   if (params.data) {
-    let err = this.updateData(params.width, params.height, params.data);
-    if (err) {
-      shadersSetGLErrorReportDetails();
-      assert(false, `Error loading ${params.name}: ${err}`);
-    }
+    this.updateData(params.width, params.height, params.data, null, function (err) {
+      if (err) {
+        shadersSetGLErrorReportDetails();
+        assert(false, `Error loading ${params.name}: ${err}`);
+      }
+    });
   } else {
     // texture is not valid, do not leave bound
     unbindAll(this.target);
@@ -257,6 +304,7 @@ Texture.prototype.updateGPUMem = function () {
   let diff = new_size - this.gpu_mem;
   engine.perf_state.gpu_mem.tex += diff;
   this.gpu_mem = diff;
+  this.tex_size_shader_params = null;
 };
 
 function bindForced(tex) {
@@ -275,19 +323,52 @@ export function textureFilterKey(params) {
   return (((filter_min * 77 + filter_mag) * 77 + wrap_s) * 77 + wrap_t) * 77 + force_mipmaps;
 }
 
+let tex_size_shader_params_cache = {};
+function getTexSizeShaderParams(w, h) {
+  if (!tex_size_shader_params_cache[w]) {
+    tex_size_shader_params_cache[w] = {};
+  }
+  let row = tex_size_shader_params_cache[w];
+  if (!row[h]) {
+    row[h] = { tex0_size: vec4(w, h, 1/w, 1/h) };
+  }
+  return row[h];
+}
+
+Texture.prototype.getTexSizeShaderParams = function () {
+  let v = this.tex_size_shader_params;
+  if (!v) {
+    v = this.tex_size_shader_params = getTexSizeShaderParams(this.width, this.height);
+  }
+  return v;
+};
+
 Texture.prototype.setSamplerState = function (params) {
   let target = this.target;
   bindForced(this);
 
-  this.filter_min = params.filter_min || default_filter_min;
+  let filter_min = this.filter_min = params.filter_min || default_filter_min;
   this.filter_mag = params.filter_mag || default_filter_mag;
-  gl.texParameteri(target, gl.TEXTURE_MIN_FILTER, this.filter_min);
-  gl.texParameteri(target, gl.TEXTURE_MAG_FILTER, this.filter_mag);
-  this.wrap_s = params.wrap_s || gl.REPEAT;
-  this.wrap_t = params.wrap_t || gl.REPEAT;
-  gl.texParameteri(target, gl.TEXTURE_WRAP_S, this.wrap_s);
-  gl.texParameteri(target, gl.TEXTURE_WRAP_T, this.wrap_t);
 
+  if (!this.mipmaps_allowed) {
+    if (filter_min === gl.LINEAR_MIPMAP_LINEAR) {
+      filter_min = gl.LINEAR;
+    } else if (filter_min === gl.NEAREST_MIPMAP_NEAREST) {
+      filter_min = gl.NEAREST;
+    }
+  }
+
+  gl.texParameteri(target, gl.TEXTURE_MIN_FILTER, filter_min);
+  gl.texParameteri(target, gl.TEXTURE_MAG_FILTER, this.filter_mag);
+  let wrap_s = this.wrap_s = params.wrap_s || gl.REPEAT;
+  let wrap_t = this.wrap_t = params.wrap_t || gl.REPEAT;
+  if (this.np2_on_gpu) {
+    wrap_s = wrap_t = gl.CLAMP_TO_EDGE;
+  }
+  gl.texParameteri(target, gl.TEXTURE_WRAP_S, wrap_s);
+  gl.texParameteri(target, gl.TEXTURE_WRAP_T, wrap_t);
+
+  // set if mipmaps desired, may not exist
   this.mipmaps = this.filter_min >= 0x2700 && this.filter_min <= 0x2703 || // Probably gl.LINEAR_MIPMAP_LINEAR
     params.force_mipmaps;
 
@@ -298,6 +379,19 @@ Texture.prototype.setSamplerState = function (params) {
       gl.texParameterf(gl.TEXTURE_2D, aniso_enum, 1);
     }
   }
+};
+
+Texture.prototype.allowMipmaps = function (allow) {
+  if (this.mipmaps_allowed === allow) {
+    return;
+  }
+  this.mipmaps_allowed = allow;
+  this.setSamplerState({
+    filter_min: this.filter_min,
+    filter_mag: this.filter_mag,
+    wrap_s: this.wrap_s,
+    wrap_t: this.wrap_t,
+  });
 };
 
 // Texture.prototype.generateManualArrayMipmaps = function (img) {
@@ -362,7 +456,366 @@ Texture.prototype.uploadPackedTexArrayWithMips = function uploadPackedTexArrayWi
   assert(!per_mipmap_data[level]);
 };
 
-Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) {
+const BYTES_PER_PIXEL_COMPRESSED = {
+  0x83f0: 0.5, // RGB_S3TC_DXT1
+  0x83f1: 0.5, // RGBA_S3TC_DXT1
+  0x83f2: 1, // RGBA_S3TC_DXT3
+  0x83f3: 1, // RGBA_S3TC_DXT5
+  0x93B0: 8/8, // GL_COMPRESSED_RGBA_ASTC_4x4_KHR - ASTC 4×4 RGBA    8bpp
+  0x93D0: 8/8, // GL_COMPRESSED_SRGB_ALPHA8_ASTC_4x4_KHR - ASTC 4×4 SRGB    8bpp
+  0x93B1: 6.4/8, // GL_COMPRESSED_RGBA_ASTC_5x4_KHR - ASTC 5×4 RGBA    6.4bpp
+  0x93D1: 6.4/8, // GL_COMPRESSED_SRGB_ALPHA8_ASTC_5x4_KHR - ASTC 5×4 SRGB    6.4bpp
+  0x93B2: 5.1/8, // GL_COMPRESSED_RGBA_ASTC_5x5_KHR - ASTC 5×5 RGBA    5.1bpp
+  0x93D2: 5.1/8, // GL_COMPRESSED_SRGB_ALPHA8_ASTC_5x5_KHR - ASTC 5×5 SRGB    5.1bpp
+  0x93B3: 4.3/8, // GL_COMPRESSED_RGBA_ASTC_6x5_KHR - ASTC 6×5 RGBA    4.3bpp
+  0x93D3: 4.3/8, // GL_COMPRESSED_SRGB_ALPHA8_ASTC_6x5_KHR - ASTC 6×5 SRGB    4.3bpp
+  0x93B4: 3.6/8, // GL_COMPRESSED_RGBA_ASTC_6x6_KHR - ASTC 6×6 RGBA    3.6bpp
+  0x93D4: 3.6/8, // GL_COMPRESSED_SRGB_ALPHA8_ASTC_6x6_KHR - ASTC 6×6 SRGB    3.6bpp
+  0x93B5: 3.2/8, // GL_COMPRESSED_RGBA_ASTC_8x5_KHR - ASTC 8×5 RGBA    3.2bpp
+  0x93D5: 3.2/8, // GL_COMPRESSED_SRGB_ALPHA8_ASTC_8x5_KHR - ASTC 8×5 SRGB    3.2bpp
+  0x93B6: 2.7/8, // GL_COMPRESSED_RGBA_ASTC_8x6_KHR - ASTC 8×6 RGBA    2.7bpp
+  0x93D6: 2.7/8, // GL_COMPRESSED_SRGB_ALPHA8_ASTC_8x6_KHR - ASTC 8×6 SRGB    2.7bpp
+  0x93B7: 2.0/8, // GL_COMPRESSED_RGBA_ASTC_8x8_KHR - ASTC 8×8 RGBA    2.0bpp
+  0x93D7: 2.0/8, // GL_COMPRESSED_SRGB_ALPHA8_ASTC_8x8_KHR - ASTC 8×8 SRGB    2.0bpp
+  0x93B8: 2.6/8, // GL_COMPRESSED_RGBA_ASTC_10x5_KHR - ASTC 10×5 RGBA    2.6bpp
+  0x93D8: 2.6/8, // GL_COMPRESSED_SRGB_ALPHA8_ASTC_10x5_KHR - ASTC 10×5 SRGB    2.6bpp
+  0x93B9: 2.1/8, // GL_COMPRESSED_RGBA_ASTC_10x6_KHR - ASTC 10×6 RGBA    2.1bpp
+  0x93D9: 2.1/8, // GL_COMPRESSED_SRGB_ALPHA8_ASTC_10x6_KHR - ASTC 10×6 SRGB    2.1bpp
+  0x93BA: 1.6/8, // GL_COMPRESSED_RGBA_ASTC_10x8_KHR - ASTC 10×8 RGBA    1.6bpp
+  0x93DA: 1.6/8, // GL_COMPRESSED_SRGB_ALPHA8_ASTC_10x8_KHR - ASTC 10×8 SRGB    1.6bpp
+  0x93BB: 1.3/8, // GL_COMPRESSED_RGBA_ASTC_10x10_KHR - ASTC 10×10 RGBA    1.3bpp
+  0x93DB: 1.3/8, // GL_COMPRESSED_SRGB_ALPHA8_ASTC_10x10_KHR - ASTC 10×10 SRGB    1.3bpp
+  0x93BC: 1.1/8, // GL_COMPRESSED_RGBA_ASTC_12x10_KHR - ASTC 12×10 RGBA    1.1bpp
+  0x93DC: 1.1/8, // GL_COMPRESSED_SRGB_ALPHA8_ASTC_12x10_KHR - ASTC 12×10 SRGB    1.1bpp
+  0x93BD: 0.9/8, // GL_COMPRESSED_RGBA_ASTC_12x12_KHR - ASTC 12×12 RGBA    0.9bpp
+  0x93DD: 0.9/8, // GL_COMPRESSED_SRGB_ALPHA8_ASTC_12x12_KHR   - ASTC 12×12 SRGB    0.9bpp
+};
+function bytesPerPixelFromCompressedFormat(fmt) {
+  let ret = BYTES_PER_PIXEL_COMPRESSED[fmt];
+  if (!ret) {
+    assert(ret, fmt.toString(16));
+  }
+  return ret;
+}
+
+Texture.prototype.texStorage = function (levels, gl_internal_format, width, height) {
+  assert(!this.fbo);
+  assert(bound_tex[0] === this.handle);
+  let key = [levels, gl_internal_format, width, height].join();
+  if (this.immutable_storage) {
+    if (this.immutable_storage === key) {
+      // already good
+      return;
+    }
+    // destroy and create a new texture
+    unbindAll(this.target);
+    gl.deleteTexture(this.handle);
+    if (this.eff_handle === this.handle) {
+      this.eff_handle = handle_loading;
+    }
+    this.handle = gl.createTexture();
+    bindForced(this);
+    this.setSamplerState({
+      filter_min: this.filter_min,
+      filter_mag: this.filter_mag,
+      wrap_s: this.wrap_s,
+      wrap_t: this.wrap_t,
+    });
+  }
+  if (levels === null) {
+    this.immutable_storage = null;
+    return;
+  }
+  gl.texStorage2D(this.target, levels, gl_internal_format, width, height);
+  this.immutable_storage = key;
+};
+
+function uploadPrep(is_compressed, tex, data, per_mipmap_data) {
+  let size = tex.width * tex.height * tex.format.count;
+  let do_sync = size <= ASYNC_TEXTURE_SIZE || textureIsLoading() || tex.for_reload;
+  let total_levels = 1;
+  let leveloffs = 0;
+  let do_prealloc = engine.webgl2 && is_compressed || !is_compressed;
+  let base_level = data;
+  if (per_mipmap_data) {
+    for (let level = 0; level < per_mipmap_data.length; ++level) {
+      let img = per_mipmap_data[level];
+      if (img.width > max_texture_size || img.height > max_texture_size) {
+        if (level === 0) {
+          dataError(`Texture ${tex.url} (${img.width}x${img.height}) larger ` +
+            `than GL max texture size (${max_texture_size}) and has been resized`);
+        }
+        ++leveloffs;
+        continue;
+      }
+      total_levels = per_mipmap_data.length - leveloffs;
+      base_level = img;
+      break;
+    }
+  }
+  // if we downsampled, adjust width/height (for GPU mem calculations, but might confuse other logic?)
+  tex.width = base_level.width;
+  tex.height = base_level.height;
+  let no_mipmaps = !engine.webgl2 && (!isPowerOfTwo(tex.width) || !isPowerOfTwo(tex.height)) ||
+    is_compressed && !per_mipmap_data;
+  if (no_mipmaps) {
+    total_levels = 1;
+  }
+
+  if (do_prealloc) {
+    profilerStart('pre-allocate');
+    if (is_compressed && engine.webgl2) {
+      tex.texStorage(total_levels, data.gl_internal_format, base_level.width, base_level.height);
+    } else {
+      if (tex.immutable_storage) {
+        tex.texStorage(null);
+      }
+      for (let ii = 0; ii < total_levels; ++ii) {
+        let img = ii === 0 ? base_level : per_mipmap_data[ii + leveloffs];
+        gl.texImage2D(tex.target, ii, tex.format.internal_type, img.width, img.height, 0,
+          tex.format.internal_type, tex.format.gl_type, null);
+      }
+    }
+    profilerStop();
+  } else {
+    if (tex.immutable_storage) {
+      tex.texStorage(null);
+    }
+  }
+
+  return {
+    do_sync,
+    leveloffs,
+    base_level,
+    do_prealloc,
+    no_mipmaps,
+  };
+}
+
+function runUploadTasks(tex, base_level, no_mipmaps, per_mipmap_data, leveloffs, uploadLevel, finish) {
+  let tasks = [];
+  if (per_mipmap_data && !no_mipmaps) {
+    for (let level = per_mipmap_data.length - 1; level >= leveloffs; --level) {
+      let img = per_mipmap_data[level];
+      uploadLevel(tasks, level - leveloffs, img);
+    }
+  } else {
+    uploadLevel(tasks, 0, base_level);
+  }
+  if (!tasks.length) {
+    // was sync
+    return void finish();
+  }
+  let task_idx = 0;
+  let waiting = false;
+  function tick() {
+    if (tex.destroyed) {
+      // cancel uploading
+      return void finish('texture destroyed while uploading');
+    }
+    bindForced(tex);
+    function doneWaiting() {
+      assert(waiting);
+      waiting = false;
+    }
+    while (task_idx < tasks.length && !waiting) {
+      waiting = true;
+      let keep_going = tasks[task_idx++](doneWaiting);
+      if (!keep_going) {
+        break;
+      }
+    }
+    if (task_idx === tasks.length && !waiting) {
+      finish();
+    } else {
+      postTick({
+        inactive: true,
+        fn: tick,
+      });
+    }
+  }
+  tick();
+}
+
+function uploadTextureCompressed(tex, data, per_mipmap_data, finish) {
+  assert(data.is_raw_data);
+  let bpp = bytesPerPixelFromCompressedFormat(data.gl_internal_format);
+  tex.format = {
+    is_compressed: true,
+    internal_type: data.gl_base_internal_format,
+    count: bpp, // actually bytes-per-pixel
+    gl_type: data.gl_internal_format,
+  };
+
+  const { do_sync, leveloffs, do_prealloc, base_level, no_mipmaps } = uploadPrep(true, tex, data, per_mipmap_data);
+
+  function uploadLevel(tasks, level, img) {
+    function doUploadFull() {
+      profilerStart('compressedTexImage2D');
+      if (tex.immutable_storage) {
+        gl.compressedTexSubImage2D(tex.target, level,
+          0, 0, img.width, img.height,
+          data.gl_internal_format, img.data);
+      } else {
+        gl.compressedTexImage2D(tex.target, level,
+          data.gl_internal_format, img.width, img.height, 0, img.data);
+      }
+      if (engine.webgl2) {
+        gl.texParameteri(tex.target, gl.TEXTURE_BASE_LEVEL, level);
+        tex.eff_handle = tex.handle; // if it was using the loading handle, we have at least some good level now
+      }
+      profilerStop();
+    }
+    if (do_sync) {
+      doUploadFull();
+    } else {
+      let level_size = img.width * img.height * bpp;
+      if (level_size <= ASYNC_TEXTURE_SIZE || !do_prealloc) {
+        // this level is small enough, do all at once
+        // or, WebGL1, we can't pre-allocate compressed textures, just do one mip layer at a time
+        tasks.push(function (done) {
+          doUploadFull();
+          done();
+          // if this didn't use up the whole quota, keep going
+          return level_size < ASYNC_TEXTURE_SIZE * 0.5;
+        });
+      } else {
+        // do full width (contiguous blocks)
+        let chunk_w = img.width;
+        let chunk_h = (ceil(ASYNC_TEXTURE_SIZE / bpp / chunk_w) + 3) & ~3;
+        for (let yy = 0; yy < img.height; yy += chunk_h) {
+          let yyy = yy;
+          tasks.push(function (done) {
+            profilerStart('compressedTexSubImage2D');
+            let eff_h = min(chunk_h, img.height - yyy);
+            let dv = new DataView(
+              img.data.buffer,
+              img.data.byteOffset + chunk_w * yyy * bpp,
+              chunk_w * eff_h * bpp
+            );
+            gl.compressedTexSubImage2D(tex.target, level,
+              0, yyy, chunk_w, eff_h,
+              data.gl_internal_format, dv);
+            if (yyy + eff_h === img.height) {
+              if (engine.webgl2) {
+                gl.texParameteri(tex.target, gl.TEXTURE_BASE_LEVEL, level);
+                tex.eff_handle = tex.handle;
+              }
+            }
+            done();
+            profilerStop();
+            return false;
+          });
+        }
+      }
+    }
+  }
+
+  tex.allowMipmaps(!no_mipmaps);
+  runUploadTasks(tex, base_level, no_mipmaps, per_mipmap_data, leveloffs, uploadLevel, function (err) {
+    buildUIActiveReload('texcomp', null);
+    finish(err);
+  });
+}
+
+function uploadTextureImgOrCanvas(tex, data, per_mipmap_data, finish) {
+  let { do_sync, leveloffs, base_level, do_prealloc, no_mipmaps } = uploadPrep(false, tex, data, per_mipmap_data);
+
+  if (base_level.width > max_texture_size || base_level.height > max_texture_size) {
+    assert(!per_mipmap_data); // would have returned a different base_level
+    assert(!do_prealloc); // would be wrong size
+    profilerStart('texture resize and upload');
+    dataError(`Texture ${tex.url} (${base_level.width}x${base_level.height}) larger ` +
+      `than GL max texture size (${max_texture_size}) and has been resized`);
+    let canvas = document.createElement('canvas');
+    canvas.width = min(base_level.width, max_texture_size);
+    canvas.height = min(base_level.height, max_texture_size);
+    let ctx = canvas.getContext('2d');
+    ctx.drawImage(base_level, 0, 0, canvas.width, canvas.height);
+    base_level = canvas;
+    profilerStop();
+  }
+
+  function uploadLevel(tasks, level, img) {
+    function doUploadFull() {
+      profilerStart('texImage2D');
+      if (do_prealloc) {
+        gl.texSubImage2D(tex.target, level, 0, 0,
+          tex.format.internal_type, tex.format.gl_type, img);
+      } else {
+        gl.texImage2D(tex.target, level, tex.format.internal_type, tex.format.internal_type, tex.format.gl_type, img);
+      }
+      if (engine.webgl2) {
+        gl.texParameteri(tex.target, gl.TEXTURE_BASE_LEVEL, level);
+        tex.eff_handle = tex.handle; // if it was using the loading handle, we have at least some good level now
+      }
+      profilerStop();
+    }
+    if (do_sync) {
+      doUploadFull();
+    } else {
+      let bpp = tex.format.count;
+      let level_size = img.width * img.height * bpp;
+
+      if (level_size <= ASYNC_TEXTURE_SIZE || !do_prealloc ||
+        // a blob source, which on Chrome at least causes a full image decode for each chunk
+        String(img.src).startsWith('blob') ||
+        // Firefox just getting weird GL crashes below
+        is_firefox ||
+        // iOS Safari gets out of mem crash or something
+        is_ios_safari ||
+        !supports_cib
+      ) {
+        // this level is small enough, do all at once
+        tasks.push(function (done) {
+          doUploadFull();
+          done();
+          // if this didn't use up the whole quota, keep going
+          return level_size < ASYNC_TEXTURE_SIZE * 0.5;
+        });
+      } else {
+        // upload in chunks
+        // note: this seems to cause issues on everything other than Chrome, and in some (blob)
+        //   cases even causes problems on Chrome, maybe it's not worth it?
+        let chunk_w = img.width;
+        let chunk_h = (ceil(ASYNC_TEXTURE_SIZE / bpp / chunk_w) + 3) & ~3;
+        for (let yy = 0; yy < img.height; yy += chunk_h) {
+          let yyy = yy;
+          tasks.push(function (done) {
+            let eff_h = min(chunk_h, img.height - yyy);
+            createImageBitmap(img, 0, yyy, chunk_w, eff_h,
+              { premultiplyAlpha: 'none', colorSpaceConversion: 'none' },
+              function (err, result) {
+                if (err) {
+                  throw err;
+                }
+                profilerStart('texSubImage2D');
+                bindForced(tex);
+                gl.texSubImage2D(tex.target, level, 0, yyy,
+                  tex.format.internal_type, tex.format.gl_type, result);
+                if (yyy + eff_h === img.height) {
+                  if (engine.webgl2) {
+                    gl.texParameteri(tex.target, gl.TEXTURE_BASE_LEVEL, level);
+                    tex.eff_handle = tex.handle;
+                  }
+                }
+                done();
+                profilerStop();
+              }
+            );
+            return false;
+          });
+        }
+      }
+    }
+  }
+
+  tex.allowMipmaps(!no_mipmaps); // provided or can be autogenerated
+  runUploadTasks(tex, base_level, no_mipmaps, per_mipmap_data, leveloffs, uploadLevel, finish);
+}
+
+Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data, next) {
+  const tex = this;
   profilerStart('Texture:updateData');
   assert(!this.destroyed);
   bindForced(this);
@@ -371,40 +824,93 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) 
   this.src_height = h;
   this.width = w;
   this.height = h;
-  // clear the error flag(s) if there are any
-  for (let ii = 0; ii < 10 && gl.getError(); ++ii) {
-    // Error cleared with gl.getError()
+
+  function finish() {
+    let err = null;
+    profilerStart('getError (flush)');
+    let gl_err = gl.getError();
+    profilerStop();
+    if (gl_err) {
+      err = `GLError(${gl_err})`;
+    }
+    if (!err && tex.mipmaps && !per_mipmap_data && tex.mipmaps_allowed) {
+      profilerStart('generateMipmap');
+      gl.generateMipmap(tex.target);
+      profilerStopStart('generateMipmap-getError (flush)');
+      gl_err = gl.getError();
+      profilerStop();
+      if (gl_err) {
+        err = `generateMipmap:GLError(${gl_err})`;
+      }
+    }
+    if (!err) {
+      tex.updateGPUMem();
+      tex.eff_handle = tex.handle;
+      tex.loaded = true;
+
+      callEach(tex.on_load, tex.on_load = null, tex);
+    }
+    next(err);
   }
-  // Resize NP2 if this is not being used for a texture array, and it is not explicitly allowed (non-mipmapped, clamped)
-  let np2 = (!isPowerOfTwo(w) || !isPowerOfTwo(h)) && !this.is_array && !this.is_cube &&
-    !(!this.mipmaps && this.wrap_s === gl.CLAMP_TO_EDGE && this.wrap_t === gl.CLAMP_TO_EDGE);
-  if (np2) {
+
+  function clearGLErr() {
+    // clear the error flag(s) if there are any
+    for (let ii = 0; ii < 10 && gl.getError(); ++ii) {
+      // Error cleared with gl.getError()
+    }
+  }
+
+  clearGLErr();
+
+  // Resize NP2 if this is not being used for a texture array, and it is not
+  //   explicitly allowed (non-mipmapped+clamped or webgl2+clamped)
+  let np2_source = (!isPowerOfTwo(w) || !isPowerOfTwo(h));
+  let np2_pad = np2_source &&
+    !this.is_array && !this.is_cube && !data.is_raw_data && !per_mipmap_data &&
+    !(!this.mipmaps && this.wrap_s === gl.CLAMP_TO_EDGE && this.wrap_t === gl.CLAMP_TO_EDGE) &&
+    !(engine.webgl2 && this.wrap_s === gl.CLAMP_TO_EDGE && this.wrap_t === gl.CLAMP_TO_EDGE);
+  if (np2_pad) {
     this.width = nextHighestPowerOfTwo(w);
     this.height = nextHighestPowerOfTwo(h);
+    profilerStart('texImage2D(null)');
     gl.texImage2D(this.target, 0, this.format.internal_type, this.width, this.height, 0,
       this.format.internal_type, this.format.gl_type, null);
+    profilerStop();
   }
-  if (data instanceof Uint8Array || data instanceof Uint8ClampedArray) {
+  this.np2_on_gpu = np2_source && !np2_pad;
+  if (data.is_raw_data) {
+    assert(!np2_pad);
+    assert(data.data instanceof Uint8Array);
+    uploadTextureCompressed(this, data, per_mipmap_data, finish);
+  } else if (data instanceof Uint8Array || data instanceof Uint8ClampedArray) {
     assert(!per_mipmap_data); // not implemented
     assert(data.length >= w * h * this.format.count);
     assert(!this.is_cube);
     if (this.is_array) {
       let num_images = h / w; // assume square
+      profilerStart('texImage');
       gl.texImage3D(this.target, 0, this.format.internal_type, w, w,
         num_images, 0, this.format.internal_type, this.format.gl_type, data);
-    } else if (np2) {
+      profilerStop();
+    } else if (np2_pad) {
       // Could do multiple upload thing like below, but smarter, but we really shouldn't be doing this for
       // in-process generated images!
+      profilerStart('texSubImage2D');
       gl.texSubImage2D(this.target, 0, 0, 0, w, h, this.format.internal_type, this.format.gl_type, data);
+      profilerStop();
     } else {
+      profilerStart('texImage2D');
       gl.texImage2D(this.target, 0, this.format.internal_type, w, h, 0,
         this.format.internal_type, this.format.gl_type, data);
+      profilerStop();
     }
+    this.allowMipmaps(true); // can be auto-generated
+    finish();
   } else {
     // Ensure this is an Image or Canvas
     if (!data.width) {
       profilerStop();
-      return `Missing width (${data.width}) ("${String(data).slice(0, 100)}")`;
+      return void next(`Missing width (${data.width}) ("${String(data).slice(0, 100)}")`);
     }
     if (this.is_cube) {
       assert(!per_mipmap_data); // not implemented
@@ -416,22 +922,33 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) 
       let ctx = canvas.getContext('2d');
       for (let ii = 0; ii < cube_faces.length; ++ii) {
         let face = cube_faces[ii];
+        profilerStart('drawImage');
         ctx.drawImage(data, face.pos[0] * tex_size, face.pos[1] * tex_size, tex_size, tex_size,
           0, 0, tex_size, tex_size);
+        profilerStopStart('texImage2D');
         gl.texImage2D(gl[face.target], 0, this.format.internal_type, this.format.internal_type, this.format.gl_type,
           canvas);
+        profilerStop();
       }
+      this.allowMipmaps(true); // can be auto-generated
+      finish();
     } else if (this.is_array && per_mipmap_data) {
       let tile_w = per_mipmap_data[0].width;
       assert(per_mipmap_data[0].height % tile_w === 0);
       let num_images = per_mipmap_data[0].height / tile_w;
 
+      profilerStart('texImage3D');
       this.uploadPackedTexArrayWithMips(per_mipmap_data, tile_w, num_images, data);
+      profilerStop();
+      this.allowMipmaps(true); // provided
+      finish();
     } else if (this.is_array) {
-      assert(!per_mipmap_data); // not implemented
+      assert(!per_mipmap_data); // handled above
       let num_images = h / w;
+      profilerStart('texImage3D');
       gl.texImage3D(this.target, 0, this.format.internal_type, w, w,
         num_images, 0, this.format.internal_type, this.format.gl_type, data);
+      profilerStop();
 
       if (gl.getError()) {
         // Fix for Samsung devices (Chris's and Galaxy S8 on CrossBrowserTesting)
@@ -452,44 +969,33 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) 
       //   did_mipmaps = true;
       // }
 
-    } else if (np2) {
+      this.allowMipmaps(true); // can be auto-generated
+      finish();
+    } else if (np2_pad) {
       assert(!per_mipmap_data); // not implemented
       // Pad up to power of two
       // Duplicate right and bottom pixel row by sending image 3 times
       if (w !== this.width) {
+        profilerStart('texSubImage2D');
         gl.texSubImage2D(this.target, 0, 1, 0, this.format.internal_type, this.format.gl_type, data);
+        profilerStop();
       }
       if (h !== this.height) {
+        profilerStart('texSubImage2D');
         gl.texSubImage2D(this.target, 0, 0, 1, this.format.internal_type, this.format.gl_type, data);
+        profilerStop();
       }
+      profilerStart('texSubImage2D');
       gl.texSubImage2D(this.target, 0, 0, 0, this.format.internal_type, this.format.gl_type, data);
+      profilerStop();
+      this.allowMipmaps(true); // can be auto-generated
+      finish();
     } else {
-      assert(!per_mipmap_data); // not implemented
-      gl.texImage2D(this.target, 0, this.format.internal_type, this.format.internal_type, this.format.gl_type, data);
+      uploadTextureImgOrCanvas(tex, data, per_mipmap_data, finish);
     }
-  }
-  let err = null;
-  let gl_err = gl.getError();
-  if (gl_err) {
-    err = `GLError(${gl_err})`;
-  }
-  if (!err && this.mipmaps && !per_mipmap_data) {
-    gl.generateMipmap(this.target);
-    gl_err = gl.getError();
-    if (gl_err) {
-      err = `GLError(${gl_err})`;
-    }
-  }
-  if (!err) {
-    this.updateGPUMem();
-    this.eff_handle = this.handle;
-    this.loaded = true;
-
-    callEach(this.on_load, this.on_load = null, this);
   }
 
   profilerStop();
-  return err;
 };
 
 Texture.prototype.onLoad = function (cb) {
@@ -505,8 +1011,6 @@ document.addEventListener('securitypolicyviolation', function () {
   localStorageSetJSON('has_csp', true);
   has_content_security_policy = true;
 });
-
-const createImageBitmap = callbackify(window.createImageBitmap);
 
 let blob_supported;
 function blobSupported() {
@@ -542,22 +1046,37 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
   assert(!tex.destroyed);
 
   let tflags;
+  let compressed_type;
   let load_gen = tex.load_gen = (tex.load_gen || 0) + 1;
+  let load_start_wall_time;
   function tryLoad(next) {
     profilerStart('Texture:tryLoad');
-
+    load_start_wall_time = Date.now();
     let url_use = url;
     let did_next = false;
     function done(err, img) {
       profilerStart('Texture:onload');
       if (!did_next) {
         did_next = true;
-        next(err, img, url_use);
+        if (url_use.endsWith('astc') && err) {
+          // presumably in development, we don't have these built by default, try again without
+          console.error(`Disabling ASTC support after failure loading: ${url_use}`);
+          astc_supported = null;
+        }
+        tex.load_time_total = Date.now() - load_start_wall_time;
+        if (texture_stream_delay) {
+          setTimeout(function () {
+            next(err, img, url_use);
+          }, texture_stream_delay);
+        } else {
+          next(err, img, url_use);
+        }
       }
       profilerStop();
     }
 
     tflags = 0;
+    compressed_type = 0;
 
     if (url_use.includes(':')) {
       url_use = locateAsset(removeHash(url_use));
@@ -577,10 +1096,36 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
         if (tflags & FORMAT_PACK) {
           url_use = `${filename_no_ext}.txp`;
         }
+        if ((tflags & FORMAT_ASTC) && astc_supported) {
+          compressed_type = FORMAT_ASTC;
+          if (url_use.endsWith('.txp')) {
+            url_use += '-astc';
+          } else {
+            url_use = `${filename_no_ext}.astc`;
+          }
+        } else if ((tflags & FORMAT_DXT) && dxt_supported) {
+          compressed_type = FORMAT_DXT;
+          if (url_use.endsWith('.txp')) {
+            url_use += '-dxt';
+          } else {
+            url_use = `${filename_no_ext}.dxt`;
+          }
+        }
       }
 
-      if (webFSExists(png_name) && blobSupported()) {
+      tex.actual_url = url_use;
+
+      if (webFSExists(url_use) && blobSupported()) {
         assert(!(tflags & FORMAT_PACK)); // not supported/tested, but should be trivial?
+
+        if (compressed_type) {
+          assert(false, 'untested, maybe works');
+          let view = webFSGetFile(png_name);
+          assert(view instanceof Uint8Array);
+          done(view.buffer);
+          profilerStop();
+          return;
+        }
 
         let view = webFSGetFile(png_name);
         let url_object = URL.createObjectURL(new Blob([view], { type: 'image/png' }));
@@ -605,7 +1150,11 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
       url_use = `${urlhash.getURLBase()}${url_use}`;
     }
 
-    if (tflags & FORMAT_PACK) {
+    if (tex.format.is_compressed && !compressed_type) {
+      tex.format = TEXTURE_FORMAT.RGBA8;
+    }
+
+    if ((tflags & FORMAT_PACK) || compressed_type) {
       fetch({
         url: url_use,
         response_type: 'arraybuffer',
@@ -614,8 +1163,18 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
       return;
     }
 
-    if (is_external && blobSupported() && has_content_security_policy) {
-      // Use `fetch` to get around content security policy
+    if (blobSupported() && supports_cib) {
+      if (is_external && has_content_security_policy) {
+        // Use `fetch` to get around content security policy
+        fetch({
+          url: url_use,
+          response_type: 'arraybuffer',
+        }, done);
+        profilerStop();
+        return;
+      }
+
+      // Also, generally, use fetch + createImageBitmap to avoid main-thread stalls decoding the PNG
       fetch({
         url: url_use,
         response_type: 'arraybuffer',
@@ -624,6 +1183,7 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
       return;
     }
 
+    // Old browser (just IE?) fallback path
     let img = new Image();
     img.onload = function () {
       done(null, img);
@@ -634,6 +1194,28 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
     img.crossOrigin = 'anonymous';
     img.src = url_use;
     profilerStop();
+  }
+
+  // next(err, img)
+  function decodeCompressedImage(arraybuffer, offset, length, next) {
+    assert(arraybuffer instanceof ArrayBuffer);
+    let view = new DataView(arraybuffer, offset, length);
+    let header = view.getUint32(0, true);
+    if (header !== TEXPROC_COMPRESSED_HEADER) {
+      return void next('invalid header');
+    }
+    let gl_internal_format = view.getUint32(4, true);
+    let gl_base_internal_format = view.getUint32(8, true);
+    let width = view.getUint32(12, true);
+    let height = view.getUint32(16, true);
+    next(null, {
+      is_raw_data: true,
+      gl_internal_format,
+      gl_base_internal_format,
+      width,
+      height,
+      data: new Uint8Array(arraybuffer).subarray(offset + 20, offset + length),
+    });
   }
 
   function decodeTexturePack(arraybuffer, next) {
@@ -688,12 +1270,20 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
         img_out.src = src_str.join('');
       }
     }
+    function decodeLevelCompressed(level, offset, length, next) {
+      decodeCompressedImage(arraybuffer, offset, length, function (err, data) {
+        mipmaps[level] = data;
+        next(err);
+      });
+    }
     let data_offs = header_offs + num_images * 4;
     for (let level = 0; level < num_images; ++level) {
       let len = dv.getUint32(header_offs, true);
       header_offs += 4;
       if (txp_flags & FORMAT_PNG) {
         tasks.push(decodeLevelPNG.bind(null, level, data_offs, len));
+      } else if (txp_flags & (FORMAT_DXT | FORMAT_ASTC)) {
+        tasks.push(decodeLevelCompressed.bind(null, level, data_offs, len));
       } else {
         return void next(`TXP: Unknown format ${txp_flags}`);
       }
@@ -713,12 +1303,32 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
 
   function decodeFetchedImage(arraybuffer, next) {
     assert(arraybuffer instanceof ArrayBuffer);
-    let img_out = new Image();
     let view = new Uint8Array(arraybuffer);
-    let url_object = URL.createObjectURL(new Blob([view], { type: 'image/png' }));
+    let blob = new Blob([view], { type: 'image/png' });
+    if (supports_cib) { // this method doesn't stall the main thread as much
+      createImageBitmap(blob,
+        { premultiplyAlpha: 'none', colorSpaceConversion: 'none' },
+        function (err, result) {
+          if (err) {
+            return void next(err);
+          }
+          next(null, result);
+        }
+      );
+
+      return;
+    }
+    let img_out = new Image();
+    let url_object = URL.createObjectURL(blob);
     img_out.onload = function () {
       URL.revokeObjectURL(url_object);
-      next(null, img_out);
+      if (texture_stream_delay) {
+        setTimeout(function () {
+          next(null, img_out);
+        }, texture_stream_delay);
+      } else {
+        next(null, img_out);
+      }
     };
     img_out.onerror = function () {
       URL.revokeObjectURL(url_object);
@@ -734,6 +1344,9 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
     }
     if (tflags & FORMAT_PACK) {
       return void decodeTexturePack(img, next);
+    }
+    if (compressed_type) {
+      return void decodeCompressedImage(img, 0, img.byteLength, next);
     }
     let unpack_mips = tex.is_array && tex.packed_mips;
     if (img instanceof ArrayBuffer) {
@@ -808,52 +1421,64 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
         --load_count;
         return;
       }
+
+      function onError(err_details) {
+        let err_url = url_use_debug && url_use_debug.length > 200 ? `${url_use_debug.slice(0, 200)}...` : url_use_debug;
+        let err = `Error loading texture "${err_url}": ${err_details}`;
+        retries++;
+        if (retries > TEX_RETRY_COUNT) {
+          --load_count;
+          tex.eff_handle = handle_error;
+          tex.load_fail = true;
+          console.error(`${err}: ${err_details}, retries failed`);
+          if (tex.soft_error) {
+            tex.err = 'Load failed';
+          } else {
+            shadersSetGLErrorReportDetails();
+            assert(false, err);
+          }
+          return;
+        }
+        console.error(`${err}: ${err_details}, retrying... `);
+        setTimeout(tryLoad.bind(null, handleLoad), 100 * retries * retries);
+      }
+
       img = img_new;
       let err_details = '';
       if (err_prep) {
-        err_details = err_prep;
-      } else if (img) {
-        let err = tex.updateData(img.width, img.height, img, mipmaps);
+        return void onError(err_prep);
+      }
+      if (!img) {
+        return void onError('no img');
+      }
+      let upload_start_wall_time = Date.now();
+      tex.updateData(img.width, img.height, img, mipmaps, function (err) {
+        tex.load_time_upload = Date.now() - upload_start_wall_time;
         if (err) {
           err_details = String(err);
           // Samsung TV gets 1282 on texture arrays
           // Samsung Galaxy S6 gets 1281 on texture arrays
           // Note: Any failed image load (partial read of a bad png, etc) also results in 1281!
-          if (tex.is_array && (err === 'GLError(1282)' || err === 'GLError(1281)') && engine.webgl2 && !engine.DEBUG) {
+          if (tex.is_array && (err === 'GLError(1282)' || err === 'GLError(1281)') &&
+            engine.webgl2 && !engine.DEBUG
+          ) {
             localStorageSetJSON('webgl2_disable', {
               ua: navigator.userAgent,
               ts: Date.now(),
             });
-            console.error(`Error loading array texture "${url_use_debug}": ${err_details}, reloading without WebGL2..`);
+            console.error(`Error loading array texture "${url_use_debug}": ` +
+              `${err_details}, reloading without WebGL2..`);
             engine.reloadSafe();
             return;
           }
           if (!tex.for_reload) {
             retries = TEX_RETRY_COUNT; // do not retry this
           }
+          onError(err_details);
         } else {
           --load_count;
-          return;
         }
-      }
-      let err_url = url_use_debug && url_use_debug.length > 200 ? `${url_use_debug.slice(0, 200)}...` : url_use_debug;
-      let err = `Error loading texture "${err_url}": ${err_details}`;
-      retries++;
-      if (retries > TEX_RETRY_COUNT) {
-        --load_count;
-        tex.eff_handle = handle_error;
-        tex.load_fail = true;
-        console.error(`${err}: ${err_details}, retries failed`);
-        if (tex.soft_error) {
-          tex.err = 'Load failed';
-        } else {
-          shadersSetGLErrorReportDetails();
-          assert(false, err);
-        }
-        return;
-      }
-      console.error(`${err}: ${err_details}, retrying... `);
-      setTimeout(tryLoad.bind(null, handleLoad), 100 * retries * retries);
+      });
     });
   }
   tryLoad(handleLoad);
@@ -1050,12 +1675,41 @@ export function textureUnloadDynamic() {
   }
 }
 
+function textureReloadEarly(filename) {
+  assert(filename.startsWith('.early/'));
+  let orig_name = filename.slice('.early/'.length);
+  let ret = false;
+  let cname = textureCname(orig_name);
+  for (let key in textures) {
+    let tex = textures[key];
+    if (tex.cname === cname && tex.url) {
+      tex.for_reload = true;
+      if (tex.format.is_compressed) {
+        buildUIActiveReload('texcomp', 'Compressing textures...');
+        tex.format = TEXTURE_FORMAT.RGBA8;
+        // real, compressed texture should get reloaded later
+      }
+      tex.had_early_reload = true;
+      tex.loadURL(`${filename}?rl=${Date.now()}`, tex.load_filter);
+      ret = true;
+    }
+  }
+  return ret;
+}
+
 function textureReload(filename) {
+  if (filename.startsWith('.early')) {
+    return textureReloadEarly(filename);
+  }
   let ret = false;
   let cname = textureCname(filename);
   for (let key in textures) {
     let tex = textures[key];
     if (tex.cname === cname && tex.url) {
+      if (tex.had_early_reload && filename.endsWith('.png')) {
+        // we, presumably, just reloaded this in the early pass already
+        continue;
+      }
       tex.for_reload = true;
       tex.loadURL(`${removeHash(tex.url)}?rl=${Date.now()}`, tex.load_filter);
       ret = true;
@@ -1067,6 +1721,11 @@ function textureReload(filename) {
 let depth_supported;
 export function textureSupportsDepth() {
   return depth_supported;
+}
+
+let texcomp_support;
+export function textureCompressionSupported() {
+  return texcomp_support;
 }
 
 export function textureStartup() {
@@ -1111,6 +1770,37 @@ export function textureStartup() {
     aniso = max_aniso = gl.getParameter(ext_anisotropic.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
   }
 
+  max_texture_size = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+
+  texcomp_support = [];
+  let ext_astc = gl.getExtension('WEBGL_compressed_texture_astc') ||
+    gl.getExtension('MOZ_WEBGL_compressed_texture_astc') ||
+    gl.getExtension('WEBKIT_WEBGL_compressed_texture_astc');
+  if (ext_astc) {
+    console.log('Supported ASTC profiles:', ext_astc.getSupportedProfiles());
+    texcomp_support.push('ASTC');
+    astc_supported = true;
+  } else {
+    console.log('ASTC not supported');
+  }
+  let ext_s3tc = gl.getExtension('WEBGL_compressed_texture_s3tc') ||
+    gl.getExtension('MOZ_WEBGL_compressed_texture_s3tc') ||
+    gl.getExtension('WEBKIT_WEBGL_compressed_texture_s3tc');
+  if (ext_s3tc) {
+    let keys = [];
+    for (let key in ext_s3tc) {
+      let m = key.match(/^COMPRESSED_(.*)_EXT$/);
+      if (m) {
+        keys.push(m[1]);
+      }
+    }
+    console.log(`DXT supported: ${keys.join()}`);
+    texcomp_support = texcomp_support.concat(keys);
+    dxt_supported = true;
+  } else {
+    console.log('DXT not supported');
+  }
+
   handle_error = textureLoad({
     name: 'error',
     width: 2, height: 2,
@@ -1152,6 +1842,19 @@ export function textureStartup() {
   });
 
   textureLoad({
+    name: 'black',
+    width: 2, height: 2,
+    nozoom: true,
+    format: TEXTURE_FORMAT.RGBA8,
+    data: new Uint8Array([
+      0, 0, 0, 255,
+      0, 0, 0, 255,
+      0, 0, 0, 255,
+      0, 0, 0, 255,
+    ]),
+  });
+
+  textureLoad({
     name: 'invisible',
     width: 2, height: 2,
     nozoom: true,
@@ -1166,7 +1869,11 @@ export function textureStartup() {
 
   filewatchOn('.png', textureReload);
   filewatchOn('.jpg', textureReload);
+  filewatchOn('.dxt', textureReload);
+  filewatchOn('.astc', textureReload);
   filewatchOn('.txp', textureReload);
+  filewatchOn('.txp-dxt', textureReload);
+  filewatchOn('.txp-astc', textureReload);
 }
 
 // Legacy API
@@ -1183,3 +1890,5 @@ exports.createForDepthCapture = textureCreateForDepthCapture;
 exports.cname = textureCname;
 exports.findTexForReplacement = textureFindForReplacement;
 exports.textures = textures;
+
+window.glov_textures = exports;

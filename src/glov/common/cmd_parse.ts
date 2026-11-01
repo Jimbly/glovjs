@@ -44,6 +44,7 @@ type CmdValueDefBase<T=string|number> = {
   default_value?: string | number;
   enum_lookup?: TSMap<number>; // TYPE_INT only
   is_toggle?: boolean;
+  no_value_display?: boolean; // do not display message with new value upon change
   set?: (str: T) => void;
   get?: () => T;
 };
@@ -77,7 +78,7 @@ const TYPE_NAME = ['INTEGER', 'NUMBER', 'STRING'];
 export function defaultHandler(err?: string | null, resp?: unknown): void {
   if (err) {
     console.error(err, resp);
-  } else {
+  } else if (resp !== undefined) {
     console.info(resp);
   }
 }
@@ -250,7 +251,7 @@ class CmdParse {
     return checkAccess(this.last_access, this.implied_access, access_list);
   }
 
-  handle(self: AccessContainer | undefined, str: string, resp_func: CmdRespFunc): boolean {
+  handle(self: AccessContainer | undefined, str: string, resp_func?: CmdRespFunc): boolean {
     resp_func = resp_func || this.default_handler;
     this.was_not_found = false;
     this.last_cmd_data = undefined;
@@ -501,7 +502,7 @@ class CmdParse {
         param.on_change(false);
       }
       if (param.get) {
-        return value();
+        return param.no_value_display ? resp_func() : value();
       } else {
         return resp_func(null, `${label} updated`);
       }

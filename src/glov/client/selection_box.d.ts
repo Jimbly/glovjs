@@ -2,6 +2,7 @@ import { Vec4 } from 'glov/common/vmath';
 import { FontStyle, Text } from './font';
 import { ScrollAreaOpts } from './scroll_area';
 import { Sprite } from './sprites';
+import { NinePatchPad } from './ui';
 
 export type EngineStateFunc = (dt: number) => void;
 
@@ -22,7 +23,6 @@ export interface MenuItem {
   prompt_string?: boolean;
   no_sound?: boolean;
   slider?: boolean;
-  no_controller_exit?: boolean;
   plus_minus?: boolean;
   disabled?: boolean;
   centered?: boolean;
@@ -51,8 +51,8 @@ export interface SelectionBoxDrawItemParams {
 }
 
 export type SelectionBoxDrawItemFunc = (params: SelectionBoxDrawItemParams) => void;
-export const selboxDefaultDrawItemBackground: SelectionBoxDrawItemFunc;
-export const selboxDefaultDrawItemText: SelectionBoxDrawItemFunc;
+export const selboxDefaultDrawItemBackground: (params: SelectionBoxDrawItemParams) => NinePatchPad;
+export const selboxDefaultDrawItemText: (params: SelectionBoxDrawItemParams, patch_pad?: NinePatchPad) => void;
 export const selboxDefaultDrawItem: SelectionBoxDrawItemFunc;
 
 export interface SelectionBoxDisplay {
@@ -94,6 +94,7 @@ export interface SelectionBoxOptsAll {
   slider_w: number; // Only for SimpleMenus
   touch_focuses: boolean;
   scroll_area_opts: ScrollAreaOpts; // Only valid at creation time
+  nav_loop: boolean;
 }
 
 export type SelectionBoxOpts = Partial<SelectionBoxOptsAll>;

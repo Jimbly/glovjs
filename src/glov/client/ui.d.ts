@@ -6,12 +6,13 @@ import {
   VoidFunc,
 } from 'glov/common/types';
 import { ROVec4 } from 'glov/common/vmath';
+import { ActionKey } from './actions';
 import { EditBoxOptsAll } from './edit_box';
 import { ALIGN, Font, FontStyle, Text } from './font';
 import { Box } from './geom_types';
 import { GlovSoundPlayOpts, SoundID, SoundLoadOpts } from './sound';
 import { SpotKeyable, SpotParam, SpotRet, SpotStateEnum } from './spot';
-import { Sprite, UISprite } from './sprites';
+import { BlendMode, Sprite, UISprite } from './sprites';
 import { UIStyle } from './uistyle';
 
 export type ColorSet = { _opaque: 'ColorSet' };
@@ -113,6 +114,16 @@ export interface DrawHBoxParam extends UIBox {
 export function drawHBox(coords: DrawHBoxParam, s: Sprite, color?: ROVec4): void;
 export function drawVBox(coords: UIBox, s: Sprite, color?: ROVec4): void;
 export function drawBox(coords: UIBox, s: Sprite, pixel_scale?: number, color?: ROVec4): void;
+export type NinePatchPadX = {
+  x: number;
+  w: number;
+};
+export type NinePatchPadY = {
+  y: number;
+  h: number;
+};
+export type NinePatchPad = NinePatchPadX | NinePatchPadY | (NinePatchPadX & NinePatchPadY) | undefined;
+export function draw9Patch(coords: UIBox, s: Sprite, pixel_scale?: number, color?: ROVec4): NinePatchPad;
 export type UIBoxTiled = UIBox & {
   crop_last?: boolean; // otherwise, default, stretch the last
 };
@@ -234,8 +245,9 @@ export interface ButtonImageParam2 extends ButtonImageParamBase {
 }
 export type ButtonImageParam = ButtonImageParam1 | ButtonImageParam2;
 export function buttonShared(param: ButtonParam): ButtonRet;
-export function buttonBackgroundDraw(param: ButtonParam, state: ButtonStateString): void;
+export function buttonBackgroundDraw(param: ButtonParam, state: ButtonStateString): NinePatchPad;
 export function buttonSpotBackgroundDraw(param: ButtonParam, spot_state: SpotStateEnum): void;
+export function buttonSpotStateToButtonState(spot_state: SpotStateEnum): ButtonStateString;
 export function buttonTextDraw(param: ButtonTextParam, state: ButtonStateString, focused: boolean): void;
 export function buttonText(param: ButtonTextParam): ButtonRet | null;
 export function buttonImage(param: ButtonImageParam): ButtonRet | null;
@@ -302,8 +314,8 @@ export type ModalDialogTickCallbackParams = {
   readonly font_height: number;
   readonly fullscreen_mode: boolean;
 };
-// Returns a hotkey, e.g. KEYS.Y, to activate one of the buttons
-export type ModalDialogTickCallback = (param: ModalDialogTickCallbackParams) => number | void;
+// Returns a hotaction, e.g. 'ok', to activate one of the buttons
+export type ModalDialogTickCallback = (param: ModalDialogTickCallbackParams) => ActionKey | void;
 export type ModalDialogButtons<CB=VoidFunc> = TSMap<ModalDialogButton<CB>>;
 export interface ModalDialogParamBase<CB> {
   title?: Text;
@@ -345,6 +357,10 @@ export function menuFadeParamsSetDefault(fade_params: MenuFadeParams): void;
 export function menuUp(param?: MenuFadeParams): void;
 export function copyTextToClipboard(text: string): boolean;
 export function provideUserString(title: Text, str: string, alt_buttons?: ModalDialogButtons): void;
+
+export function indicateFocus(x: number, y: number, w: number, h: number, z: number): void;
+export function uiSetFocusIndicator(fn: typeof indicateFocus): void;
+
 export function drawRect(x0: number, y0: number, x1: number, y1: number, z?: number, color?: ROVec4): void;
 export function drawRect2(param: UIBoxColored): void;
 export function drawRect4Color(
@@ -356,8 +372,6 @@ export function drawRect4Color(
   color_ll: ROVec4,
   color_lr: ROVec4,
 ): void;
-// TODO: import from sprites.js's types after conversion
-type BlendMode = 0 | 1 | 2; // BlendMode
 export function drawElipse(
   x0: number, y0: number,
   x1: number, y1: number,

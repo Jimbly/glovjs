@@ -12,6 +12,7 @@ import {
 } from 'glov/common/vmath';
 import {
   autoAtlas,
+  autoAtlasNoWarn,
   autoAtlasOnImage,
 } from './autoatlas';
 import {
@@ -54,12 +55,24 @@ markdownSetColorStyles(default_palette.map((c) => fontStyleColored(null, c)));
 // Note: renderable can return null (at parse time) and will be replaced with the original text
 export type MarkdownRenderable = (content: RenderableContent, data?: unknown) => (MDLayoutBlock | null);
 
+export function markdownLayoutIsStartOfLine(param: MDLayoutCalcParam): boolean {
+  let { cursor } = param;
+  return Boolean(cursor.x === cursor.line_x0);
+}
+
+export function markdownLayoutWrap(param: MDLayoutCalcParam): void {
+  let { cursor, line_height } = param;
+  cursor.x = cursor.line_x0 = param.indent;
+  cursor.y += line_height; // TODO: = cursor.line_y1 instead?
+  cursor.line_y1 = cursor.y;
+}
+
 export function markdownLayoutFit(param: MDLayoutCalcParam, dims: Optional<Box, 'x' | 'y'>): dims is Box {
   let { cursor, line_height } = param;
-  if (cursor.x + dims.w > param.w + EPSILON && cursor.x !== cursor.line_x0 && (param.align & ALIGN.HWRAP)) {
-    cursor.x = cursor.line_x0 = param.indent;
-    cursor.y += line_height; // TODO: = cursor.line_y1 instead?
-    cursor.line_y1 = cursor.y;
+  if (cursor.x + dims.w > param.w + EPSILON && (param.align & ALIGN.HWRAP) &&
+    !markdownLayoutIsStartOfLine(param)
+  ) {
+    markdownLayoutWrap(param);
   }
   if (cursor.x + dims.w > param.w + EPSILON && (param.align & ALIGN.HWRAP)) {
     // still over, doesn't fit on a whole line, modify w (if caller listens to that)
@@ -110,9 +123,11 @@ export function markdownImageRegisterAutoAtlas(atlas_name: string): void {
     if (img_name === 'def') { // exists in every atlas
       return;
     }
+    autoAtlasNoWarn(true);
     markdownImageRegister(img_name, {
       sprite: autoAtlas(atlas_name, img_name),
     });
+    autoAtlasNoWarn(false);
   });
 }
 
@@ -121,6 +136,8 @@ function getImageData(key: string): MarkdownImageParam {
 }
 
 class MDRImg implements MDLayoutBlock, MDDrawBlock, Box {
+  break_pre = false;
+  break_post = false;
   key: string;
   scale: number;
   aspect: number;
@@ -156,11 +173,7 @@ class MDRImg implements MDLayoutBlock, MDDrawBlock, Box {
       } else if (this.aspect) {
         aspect = this.aspect;
       } else {
-        let tex = sprite.texs[0];
-        aspect = tex.width / tex.height;
-        if (sprite.uvs) {
-          aspect *= (sprite.uvs[2] - sprite.uvs[0]) / (sprite.uvs[3] - sprite.uvs[1]);
-        }
+        aspect = sprite.getAspect();
       }
     }
     this.w = h * aspect;
@@ -190,6 +203,7 @@ class MDRImg implements MDLayoutBlock, MDDrawBlock, Box {
       h: this.h,
       frame: img_data.frame,
       color,
+      nozoom: true, // if it's in an atlas, it should have sufficient padding to not need this
     });
     profilerStop();
   }
@@ -200,6 +214,8 @@ function createMDRImg(content: RenderableContent): MDRImg {
 markdownRenderableAddDefault('img', createMDRImg);
 
 class MDRColorStart implements MDLayoutBlock {
+  break_pre = false;
+  break_post = false;
   key: string;
   constructor(content: RenderableContent) {
     this.key = content.key;
@@ -226,6 +242,8 @@ class MDRColorStart implements MDLayoutBlock {
 markdownRenderableAddDefault('c', (content: RenderableContent) => new MDRColorStart(content));
 
 class MDRColorEnd implements MDLayoutBlock {
+  break_pre = false;
+  break_post = false;
   layout(param: MDLayoutCalcParam): MDDrawBlock[] {
     let { font_styles, font_style_idx, font_style_stack } = param;
     if (!font_style_stack || !font_style_stack.length) {

@@ -36,6 +36,7 @@ const camera2d = require('./camera2d.js');
 const { dynGeomQueueSprite } = require('./dyn_geom.js');
 const engine = require('./engine.js');
 const geom = require('./geom.js');
+const { glScissorTest } = require('./glstate');
 const { cos, max, min, round, sin } = Math;
 const {
   textureCmpArray,
@@ -352,9 +353,10 @@ function fillUVs(tex, w, h, nozoom, uvs) {
       }
     } else if (zoom_level > 1) { // minification
       // need to apply this bias even with nearest filtering, not exactly sure why
-      let mipped_texels = zoom_level / 2;
-      ubias = vbias = 0.5 + mipped_texels;
-
+      // let mipped_texels = zoom_level / 2;
+      // ubias = vbias = 0.5 + mipped_texels;
+      ubias = 0.5 + (uvs[2] - uvs[0]) * tex.width / w / 2;
+      vbias = 0.5 + (uvs[3] - uvs[1]) * tex.height / h / 2;
     }
     if (uvs[0] > uvs[2]) {
       ubias *= -1;
@@ -519,7 +521,7 @@ function clipCoordsDom(x, y, w, h) {
 let active_scissor = null;
 function scissorSet(scissor) {
   if (!active_scissor) {
-    gl.enable(gl.SCISSOR_TEST);
+    glScissorTest(true);
   }
   let [x, y, w, h] = scissor;
   if (!verify(w >= 0)) {
@@ -532,7 +534,7 @@ function scissorSet(scissor) {
   active_scissor = scissor;
 }
 function scisssorClear() {
-  gl.disable(gl.SCISSOR_TEST);
+  glScissorTest(false);
   active_scissor = null;
 }
 
@@ -845,7 +847,7 @@ function finishDraw() {
 
 export function spriteDrawReset() {
   if (active_scissor) {
-    gl.disable(gl.SCISSOR_TEST);
+    glScissorTest(false);
     active_scissor = null;
   }
 }
@@ -1055,11 +1057,22 @@ function Sprite(params) {
 }
 
 Sprite.prototype.getAspect = function () {
+  if (this.uidata) {
+    // images within atlases, etc
+    if (this.uidata.aspect && this.uidata.aspect.length === 1) {
+      return this.uidata.aspect[0];
+    }
+    return 1;
+  }
   let tex = this.texs[0];
   if (!tex) {
     return 1;
   }
-  return tex.src_width / tex.src_height;
+  if (this.uvs) {
+    return (this.uvs[2] - this.uvs[0]) * tex.width / ((this.uvs[3] - this.uvs[1]) * tex.height);
+  } else {
+    return tex.src_width / tex.src_height;
+  }
 };
 
 Sprite.prototype.onReInit = function (cb) {

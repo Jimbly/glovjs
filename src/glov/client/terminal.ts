@@ -2,18 +2,42 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 /*eslint no-bitwise:off */
 
-import * as assert from 'assert';
+import assert from 'assert';
+import { stripAnsi } from 'glov/common/ansi';
+import { VoidFunc } from 'glov/common/types';
+import { clamp } from 'glov/common/util';
+import {
+  JSVec2,
+  ROVec4,
+  vec4,
+} from 'glov/common/vmath';
+import { actionEdge } from './actions';
+import {
+  getFrameDt,
+  getFrameTimestamp,
+} from './engine';
+import {
+  Font,
+  FontStyle,
+  fontStyle,
+  intColorFromVec4Color,
+} from './font';
+import {
+  inputClick,
+  keyDownEdge,
+  KEYS,
+  mouseMoved,
+  mouseOver,
+} from './input';
+import {
+  drawRect,
+  playUISound,
+  uiGetFont,
+} from './ui';
+
 const { abs, floor, max, min } = Math;
-import { clamp } from 'glov/common/util.js';
-import { vec4 } from 'glov/common/vmath.js';
-import * as engine from './engine.js';
-import * as glov_font from './font.js';
-import * as input from './input.js';
-import * as ui from './ui.js';
 
 Z.BACKGROUND = Z.BACKGROUND || 1;
-
-const { KEYS } = input;
 
 const mode_regex1 = /^((?:\d+;)*\d+m)/u;
 const mode_regex2 = /(\d+)[;m]/gu;
@@ -32,10 +56,40 @@ const ansi_to_unicode = [
   8805,8804,8992,8993,247,8776,176,8729,183,8730,8319,178,9632,160
 ];
 
+export type TerminalSubView = {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  cursor_x?: number;
+  cursor_y?: number;
+};
+
 const MOD_CH = 1;
 const MOD_SCROLL = 2;
 const MOD_CLEAR = 3;
 const MOD_CLEAREOL = 4;
+const MOD_CB = 5;
+type ModType = 1 | 2 | 3 | 4 | 5;
+type Mod = {
+  type: ModType;
+  x: number;
+  y: number;
+  fg: number;
+  bg: number;
+  attr: number;
+  sub_view: TerminalSubView | null;
+  next: Mod | null;
+} & ({
+  type: typeof MOD_CB;
+  ch: VoidFunc;
+} | {
+  type: typeof MOD_CH;
+  ch: string;
+} | {
+  type: typeof MOD_CLEAR | typeof MOD_CLEAREOL | typeof MOD_SCROLL;
+  ch: undefined;
+});
 
 const ansi_to_vga = [
   0, // black
@@ -48,21 +102,6 @@ const ansi_to_vga = [
   7, // white
 ];
 
-function toch(ch) {
-  if (typeof ch === 'string') {
-    let idx = ch.charCodeAt(0);
-    if (ansi_to_unicode[idx]) {
-      return String.fromCharCode(ansi_to_unicode[idx]);
-    } else {
-      return ch;
-    }
-  }
-  if (typeof ch === 'number') {
-    return String.fromCharCode(ansi_to_unicode[ch] || ch);
-  } else {
-    return String(ch)[0] || ' ';
-  }
-}
 const ATTR = {
   BLINK: 1,
   UNDERLINE: 2, // unimplemented
@@ -71,8 +110,11 @@ const ATTR = {
 };
 
 class CharInfo {
-  constructor(fg, bg, attr) {
-    this.ch = ' ';
+  ch = ' ';
+  fg: number;
+  bg: number;
+  attr: number;
+  constructor(fg: number, bg: number, attr: number) {
     this.fg = fg;
     this.bg = bg;
     this.attr = attr;
@@ -98,40 +140,127 @@ const default_palette = [
   vec4(63/64,63/64,63/63,1),
 ];
 
-class GlovTerminal {
-  constructor(params) {
+export type TerminalCodePage = 'ansi' | 'unicode';
+
+export type TerminalParams = Partial<{
+  baud: number;
+  draw_cursor: JSVec2 | null | false;
+  sounds: boolean;
+  x: number;
+  y: number;
+  z: number;
+  w: number;
+  h: number;
+  codepage: TerminalCodePage;
+  palette: ROVec4[];
+  char_width: number;
+  char_height: number;
+  font: Font;
+  auto_scroll: boolean;
+  auto_crlf: boolean;
+  ignore_newline_after_wrap: boolean;
+}>;
+
+export type TerminalPrintParams = Partial<{
+  x: number;
+  y: number;
+  fg: number;
+  bg: number;
+  codepage: TerminalCodePage;
+  text: string | number | (number|string)[];
+
+  center: boolean;
+  w: number;
+}>;
+
+export type TerminalColorPair = { fg: number; bg: number };
+export type TerminalMenuItem = {
+  label: string;
+  x: number;
+  y: number;
+  color_sel: TerminalColorPair;
+  color_unsel: TerminalColorPair;
+  color_execute: TerminalColorPair;
+  pre_sel: string;
+  pre_unsel: string;
+  hotkey?: string;
+};
+export type TerminalMenuParams = {
+  key?: string;
+  x: number;
+  y: number;
+  items: (string | TerminalMenuItem)[];
+  def_idx?: number;
+  allow_leftright?: boolean;
+  color_sel?: TerminalColorPair;
+  color_unsel?: TerminalColorPair;
+  color_execute?: TerminalColorPair;
+  pre_sel?: string;
+  pre_unsel?: string;
+  post_sel?: string;
+  post_unsel?: string;
+};
+
+
+class Terminal {
+  baud: number;
+  frame = 0;
+  draw_cursor: JSVec2 | null | false;
+  sounds: boolean;
+  cp: TerminalCodePage = 'ansi';
+  // screen buffer
+  render_x: number;
+  render_y: number;
+  render_z: number;
+  w: number;
+  h: number;
+  // cursor
+  x = 0;
+  y = 0;
+  fg = 7;
+  bg = 0;
+  attr = 0;
+  saved_x = 0;
+  saved_y = 0;
+  playback = {
+    x: 0,
+    y: 0,
+    fg: 0,
+    bg: 0,
+    attr: 0,
+    timestamp: 0,
+  };
+  mod_head: Mod | null = null;
+  mod_tail: Mod | null = null;
+  mod_countdown = 0;
+  // current sub-view
+  sub_view: TerminalSubView | null = null;
+  x0: number = 0;
+  y0: number = 0;
+  x1: number;
+  y1: number;
+  // options
+  palette: ROVec4[];
+  font_styles: FontStyle[];
+  char_width: number;
+  char_height: number;
+  font: Font;
+  auto_scroll: boolean;
+  auto_crlf: boolean;
+  ignore_newline_after_wrap: boolean;
+  buffer: CharInfo[][];
+  prebuffer: CharInfo[][];
+  constructor(params?: Partial<TerminalParams>) {
     params = params || {};
     this.baud = params.baud ?? 9600;
-    this.frame = 0;
     this.draw_cursor = params.draw_cursor ?? [1,4];
-    // screen buffer
+    this.sounds = params.sounds ?? true;
     this.render_x = params.x || 0;
     this.render_y = params.y || 0;
     this.render_z = params.z || Z.BACKGROUND;
     this.w = params.w || 80;
     this.h = params.h || 25;
-    // cursor
-    this.x = 0;
-    this.y = 0;
-    this.fg = 7;
-    this.bg = 0;
-    this.attr = 0;
-    this.saved_x = 0;
-    this.saved_y = 0;
-    this.playback = {
-      x: 0,
-      y: 0,
-      fg: 7,
-      bg: 0,
-      attr: 0,
-    };
-    this.mod_head = null;
-    this.mod_tail = null;
-    this.mod_countdown = 0;
-    // Current sub-view
-    this.sub_view = null; // { x, y, w, h }
-    this.x0 = 0;
-    this.y0 = 0;
+    this.codepage(params.codepage);
     this.x1 = this.w;
     this.y1 = this.h;
 
@@ -143,13 +272,13 @@ class GlovTerminal {
     }
     this.font_styles = [];
     for (let ii = 0; ii < this.palette.length; ++ii) {
-      this.font_styles.push(glov_font.style(null, {
-        color: glov_font.intColorFromVec4Color(this.palette[ii]),
+      this.font_styles.push(fontStyle(null, {
+        color: intColorFromVec4Color(this.palette[ii]),
       }));
     }
     this.char_width = params.char_width || 9;
     this.char_height = params.char_height || 16;
-    this.font = params.font || engine.font;
+    this.font = params.font || uiGetFont();
     this.auto_scroll = params.auto_scroll ?? true;
     this.auto_crlf = params.auto_crlf ?? false;
     this.ignore_newline_after_wrap = params.ignore_newline_after_wrap ?? false;
@@ -165,7 +294,27 @@ class GlovTerminal {
     }
   }
 
-  domod(buffer, mod) {
+  tochFn(ch: string | number): string {
+    if (typeof ch === 'string') {
+      if (this.cp === 'ansi') {
+        let idx = ch.charCodeAt(0);
+        if (ansi_to_unicode[idx]) {
+          return String.fromCharCode(ansi_to_unicode[idx]);
+        }
+      }
+      return ch;
+    } else if (typeof ch === 'number') {
+      if (this.cp === 'ansi') {
+        return String.fromCharCode(ansi_to_unicode[ch] || ch);
+      }
+      return String.fromCharCode(ch);
+    } else {
+      return String(ch)[0] || ' ';
+    }
+  }
+  toch = this.tochFn.bind(this);
+
+  domod(buffer: CharInfo[][], mod: Mod): void {
     let mod_playback = buffer === this.buffer;
     switch (mod.type) { // eslint-disable-line default-case
       case MOD_CH:
@@ -245,9 +394,14 @@ class GlovTerminal {
           this.playback.y = mod.y;
         }
       } break;
+      case MOD_CB:
+        if (mod_playback) {
+          mod.ch();
+        }
+        break;
     }
     if (mod_playback) {
-      this.playback.timestamp = engine.getFrameTimestamp();
+      this.playback.timestamp = getFrameTimestamp();
       if (this.playback.x >= this.w) {
         this.playback.x = 0;
         this.playback.y++;
@@ -258,16 +412,22 @@ class GlovTerminal {
     }
   }
 
-  mod(type, ch) {
-    let mod = {
-      type,
-      ch,
+  mod(type: typeof MOD_CB, cb: VoidFunc): Mod | null;
+  mod(type: typeof MOD_SCROLL): Mod | null;
+  mod(type: typeof MOD_CLEAR): Mod | null;
+  mod(type: typeof MOD_CLEAREOL): Mod | null;
+  mod(type: typeof MOD_CH, ch: string): Mod | null;
+  mod(type: ModType, ch?: string | VoidFunc): Mod | null {
+    let mod: Mod = {
+      type: type as 1,
+      ch: ch as string,
       x: this.x,
       y: this.y,
       fg: this.fg,
       bg: this.bg,
       attr: this.attr,
       sub_view: this.sub_view,
+      next: null,
     };
     if (type === MOD_CH) {
       let char_info = this.prebuffer[mod.y][mod.x];
@@ -277,13 +437,13 @@ class GlovTerminal {
         char_info.attr === mod.attr
       ) {
         // no change, discard mod
-        return;
+        return null;
       }
     }
     this.domod(this.prebuffer, mod);
     if (!this.baud) {
       this.domod(this.buffer, mod);
-      return;
+      return null;
     }
     if (this.mod_tail) {
       this.mod_tail.next = mod;
@@ -291,14 +451,15 @@ class GlovTerminal {
     } else {
       this.mod_head = this.mod_tail = mod;
     }
+    return mod;
   }
 
-  normal() {
+  normal(): void {
     this.color(7, 0);
     this.attr = 0;
   }
 
-  color(fg, bg) {
+  color(fg?: null | number, bg?: null | number): void {
     if (typeof fg === 'number') {
       this.fg = fg;
     }
@@ -307,7 +468,13 @@ class GlovTerminal {
     }
   }
 
-  moveto(x, y) {
+  codepage(codepage?: TerminalCodePage): void {
+    if (codepage === 'ansi' || codepage === 'unicode') {
+      this.cp = codepage;
+    }
+  }
+
+  moveto(x?: null | number, y?: null | number): void {
     if (typeof x === 'number') {
       this.x = this.x0 + x;
     }
@@ -316,7 +483,7 @@ class GlovTerminal {
     }
     this.checkwrap();
   }
-  offset(x, y) {
+  offset(x?: null | number, y?: null | number): void {
     if (typeof x === 'number') {
       this.x += x;
     }
@@ -325,10 +492,10 @@ class GlovTerminal {
     }
     this.checkwrap();
   }
-  autoScroll(b) {
+  autoScroll(b: boolean): void {
     this.auto_scroll = b;
   }
-  checkwrap() {
+  checkwrap(): boolean {
     let ret = false;
     if (this.x < this.x0) {
       this.x = this.x0;
@@ -346,32 +513,38 @@ class GlovTerminal {
     }
     return ret;
   }
-  cr() {
+  cr(): void {
     this.x = this.x0;
     this.checkwrap();
   }
-  lf() {
+  lf(): void {
     this.y++;
     this.checkwrap();
   }
-  crlf() {
+  crlf(): void {
     this.x = this.x0;
     this.y++;
     this.checkwrap();
   }
-  clear() {
+  clear(): void {
     this.moveto(0, 0);
     this.mod(MOD_CLEAR);
   }
-  cleareol() {
+  cleareol(): void {
     this.mod(MOD_CLEAREOL);
     this.x = this.w; // probably?
     this.checkwrap();
   }
+  queueCb(cb: VoidFunc): void {
+    let mod = this.mod(MOD_CB, cb);
+    if (!mod) {
+      cb();
+    }
+  }
 
-  subViewPush(sub_view) {
+  subViewPush(sub_view: TerminalSubView): void {
     assert(!this.sub_view);
-    if (sub_view.cursor_x) {
+    if (typeof sub_view.cursor_x === 'number') {
       this.moveto(sub_view.cursor_x, sub_view.cursor_y);
     }
     this.sub_view = sub_view;
@@ -380,7 +553,7 @@ class GlovTerminal {
     this.x1 = sub_view.x + sub_view.w;
     this.y1 = sub_view.y + sub_view.h;
   }
-  subViewPop() {
+  subViewPop(): void {
     assert(this.sub_view);
     this.sub_view.cursor_x = this.x;
     this.sub_view.cursor_y = this.y;
@@ -390,18 +563,26 @@ class GlovTerminal {
     this.y1 = this.h;
   }
 
-  print(params) {
+  print(params: TerminalPrintParams): void {
     this.moveto(params.x, params.y);
     this.color(params.fg, params.bg);
+    this.codepage(params.codepage);
     let just_wrapped = false; // maybe should persist between print() calls?
     let text = params.text || '';
-    if (text && !text.length) {
+    if (params.center && params.w && typeof text === 'string') {
+      let len = stripAnsi(text).length;
+      let pad = floor((params.w - len) / 2);
+      if (pad > 0) {
+        this.offset(pad);
+      }
+    }
+    if (typeof text === 'number') {
       text = [text];
     }
     if (typeof text === 'string') {
       text = text.split('');
     }
-    text = text.map(toch).join('');
+    text = text.map(this.toch).join('');
     for (let ii = 0; ii < text.length;) {
       let ch = text[ii];
       let handled = false;
@@ -453,7 +634,7 @@ class GlovTerminal {
           let ii_save = ii;
           ii += m[0].length + 2;
           let sub_str = m[1];
-          m = mode_regex2.exec(sub_str);
+          m = mode_regex2.exec(sub_str)!;
           do {
             let sub_code = Number(m[1]);
             if (sub_code >= 40) {
@@ -512,7 +693,15 @@ class GlovTerminal {
       }
     }
   }
-  fill(params) {
+  fill(params: Partial<{
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    fg: number;
+    bg: number;
+    ch: string | number;
+  }>): void {
     let x = params.x || 0;
     let y = params.y || 0;
     let w = params.w || this.w;
@@ -524,7 +713,7 @@ class GlovTerminal {
     let x1 = clamp(x + w, 0, eff_w);
     let y0 = clamp(y, 0, eff_h);
     let y1 = clamp(y + h, 0, eff_h);
-    let ch = toch(params.ch || ' ');
+    let ch = this.toch(params.ch || ' ');
     for (let ii = y0; ii < y1; ++ii) {
       this.moveto(x0, ii);
       for (let jj = x0; jj < x1; ++jj) {
@@ -534,7 +723,7 @@ class GlovTerminal {
     }
   }
 
-  ansiCharsTo(mod) {
+  ansiCharsTo(mod: Mod): number {
     // Adjust attributes
     let count = 0;
     let m = false;
@@ -595,7 +784,15 @@ class GlovTerminal {
     return count;
   }
 
-  cells(params) {
+  cells(params: {
+    x: number;
+    y: number;
+    ws: number[];
+    hs: number[];
+    charset?: number;
+    header?: string | string[]; // one per column
+    header_format?: string; // eg ansi.green('')
+  }): void {
     let { x, y, ws, hs, header } = params;
     let charset = [
       '│─┌┬┐└┴┘├┼┤',
@@ -606,7 +803,7 @@ class GlovTerminal {
 
     // draw top
     let terminal = this;
-    function drawHorizLine(base, text_list) {
+    function drawHorizLine(base: number, text_list?: string | (string|undefined)[]): void {
       let line = [charset[base]];
       if (!Array.isArray(text_list)) {
         text_list = [text_list];
@@ -668,8 +865,18 @@ class GlovTerminal {
     }
   }
 
-  menu(params) {
-    let { x, y, items } = params;
+  sound(id: string): void {
+    if (this.sounds) {
+      playUISound(id);
+    }
+  }
+
+  last_menu_frame = -1;
+  last_menu_key = '';
+  menu_idx = 0;
+  menu_select_delta = 0;
+  menu(params: TerminalMenuParams): number {
+    let { x, y, items, allow_leftright } = params;
     let color_sel = params.color_sel || { fg: 15, bg: 8 };
     let color_unsel = params.color_unsel || { fg: 7, bg: 0 };
     let color_execute = params.color_execute || { fg: 8, bg: 0 };
@@ -685,17 +892,21 @@ class GlovTerminal {
     this.last_menu_frame = this.frame;
     this.last_menu_key = menu_key;
 
-    if (input.keyDownEdge(KEYS.DOWN) || input.keyDownEdge(KEYS.S)) {
+    if (actionEdge('down')) {
       this.menu_idx++;
+      this.sound('rollover');
     }
-    if (input.keyDownEdge(KEYS.UP) || input.keyDownEdge(KEYS.W)) {
+    if (actionEdge('up')) {
       this.menu_idx--;
+      this.sound('rollover');
     }
-    if (input.keyDownEdge(KEYS.HOME)) {
+    if (keyDownEdge(KEYS.HOME)) {
       this.menu_idx = 0;
+      this.sound('rollover');
     }
-    if (input.keyDownEdge(KEYS.END)) {
+    if (keyDownEdge(KEYS.END)) {
       this.menu_idx = items.length - 1;
+      this.sound('rollover');
     }
 
     let max_w = 0;
@@ -730,26 +941,29 @@ class GlovTerminal {
         }
       }
       let param = {
-        x: this.render_x + effx * this.char_width,
-        y: this.render_y + effy * this.char_height,
+        x: this.render_x + ((this.sub_view ? this.sub_view.x : 0) + effx) * this.char_width,
+        y: this.render_y + ((this.sub_view ? this.sub_view.y : 0) + effy) * this.char_height,
         w: max_w * this.char_width,
         h: this.char_height,
       };
       let click;
-      if ((click = input.click(param))) {
+      if ((click = inputClick(param))) {
         if (click.button === 2) {
           this.menu_select_delta = -1;
         }
         this.menu_idx = ii;
         ret = ii;
-      } else if (input.mouseMoved() && input.mouseOver(param)) {
-        this.menu_idx = ii;
+      } else if (mouseMoved() && mouseOver(param)) {
+        if (this.menu_idx !== ii) {
+          this.menu_idx = ii;
+          this.sound('rollover');
+        }
       }
-      if (hotkey && input.keyDownEdge(KEYS.A + hotkey.charCodeAt(0) - 'A'.charCodeAt(0))) {
+      if (hotkey && keyDownEdge(KEYS.A + hotkey.charCodeAt(0) - 'A'.charCodeAt(0))) {
         this.menu_idx = ii;
         ret = ii;
       }
-      if ((hotkey && hotkey === '0' || items.length === 1) && input.keyDownEdge(KEYS.ESCAPE)) {
+      if ((hotkey && hotkey === '0' || items.length === 1) && actionEdge('cancel')) {
         this.menu_idx = ii;
         ret = ii;
       }
@@ -758,11 +972,10 @@ class GlovTerminal {
     this.menu_idx = (this.menu_idx + items.length) % items.length;
 
     let left_select = false;
-    if (input.keyDownEdge(KEYS.SPACE) ||
-      input.keyDownEdge(KEYS.ENTER) ||
-      ret === -1 && (
-        input.keyDownEdge(KEYS.D) || input.keyDownEdge(KEYS.RIGHT) ||
-        (left_select = (input.keyDownEdge(KEYS.A) || input.keyDownEdge(KEYS.LEFT)))
+    if (actionEdge('accept') ||
+      ret === -1 && allow_leftright && (
+        actionEdge('right') ||
+        (left_select = Boolean(actionEdge('left')))
       )
     ) {
       ret = this.menu_idx;
@@ -788,25 +1001,28 @@ class GlovTerminal {
         eff_pre_unsel = item.pre_unsel;
         item = item.label;
       }
-      let param = {
+      let param: TerminalPrintParams = {
         x: effx,
         y: effy,
         fg: colors.fg,
         bg: colors.bg,
+        text: `${selected ? eff_pre_sel : eff_pre_unsel}${item}${selected ? post_sel : post_unsel}`,
       };
-      param.text = `${selected ? eff_pre_sel : eff_pre_unsel}${item}${selected ? post_sel : post_unsel}`;
       this.print(param);
     }
 
     this.color(color_unsel.fg, color_unsel.bg);
 
+    if (ret !== -1) {
+      this.sound('button_click');
+    }
     return ret;
   }
 
-  isAnimating() {
+  isAnimating(): boolean {
     return Boolean(this.mod_head);
   }
-  finishAnimating() {
+  finishAnimating(): void {
     while (this.mod_head) {
       let mod = this.mod_head;
       this.mod_head = mod.next;
@@ -818,8 +1034,8 @@ class GlovTerminal {
     this.mod_countdown = 0;
   }
 
-  render() {
-    let dt = engine.getFrameDt();
+  render(): void {
+    let dt = getFrameDt();
     this.frame++;
 
     while (dt >= this.mod_countdown && this.mod_head) {
@@ -844,7 +1060,7 @@ class GlovTerminal {
     this.mod_countdown = max(0, this.mod_countdown - dt);
 
     const { w, h, buffer, char_width, char_height, palette, draw_cursor } = this;
-    const blink = engine.getFrameTimestamp() % 1000 > 500;
+    const blink = getFrameTimestamp() % 1000 > 500;
     const x = this.render_x;
     const y = this.render_y;
     const z = this.render_z;
@@ -862,17 +1078,17 @@ class GlovTerminal {
         // found first non-empty character
         let jj0 = jj;
         let fg = line[jj].fg;
-        let text = [];
+        let chs = [];
         while (jj < w && (line[jj].fg === fg || line[jj].ch === ' ')) {
           let ch = line[jj].ch;
           if (blink && (line[jj].attr & ATTR.BLINK)) {
             ch = ' ';
           }
-          text.push(ch);
+          chs.push(ch);
           ++jj;
         }
-        text = text.join('');
-        engine.font.drawSized(this.font_styles[fg],
+        let text = chs.join('');
+        this.font.drawSized(this.font_styles[fg],
           x + jj0 * char_width, y + ii * char_height, z + 0.5,
           char_height, text);
       }
@@ -882,9 +1098,9 @@ class GlovTerminal {
       let { playback } = this;
       let cx = x + (this.mod_head ? playback.x : this.x) * char_width;
       let cy = y + (this.mod_head ? playback.y : this.y) * char_height;
-      let cursor_blink = (engine.getFrameTimestamp() - playback.timestamp) % 1000 < 500;
+      let cursor_blink = (getFrameTimestamp() - playback.timestamp) % 1000 < 500;
       if (cursor_blink) {
-        ui.drawRect(cx, cy + char_height - draw_cursor[1] - 1,
+        drawRect(cx, cy + char_height - draw_cursor[1] - 1,
           cx + char_width, cy + char_height - draw_cursor[0],
           z + 0.75, palette[this.mod_head ? playback.fg : this.fg]);
       }
@@ -896,17 +1112,17 @@ class GlovTerminal {
     // Right now it draws 6 rects, could be done in 3
     let box_x0 = 0;
     let box_y0 = 0;
-    let last_x;
-    let last_y;
+    let last_x: number;
+    let last_y: number;
     let box_color = buffer[0][0].bg;
-    function flush() {
-      ui.drawRect(x + box_x0 * char_width, y + box_y0 * char_height,
+    function flush(): void {
+      drawRect(x + box_x0 * char_width, y + box_y0 * char_height,
         x + (last_x + 1) * char_width, y + (last_y + 1) * char_height, z, palette[box_color]);
       if (box_y0 !== last_y && last_y !== w - 1) {
         // A was draw, draw B:
         // AAABB
         // AAA..
-        ui.drawRect(x + (last_x + 1) * char_width, y + box_y0 * char_height,
+        drawRect(x + (last_x + 1) * char_width, y + box_y0 * char_height,
           x + w * char_width, y + last_y * char_height, z, palette[box_color]);
       }
     }
@@ -927,7 +1143,8 @@ class GlovTerminal {
     flush();
   }
 }
+export type { Terminal };
 
-export function terminalCreate(params) {
-  return new GlovTerminal(params);
+export function terminalCreate(params: TerminalParams): Terminal {
+  return new Terminal(params);
 }

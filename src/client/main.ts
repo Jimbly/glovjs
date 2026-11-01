@@ -22,6 +22,7 @@ platformRegister('itch', {
 
 import assert from 'assert';
 import { autoAtlasTextureOpts } from 'glov/client/autoatlas';
+import { bindUIStartup } from 'glov/client/bind_ui';
 import { ChatUI, chatUICreate } from 'glov/client/chat_ui';
 import { MODE_DEVELOPMENT, platformGetID } from 'glov/client/client_config';
 import { cmd_parse } from 'glov/client/cmds';
@@ -302,6 +303,9 @@ export function main(): void {
     ],
   });
   playStartup();
+
+  bindUIStartup();
+
   engine.setState(titleInit);
   titleStartup();
 }

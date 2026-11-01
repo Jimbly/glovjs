@@ -1,0 +1,293 @@
+export const internal = {
+  actionStartup, // eslint-disable-line @typescript-eslint/no-use-before-define
+  actionTopOfFrame, // eslint-disable-line @typescript-eslint/no-use-before-define
+  actionEatAll, // eslint-disable-line @typescript-eslint/no-use-before-define
+};
+
+import assert from 'assert';
+import { CmdRespFunc } from 'glov/common/cmd_parse';
+import {
+  bindDown,
+  bindDownEdge,
+  BindDownOpts,
+  bindKB,
+  bindLayerRegister,
+  bindPad,
+} from './binds';
+import { platformGetID } from './client_config';
+import { cmd_parse } from './cmds';
+import { debugDefineIsSet, getFrameDtHr } from './engine';
+import {
+  KEYS,
+  MOD_CTRL,
+  MOD_SHIFT,
+  PAD,
+} from './input';
+import { EventCallback } from './ui';
+
+/*
+
+Callers can add custom actions with the following code:
+
+declare module 'glov/client/actions' {
+  interface ActionRegistry {
+    myaction: 0;
+  }
+}
+
+actionRegister('myaction');
+
+*/
+
+const { max } = Math;
+
+export interface ActionRegistry {
+  up: 0;
+  left: 0;
+  down: 0;
+  right: 0;
+  prev: 0;
+  next: 0;
+  accept: 0;
+  cancel: 0;
+
+  // used (primarily) for modal dialogs
+  ok: 0;
+  yes: 0;
+  no: 0;
+}
+
+export type ActionKey = keyof ActionRegistry;
+
+type ActionState = {
+  down: number;
+  down_edge: number;
+  prevent_down_trickle: boolean;
+};
+let action_state = Object.create(null) as Record<ActionKey, ActionState>;
+
+// Used for external events to trigger actions (e.g. on-screen controls),
+//   though e.g. cmd_parse.handle('myaction 0') also works
+export function actionTriggerEdge(action_key: ActionKey, is_down: boolean): void {
+  let action = action_state[action_key];
+  assert(action);
+  if (is_down) {
+    action.down_edge++;
+    action.down++;
+  } else {
+    action.down = max(0, action.down - 1);
+  }
+}
+
+function actionCmd(action_key: ActionKey, value: string, resp_func: CmdRespFunc): void {
+  value = value.trim();
+  if (!value) {
+    actionTriggerEdge(action_key, true);
+    actionTriggerEdge(action_key, false);
+  } else {
+    let action = action_state[action_key];
+    if (value === '0') {
+      if (action.down) {
+        actionTriggerEdge(action_key, false);
+      }
+    } else if (value === '1') {
+      if (!action.down) {
+        actionTriggerEdge(action_key, true);
+      }
+    } else {
+      return resp_func(`Usage: /${action_key} 0|1`);
+    }
+  }
+  resp_func();
+}
+
+export type ActionRegisterParam = {
+  // if prevent_down_trickle is true, then we never return a truthy `down`unless
+  //   the `downEdge` event happened for this event
+  prevent_down_trickle?: boolean;
+};
+export function actionRegister(action_key: ActionKey, opts?: ActionRegisterParam): void {
+  assert(!action_state[action_key]);
+  action_state[action_key] = {
+    down: 0,
+    down_edge: 0,
+    prevent_down_trickle: Boolean(opts && opts.prevent_down_trickle),
+  };
+  cmd_parse.register({
+    cmd: action_key,
+    help: `Bindable Action: ${action_key}`,
+    func: actionCmd.bind(null, action_key),
+  });
+}
+
+export function actionExists(key: string): key is ActionKey {
+  return Boolean(action_state[key as ActionKey]);
+}
+
+export function actionBindKB(key: keyof typeof KEYS, action_key: ActionKey, modifiers?: number, layer?: string): void {
+  assert(action_state[action_key], `Action "${action_key}" not yet registered`);
+  bindKB({
+    key,
+    cmd: action_key,
+    action: 'action',
+    modifiers,
+    layer,
+  });
+}
+export function actionBindPad(pad: keyof typeof PAD, action_key: ActionKey, modifiers?: number, layer?: string): void {
+  assert(action_state[action_key], `Action "${action_key}" not yet registered`);
+  bindPad({
+    key: pad,
+    cmd: action_key,
+    action: 'action',
+    modifiers,
+    layer,
+  });
+}
+
+function actionTopOfFrame(): void {
+  // TODO: this whole thing is mostly only needed for actionTriggerEvent()
+  //   (on-screen controls) support, should this live in binds or input instead?
+  //   It's also, arguably, useful for `/bind = up 1` kinds of things
+  for (let key in action_state) {
+    let action = action_state[key as ActionKey];
+    action.down_edge = 0;
+  }
+}
+
+function actionEatAll(): void {
+  actionTopOfFrame();
+}
+
+export type ActionOpts = {
+  in_event_cb?: EventCallback | null; // for clicks and key presses
+  peek?: boolean;
+  flags?: number; // BIND_FLAG_NOKB, etc
+  repeat?: boolean;
+};
+
+export function actionEdge(action_key: ActionKey, opts?: ActionOpts | null): number {
+  let ret = bindDownEdge(action_key, opts);
+  let state = action_state[action_key];
+  assert(state);
+  ret += state.down_edge;
+  if (!(opts && opts.peek)) {
+    state.down_edge = 0;
+  }
+  return ret;
+}
+
+const PREVENT_TRICKLE = {
+  prevent_down_trickle: true,
+};
+export function actionDown(action_key: ActionKey, opts?: BindDownOpts | null): number {
+  let state = action_state[action_key];
+  assert(state);
+  if (state.prevent_down_trickle) {
+    if (opts) {
+      opts = {
+        peek: opts.peek,
+        prevent_down_trickle: true,
+      };
+    } else {
+      opts = PREVENT_TRICKLE;
+    }
+  }
+  let ret = bindDown(action_key, opts);
+  if (state.down) {
+    ret = getFrameDtHr();
+  }
+  return ret;
+}
+
+function actionStartup(): void {
+  actionRegister('up', { prevent_down_trickle: false });
+  actionRegister('left', { prevent_down_trickle: false });
+  actionRegister('down', { prevent_down_trickle: false });
+  actionRegister('right', { prevent_down_trickle: false });
+  actionRegister('prev', { prevent_down_trickle: true });
+  actionRegister('next', { prevent_down_trickle: true });
+  actionRegister('accept', { prevent_down_trickle: true });
+  actionRegister('cancel', { prevent_down_trickle: true });
+  actionRegister('ok', { prevent_down_trickle: true });
+  actionRegister('yes', { prevent_down_trickle: true });
+  actionRegister('no', { prevent_down_trickle: true });
+
+  // basic nav set - active even when an edit box has keyboard focus
+  actionBindPad('UP', 'up', 0, 'nav');
+  actionBindPad('DOWN', 'down', 0, 'nav');
+  actionBindPad('LEFT', 'left', 0, 'nav');
+  actionBindPad('RIGHT', 'right', 0, 'nav');
+  actionBindPad('LSTICK_UP', 'up', 0, 'nav');
+  actionBindPad('LSTICK_LEFT', 'left', 0, 'nav');
+  actionBindPad('LSTICK_DOWN', 'down', 0, 'nav');
+  actionBindPad('LSTICK_RIGHT', 'right', 0, 'nav');
+  actionBindPad('RSTICK_UP', 'up', 0, 'nav');
+  actionBindPad('RSTICK_LEFT', 'left', 0, 'nav');
+  actionBindPad('RSTICK_DOWN', 'down', 0, 'nav');
+  actionBindPad('RSTICK_RIGHT', 'right', 0, 'nav');
+  actionBindPad('LEFT_BUMPER', 'prev', 0, 'nav');
+  actionBindPad('RIGHT_BUMPER', 'next', 0, 'nav');
+  actionBindKB('TAB', 'next', 0, 'nav');
+  actionBindKB('TAB', 'prev', MOD_SHIFT, 'nav');
+  if (platformGetID() === 'electron') {
+    actionBindKB('TAB', 'prev', MOD_CTRL, 'nav');
+  }
+  // note: these input events, not actions/binds, are disabled if widget is stealing keyboard input
+  actionBindKB('UP', 'up', 0, 'nav');
+  actionBindKB('DOWN', 'down', 0, 'nav');
+  actionBindKB('LEFT', 'left', 0, 'nav');
+  actionBindKB('RIGHT', 'right', 0, 'nav');
+
+  // extended nav set - active based on app's needs
+  bindLayerRegister('navext', 60);
+  actionBindKB('W', 'up', 0, 'navext');
+  actionBindKB('A', 'left', 0, 'navext');
+  actionBindKB('S', 'down', 0, 'navext');
+  actionBindKB('D', 'right', 0, 'navext');
+  actionBindKB('NUMPAD8', 'up', 0, 'navext');
+  actionBindKB('NUMPAD4', 'left', 0, 'navext');
+  actionBindKB('NUMPAD5', 'down', 0, 'navext');
+  actionBindKB('NUMPAD2', 'down', 0, 'navext');
+  actionBindKB('NUMPAD6', 'right', 0, 'navext');
+
+  // general binds
+  actionBindKB('SPACE', 'accept', 0, 'nav');
+  actionBindKB('ENTER', 'accept', 0, 'nav');
+  actionBindPad('A', 'accept', 0, 'nav');
+
+  actionBindKB('ESC', 'cancel', 0, 'nav');
+  actionBindKB('BACKSPACE', 'cancel', 0, 'navext');
+  actionBindPad('B', 'cancel', 0, 'nav');
+
+  // modal dialogs
+  actionBindKB('O', 'ok', 0, 'nav');
+  actionBindKB('Y', 'yes', 0, 'nav');
+  actionBindKB('N', 'no', 0, 'nav');
+
+  // recommended extras:
+  // actionBindKB('E', 'accept', 0, 'nav');
+  // actionBindKB('Q', 'cancel', 0, 'nav');
+  // actionBindPad('X', 'accept', 0, 'nav');
+  // actionBindPad('Y', 'cancel', 0, 'nav');
+  // actionBindPad('BACK', 'cancel', 0, 'nav');
+
+  if (debugDefineIsSet('IJKL')) {
+    // convenient set for checking if any hardcoded arrows/wasd/enter/space/etc is used
+    actionBindKB('I', 'up', 0, 'navext');
+    actionBindKB('J', 'left', 0, 'navext');
+    actionBindKB('K', 'down', 0, 'navext');
+    actionBindKB('L', 'right', 0, 'navext');
+    actionBindKB('U', 'accept', 0, 'nav');
+    actionBindKB('O', 'cancel', 0, 'nav');
+  }
+  if (debugDefineIsSet('YGHJ')) {
+    // second set for checking if any hardcoded arrows/wasd/enter/space/etc is used
+    actionBindKB('Y', 'up', 0, 'navext');
+    actionBindKB('G', 'left', 0, 'navext');
+    actionBindKB('H', 'down', 0, 'navext');
+    actionBindKB('J', 'right', 0, 'navext');
+    actionBindKB('R', 'accept', 0, 'nav');
+    actionBindKB('F', 'cancel', 0, 'nav');
+  }
+}

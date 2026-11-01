@@ -1,6 +1,7 @@
 module.exports = function (gb) {
   let config = {
     asset_hashing: false, // Set to true if assets will be deployed via things like a write-once CDN with long caching
+    astc_in_dev: false, // Set to true if ASTC compression needs to be tested in development
     server_js_files: [
       '**/*.[jt]s',
       '!**/*.d.ts',
@@ -27,22 +28,28 @@ module.exports = function (gb) {
     client_css: ['client/**/*.css', '!client/sounds/Bfxr/**'],
     client_png: [
       'client/**/*.png',
+      '!client/img/texproc/*.png', // large example files from demo
       '!client/atlases/**',
       'client_autoatlas:**/*.png',
     ],
-    client_png_alphafix: [
-      '**',
-      '!client/spine/**/*.png', // Already has appropriate color channel
-      '!client/img/font/*.png', // Should already be imagemin'd, do not bloat this
-    ],
+    client_png_alphafix: {
+      globs: [
+        '**',
+        '!client/spine/**/*.png', // Already has appropriate color channel
+        '!client/img/font/*.png', // Should already be imagemin'd, do not bloat this
+      ],
+      rules: {
+      // '**/*_1.png': 3, // ex: treat the RED+GREEN channels as if they were an alpha channel
+      },
+    },
     client_autosound: [
+      'client/sounds/**/*.ogg',
       'client/sounds/**/*.wav',
       'client/sounds/**/*.mp3',
     ],
-    client_autosound_config: null, // default: wav to 512kb, mp3 at 128kbps, ogg
+    client_autosound_config: null, // default: inputs: wav,mp3,ogg outputs: mp3 at 128kbps, ogg
     client_static: [
       'client/**/*.webm',
-      'client/**/*.ogg',
       // 'client/**/*.png',
       'client/**/*.jpg',
       'client/**/*.glb',
@@ -68,6 +75,17 @@ module.exports = function (gb) {
       '!**/*.ogg',
       '!**/*.webm',
       '!**/*.js.map',
+      '!**/*.gz', // at least: outputs from client_compress_dev
+    ],
+    gzipped_textures: [
+      // These files:
+      //   A) are stored gzipped even in the cache
+      //   B) are compressed (.gz) even in development
+      //   C) are only output compressed in both dev (.gz) and prod (.br, .gz)
+      '.dxt',
+      '.astc',
+      '.txp-dxt',
+      '.txp-astc'
     ],
     client_fsdata: [
       'client/shaders/**',
@@ -81,7 +99,7 @@ module.exports = function (gb) {
       'client_texproc_output:!**/favicon*.png',
       'client_autoatlas:**.auat',
     ],
-    fsdata_embed: ['.json', '.tflag', '.auat'],
+    fsdata_embed: ['.json', '.tflag', '.auat'], // get stored as a JS object, not binary encoded
     fsdata_strip: ['.json'],
     fsdata_sized_embed: {
       globs: [
@@ -151,6 +169,7 @@ module.exports = function (gb) {
       'client/atlases/**/*.yaml',
     ],
     autoatlas_ignore: ['someatlas:sometile'],
+    autoatlas_async_hashed: 0,
   };
   // eslint-disable-next-line n/global-require
   require('./config.project.js')(config, gb);

@@ -103,6 +103,7 @@ export function settingsRegister(defs) {
       default_value: def.default_value,
       enum_lookup: def.enum_lookup,
       is_toggle: def.is_toggle,
+      no_value_display: def.no_value_display,
     });
   });
 }

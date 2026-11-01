@@ -59,6 +59,11 @@ export function localStorageGet(key: string): string | undefined {
   return ret;
 }
 
+function localStorageDefaultErrorHandler(e: unknown): void {
+  console.error('LocalStorage error, further writes will likely fail', e);
+}
+let on_error: null | ((e: unknown) => void) = localStorageDefaultErrorHandler;
+
 export function localStorageSet(key: string, value: string | null | undefined): void {
   assert(is_set);
   if (value === null) {
@@ -98,9 +103,19 @@ export function localStorageSet(key: string, value: string | null | undefined): 
       } catch (e) {
         // ignored, it's in the overlay for the current session at least
         // FireFox throws "The quota has been exceeded" errors here
+        if (on_error) {
+          let cb = on_error;
+          on_error = null;
+          cb(e);
+        }
       }
     }
   }
+}
+
+// Note: only called once
+export function localStorageOnError(cb: null | ((e: unknown) => void)): void {
+  on_error = cb;
 }
 
 export function localStorageSetJSON<T = unknown>(key: string, value: T): void {

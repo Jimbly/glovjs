@@ -8,6 +8,7 @@ import * as assert from 'assert';
 const { max, round, sin } = Math;
 import { clamp, cloneShallow, easeIn, merge } from 'glov/common/util.js';
 import { v4copy, vec4 } from 'glov/common/vmath.js';
+import { actionEdge } from './actions';
 import * as camera2d from './camera2d.js';
 import * as glov_engine from './engine.js';
 import {
@@ -50,6 +51,7 @@ import {
   spriteClipResume,
 } from './sprites.js';
 import {
+  draw9Patch,
   drawHBox,
   getUIElemData,
   playUISound,
@@ -94,14 +96,19 @@ export function selboxDefaultDrawItemBackground({
   image_set, color,
   image_set_extra, image_set_extra_alpha,
 }) {
-  drawHBox({ x, y, z, w, h },
-    image_set, color);
+  let patch_pad = draw9Patch({
+    x, y, z, w, h,
+  }, image_set, 1, color);
+
+  // drawHBox({ x, y, z, w, h },
+  //   image_set, color);
   if (image_set_extra && image_set_extra_alpha) {
     v4copy(color_temp_fade, color);
     color_temp_fade[3] *= easeIn(image_set_extra_alpha, 2);
     drawHBox({ x, y, z: z + 0.001, w, h },
       image_set_extra, color_temp_fade);
   }
+  return patch_pad;
 }
 
 export function selboxDefaultDrawItemText({
@@ -112,7 +119,17 @@ export function selboxDefaultDrawItemText({
   font_height,
   line_height,
   style,
-}) {
+}, patch_pad) {
+  x += display.xpad;
+  w -= display.xpad * 2;
+  if (patch_pad) {
+    if (patch_pad.x !== undefined) {
+      ({ x, w } = patch_pad);
+    }
+    if (patch_pad.y !== undefined) {
+      ({ y, h } = patch_pad);
+    }
+  }
   let text_z = z + 1;
   // spriteListClipperPush(x, y + yoffs, eff_width - pad, h);
   let did_tab = false;
@@ -123,10 +140,10 @@ export function selboxDefaultDrawItemText({
       did_tab = true;
       let pre = str.slice(0, tab_idx);
       let post = str.slice(tab_idx + 1);
-      let x1 = x + display.xpad;
-      let x2 = x + display.xpad + display.tab_stop + pad;
+      let x1 = x;
+      let x2 = x + display.tab_stop + pad;
       let w1 = display.tab_stop;
-      let w2 = w - display.tab_stop - display.xpad * 2 - pad;
+      let w2 = w - display.tab_stop - pad;
       if (display.use_markdown) {
         markdownAuto({
           font_style: style,
@@ -159,10 +176,10 @@ export function selboxDefaultDrawItemText({
   if (!did_tab) {
     let md = {
       font_style: style,
-      x: x + display.xpad,
+      x,
       y,
       z: text_z,
-      w: w - display.xpad * 2,
+      w,
       h,
       text_height: font_height,
       line_height,
@@ -188,8 +205,8 @@ export function selboxDefaultDrawItemText({
 }
 
 export function selboxDefaultDrawItem(param) {
-  selboxDefaultDrawItemBackground(param);
-  selboxDefaultDrawItemText(param);
+  let patch = selboxDefaultDrawItemBackground(param);
+  selboxDefaultDrawItemText(param, patch);
 }
 
 
@@ -256,7 +273,6 @@ export class GlovMenuItem {
     this.prompt_string = Boolean(params.prompt_string);
     this.no_sound = Boolean(params.no_sound);
     this.slider = Boolean(params.slider);
-    this.no_controller_exit = Boolean(params.no_controller_exit);
     this.plus_minus = Boolean(params.plus_minus);
     this.disabled = Boolean(params.disabled);
     this.centered = Boolean(params.centered);
@@ -848,9 +864,7 @@ class GlovDropDown extends SelectionBoxBase {
       this.last_selected :
       this.selected;
 
-    if (this.dropdown_visible && (
-      keyDownEdge(KEYS.ESC) || padButtonDownEdge(PAD.B)
-    )) {
+    if (this.dropdown_visible && actionEdge('cancel')) {
       this.selected = eff_selection;
       this.onListSelect();
     }

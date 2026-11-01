@@ -7,7 +7,9 @@ const { platformParameterGet } = require('./client_config');
 const engine = require('./engine.js');
 const { fontStyle } = require('./font.js');
 const camera2d = require('./camera2d.js');
-const in_event = require('./in_event.js');
+const {
+  inEventHandle,
+} = require('./in_event');
 const input = require('./input.js');
 const { abs } = Math;
 const {
@@ -191,7 +193,7 @@ export function link(param) {
               }
             }
             state.clicked = true;
-            in_event.handle('mouseup', ev);
+            inEventHandle('mouseup', ev);
           };
         }
         elem.appendChild(a_elem);

@@ -38,6 +38,7 @@ export interface Texture {
   ): void;
   setSamplerState(opts: TextureOptions): void;
   onLoad(cb: (tex: Texture) => void): void;
+  getTexSizeShaderParams(): { tex0_size: ROVec4 } & ShaderParams; // returns { tex0_size: [w, h, 1/w, 1/h] }
 }
 
 export type ShaderParams = TSMap<number[]|ROVec1|ROVec2|ROVec3|ROVec4>;
@@ -185,7 +186,7 @@ export function spriteQueueRaw4Color(
   x2: number, y2: number, c2: ROVec4, u2: number, v2: number,
   x3: number, y3: number, c3: ROVec4, u3: number, v3: number,
   z: number,
-  shader?: Shader, shader_params?: ShaderParams, blend?: BlendMode
+  shader?: Shader | null, shader_params?: ShaderParams | null, blend?: BlendMode
 ): SpriteData;
 
 // Expects a buffer in the form of:
@@ -194,7 +195,7 @@ export function spriteQueueRaw4ColorBuffer(
   texs: Texture[],
   buf: Float32Array/* length: 32*/,
   z: number,
-  shader?: Shader, shader_params?: ShaderParams, blend?: BlendMode
+  shader?: Shader | null, shader_params?: ShaderParams | null, blend?: BlendMode
 ): SpriteData;
 
 // 4 arbitrary positions, 2 uvs
@@ -208,7 +209,7 @@ export function spriteQueueRaw4(
   z: number,
   u0: number, v0: number, u1: number, v1: number,
   color: ROVec4,
-  shader?: Shader, shader_params?: ShaderParams, blend?: BlendMode
+  shader?: Shader | null, shader_params?: ShaderParams | null, blend?: BlendMode
 ): SpriteData;
 
 export function spriteQueueRaw(
@@ -216,7 +217,7 @@ export function spriteQueueRaw(
   x: number, y: number, z: number, w: number, h: number,
   u0: number, v0: number, u1: number, v1: number,
   color: ROVec4,
-  shader?: Shader, shader_params?: ShaderParams, blend?: BlendMode
+  shader?: Shader | null, shader_params?: ShaderParams | null, blend?: BlendMode
 ): SpriteData;
 
 export function spriteQueueSprite(
@@ -225,8 +226,8 @@ export function spriteQueueSprite(
   w: number, h: number, rot: number,
   uvs: ROVec4,
   color: ROVec4,
-  shader?: Shader,
-  shader_params?: ShaderParams,
+  shader?: Shader | null,
+  shader_params?: ShaderParams | null,
   nozoom?: boolean,
   pixel_perfect?: boolean,
   blend?: BlendMode,

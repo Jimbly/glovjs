@@ -18,7 +18,10 @@ export function reportSetProject(project: string): void {
 }
 
 let last_report_id = 0;
-const RATE_LIMIT = 30*1000;
+let rate_limit = 30*1000;
+export function reportRateLimit(time: number): void {
+  rate_limit = time;
+}
 let last_report_time: TSMap<number> = {};
 let queued_report: TSMap<DataObject> = {};
 export function reportSend(type: string, payload: DataObject): void {
@@ -28,14 +31,14 @@ export function reportSend(type: string, payload: DataObject): void {
   }
   let now = Date.now();
   let last_time = last_report_time[type] || 0;
-  if (now - last_time < RATE_LIMIT) {
+  if (now - last_time < rate_limit) {
     setTimeout(function () {
       let payload2 = queued_report[type];
       if (payload2) {
         delete queued_report[type];
         reportSend(type, payload2);
       }
-    }, RATE_LIMIT);
+    }, rate_limit);
     queued_report[type] = payload;
     return;
   }
