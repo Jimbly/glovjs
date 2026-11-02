@@ -58,7 +58,7 @@ class BindUIAction extends UIAction {
       w,
       h: game_height - SCREEN_PAD * 2,
       z,
-      pad: 20,
+      pad: 2,
       label_style: style_text,
       header_style: style_text,
       alt_background_color: [1, 1, 1, 0.1],
