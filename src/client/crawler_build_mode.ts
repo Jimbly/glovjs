@@ -67,6 +67,7 @@ import {
   crawlerHasWallDesc,
   CrawlerLevel,
   CrawlerLevelSerialized,
+  crawlerVstyle,
   dirMod,
   DirType,
   DX,
@@ -90,6 +91,7 @@ import {
   crawlerController,
   crawlerGameState,
   crawlerRoom,
+  crawlerScriptAPI,
   crawlerSetLevelGenMode,
 } from './crawler_play';
 import { crawlerRenderGetThumbnail, crawlerRenderViewportGet } from './crawler_render';
@@ -182,7 +184,7 @@ function buildModeFinishUndoRedo(diff: Diff, level_data: CrawlerLevelSerialized)
     let vis_str = level.getVisString();
     level.deserialize(level_data);
     level.finalize();
-    level.applyVisString(vis_str);
+    level.applyVisString(vis_str, crawlerScriptAPI());
     // Re-set this as active to get vstyle updates applies
     game_state.setLevelActive(last_floor);
   }
@@ -267,7 +269,7 @@ export function buildModeOnBuildOp(data: BuildModeOp, resp_func: NetResponseCall
   diffApply(level_data, diff);
   level.deserialize(level_data);
   level.finalize();
-  level.applyVisString(vis_str);
+  level.applyVisString(vis_str, crawlerScriptAPI());
   if (floor_id === game_state.floor_id) {
     // Re-set this as active to get vstyle updates applies
     game_state.setLevelActive(floor_id);
@@ -413,6 +415,7 @@ function spawnRemove(level: CrawlerLevel, x: number, y: number): void {
 
 function eventsRemove(level: CrawlerLevel, x: number, y: number): void {
   delete level.getCell(x, y)!.events;
+  delete level.getCell(x, y)!.props;
 }
 
 function eventKeyOnly(str: string): string {
@@ -476,9 +479,9 @@ function setCellEx(
   }
   // Remove old default props
   if (old_cell_desc.default_props && target_cell.props) {
-    let new_props = arrayToSet(cell_desc.default_props || []);
+    let new_props = arrayToSet((cell_desc.default_props || []).map(eventKeyOnly));
     for (let ii = 0; ii < old_cell_desc.default_props.length; ++ii) {
-      let key = old_cell_desc.default_props[ii];
+      let key = eventKeyOnly(old_cell_desc.default_props[ii]);
       if (!new_props[key] && target_cell.props[key] !== undefined) {
         delete target_cell.props[key];
       }
@@ -488,7 +491,15 @@ function setCellEx(
   if (cell_desc.default_props) {
     for (let ii = 0; ii < cell_desc.default_props.length; ++ii) {
       let key = cell_desc.default_props[ii];
-      target_cell.setProp(key, '');
+      let param = '';
+      let idx = key.indexOf(' ');
+      if (idx !== -1) {
+        param = key.slice(idx + 1);
+        key = key.slice(0, idx);
+      }
+      if (!target_cell.props || target_cell.props[key] === undefined) {
+        target_cell.setProp(key, param);
+      }
     }
   }
   // Remove old default events
@@ -873,7 +884,7 @@ function showPaintPaletteConfig(level: CrawlerLevel, x1: number): void {
       hide_walls[desc.advertised_wall] = true;
     }
   }
-  let vstyle = level.vstyle;
+  let vstyle = crawlerVstyle();
   for (let key in vstyle.cell_swaps) {
     hide_cells[vstyle.cell_swaps[key]!] = true;
   }
@@ -1540,7 +1551,7 @@ export function crawlerBuildModeUI(frame: Box & { map_view: boolean }): void {
       width: w,
       entry_height: button_height,
       items,
-    }, level.vstyle.id || 'default');
+    }, level.vstyle_id || 'default');
     if (new_vstyle) {
       buildModeSetVstyle(new_vstyle.tag!);
     }
@@ -1798,6 +1809,6 @@ cmd_parse.register({
     if (param) {
       buildModeSetVstyle(param === 'reset' ? '' : param);
     }
-    resp_func(null, `Vstyle = ${level.vstyle.id}`);
+    resp_func(null, `Vstyle = ${level.vstyle_id}`);
   }
 });

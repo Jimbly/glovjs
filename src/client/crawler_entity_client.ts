@@ -4,6 +4,14 @@ export enum OnlineMode {
   ONLINE_ONLY,
 }
 
+export const INDEX_FLOOR = 0;
+export const INDEX_POS = 1;
+
+export const DEFAULT_SERIALIZE_IGNORED: TSMap<boolean> = {
+  seq_player_move: true,
+  seq_ai_update: true,
+};
+
 import assert from 'assert';
 import { autoAtlas } from 'glov/client/autoatlas';
 import { cmd_parse } from 'glov/client/cmds';
@@ -25,6 +33,7 @@ import { spriteAnimationCreate } from 'glov/client/sprite_animation';
 import {
   Sprite,
   spriteCreate,
+  SpriteDraw3DParams,
   SpriteParamBase,
   TextureOptions,
 } from 'glov/client/sprites';
@@ -36,6 +45,7 @@ import { dataError } from 'glov/common/data_error';
 import {
   ActionMessageParam,
 } from 'glov/common/entity_base_common';
+import { randSpatial } from 'glov/common/rand_fast';
 import { TraitFactory, traitFactoryCreate } from 'glov/common/trait_factory';
 import {
   DataObject,
@@ -45,15 +55,16 @@ import {
 } from 'glov/common/types';
 import { plural } from 'glov/common/util';
 import {
+  JSVec3,
   ROVec2,
   ROVec3,
   ROVec4,
   vec2,
+  Vec3,
 } from 'glov/common/vmath';
 import { CRAWLER_IS_ONLINE } from '../common/crawler_config';
 import {
   EntityCrawlerDataCommon,
-  entSamePos,
 } from '../common/crawler_entity_common';
 import { crawlerEntityTraitsCommonStartup } from '../common/crawler_entity_traits_common';
 import type { CrawlerState } from '../common/crawler_state';
@@ -101,8 +112,16 @@ export type Floater = {
   msg: string;
   blink_good?: boolean;
   yoffs?: number;
+  size_mult?: number;
+  xoffs?: number;
 };
 
+export type EntDrawParam = Omit<SpriteDraw3DParams, 'pos'> & {
+  pos: Vec3; // not read-only, caller can modify
+  sprite_shadow: Sprite | undefined;
+  readonly hscale: number;
+  readonly vscale: number;
+};
 
 export interface EntityCrawlerClient extends EntityBaseClient {
   data: EntityCrawlerDataCommon;
@@ -120,9 +139,7 @@ export interface EntityCrawlerClient extends EntityBaseClient {
   onDeleteSub?: (param: EntityOnDeleteSubParam) => void;
   triggerAnimation?: (anim: string) => void;
 
-  draw_cb?: (param: {
-    pos: ROVec3;
-  }) => void;
+  draw_cb?: (param: EntDrawParam) => void;
 
   // On prototype properties:
   do_split: boolean;
@@ -144,6 +161,16 @@ let entity_pos_manager_online: EntityPositionManager;
 let entity_pos_manager_offline: EntityPositionManager;
 let entity_pos_manager: EntityPositionManager;
 
+function indexByFloor(ent: Entity): number {
+  return ent.data.floor;
+}
+export function indexPosKey(floor_id: number, x: number, y: number): number {
+  return floor_id * 1000000 + y * 1000 + x;
+}
+function indexByPos(ent: Entity): number {
+  let pos = ent.getData<JSVec3>('pos')!;
+  return indexPosKey(ent.data.floor, pos[0], pos[1]);
+}
 
 export function crawlerEntClientDefaultDraw2D(this: EntityCrawlerClient, param: EntityDraw2DOpts): void {
   ui.font.draw({
@@ -219,13 +246,13 @@ export function myEntID(): EntityID {
 }
 
 export function crawlerMyEnt(): Entity {
-  let ent = entity_manager.entities[my_ent_id];
+  let ent = entity_manager.getEnt(my_ent_id);
   assert(ent);
   return ent;
 }
 
 export function crawlerMyEntOptional(): Entity | undefined {
-  return entity_manager.entities[my_ent_id];
+  return entity_manager.getEnt(my_ent_id);
 }
 
 export function crawlerMyActionSend<T>(param: ActionMessageParam, resp_func?: NetErrorCallback<T>): void {
@@ -236,12 +263,17 @@ export function crawlerMyApplyBatchUpdate<T>(update: BatchUpdateParam, resp_func
   crawlerMyEnt().applyBatchUpdate(update, resp_func);
 }
 
-export function crawlerEntitiesAt(cem: ClientEntityManagerInterface<Entity>,
+export function crawlerEntitiesAt<T extends Entity>(
   pos: [number, number] | ROVec2,
   floor_id: number,
   skip_fading_out: boolean
-): Entity[] {
-  return cem.entitiesFind((ent) => entSamePos(ent, pos) && ent.data.floor === floor_id, skip_fading_out);
+): T[] {
+  let ents = entity_manager.indexedGet(INDEX_POS, indexPosKey(floor_id, pos[0], pos[1]));
+  let ret = Object.values(ents) as T[];
+  if (skip_fading_out) {
+    ret = ret.filter((ent) => !ent.fading_out);
+  }
+  return ret;
 }
 
 function onlyPlayerBlockers(ent: Entity): boolean {
@@ -251,7 +283,7 @@ export function entityBlocks(floor_id: number, pos: ROVec2, skip_fading_out: boo
   // if (engine.DEBUG && keyDown(KEYS.ALT)) {
   //   return null;
   // }
-  let ent_list = crawlerEntitiesAt(entity_manager, pos, floor_id, skip_fading_out);
+  let ent_list = crawlerEntitiesAt(pos, floor_id, skip_fading_out);
   ent_list = ent_list.filter(onlyPlayerBlockers);
   if (!ent_list.length) {
     return null;
@@ -457,7 +489,7 @@ function crawlerTraitsInit(ent_factory: TraitFactory<Entity, DataObject>): void 
         filter_mag: 'LINEAR',
         origin: [0.5, 1],
       },
-      scale: 0.75,
+      scale: [0.75, 0.75],
       hflip_random: false,
       sprite: null!,
     },
@@ -486,10 +518,15 @@ function crawlerTraitsInit(ent_factory: TraitFactory<Entity, DataObject>): void 
       if (opts.shadow) {
         opts.sprite_shadow = autoAtlas(opts.shadow.atlas, opts.shadow.name).withOrigin(shadow_origin);
       }
+      if (typeof opts.scale === 'number') {
+        opts.scale = [opts.scale, opts.scale];
+      }
     },
     alloc_state: function (opts: DrawableSpriteOpts, ent: Entity) {
       let anim = spriteAnimationCreate(opts.anim_data);
       anim.setState(ent.data.state || 'idle');
+      let pos = ent.data.pos;
+      let hflip = (pos ? randSpatial(733941, pos[0], pos[1], pos[2] || 0) : random()) < 0.5;
       let ret: DrawableSpriteState = {
         anim,
         anim_update_frame: 0,
@@ -498,7 +535,7 @@ function crawlerTraitsInit(ent_factory: TraitFactory<Entity, DataObject>): void 
         sprite_hybrid: opts.sprite_hybrid,
         anim_offs: random() * 120000,
         sprite_shadow: opts.sprite_shadow,
-        hflip: opts.hflip_random ? random() > 0.5 : false,
+        hflip: opts.hflip_random ? hflip : false,
       };
       return ret;
     },
@@ -563,7 +600,12 @@ export function crawlerEntFactory<T extends Entity=Entity>(): TraitFactory<T, Da
 
 const example_ent_data = { pos: [0, 0, 0] };
 
+let first_reload_frame = 0;
 function onEntDefReload(type_id: string): void {
+  let now = getFrameIndex();
+  if (!first_reload_frame && false) {
+    first_reload_frame = now;
+  }
   let reloaded = entity_manager ? entity_manager.entitiesReload((ent: Entity) => {
     return ent.type_id === type_id;
   }) : [];
@@ -571,7 +613,7 @@ function onEntDefReload(type_id: string): void {
     id: type_id,
     example_ent: ent_factory.allocate(type_id, example_ent_data),
   };
-  if (reloaded.length) {
+  if (reloaded.length && now !== first_reload_frame) {
     statusPush(`Reloaded ${reloaded.length} "${type_id}" ${plural(reloaded.length, 'ent')}`);
   }
 }
@@ -663,7 +705,7 @@ cmd_parse.register({
         params.splice(0, 1);
       }
     }
-    let ent = crawlerEntityManager().entities[ent_id];
+    let ent = crawlerEntityManager().getEnt(ent_id);
     if (!ent) {
       return void resp_func('ERR_INVALID_ENT_ID');
     }
@@ -720,10 +762,16 @@ export function crawlerEntityTraitsClientStartup<TBaseClass extends EntityCrawle
     };
   });
 
+  let indexers = [
+    indexByFloor,
+    indexByPos,
+  ];
+
   if (netSubs()) {
     entity_manager_online = clientEntityManagerCreate({
       channel_type: param.channel_type || 'crawl',
       create_func: entCreate,
+      indices: indexers,
     });
     entity_pos_manager_online = entityPositionManagerCreate({
       entity_manager: entity_manager_online,
@@ -733,6 +781,7 @@ export function crawlerEntityTraitsClientStartup<TBaseClass extends EntityCrawle
   }
   entity_manager_offline = offlineEntityManagerCreate({
     create_func: entCreate,
+    indices: indexers,
   });
   entity_pos_manager_offline = entityPositionManagerCreate({
     entity_manager: entity_manager_offline,

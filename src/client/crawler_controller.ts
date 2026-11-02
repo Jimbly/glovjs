@@ -1,7 +1,15 @@
 import assert from 'assert';
+import {
+  actionBindKB,
+  actionBindPad,
+  actionDown,
+  ActionKey,
+  actionRegister,
+} from 'glov/client/actions';
+import { bindLayerRegister } from 'glov/client/binds';
 import * as engine from 'glov/client/engine';
 import {
-  getFrameIndex,
+  debugDefineIsSet,
   getFrameTimestamp,
 } from 'glov/client/engine';
 import { ClientEntityManagerInterface } from 'glov/client/entity_manager_client';
@@ -15,9 +23,8 @@ import {
   PAD,
   padButtonDown,
 } from 'glov/client/input';
-import * as settings from 'glov/client/settings';
 import { Sprite } from 'glov/client/sprites';
-import { textureLoadCount } from 'glov/client/textures';
+import { textureLoadCount, textureSetIsLoading } from 'glov/client/textures';
 import * as ui from 'glov/client/ui';
 import {
   ButtonStateString,
@@ -37,6 +44,7 @@ import {
   sign,
 } from 'glov/common/util';
 import {
+  JSVec2,
   ROVec2,
   rovec3,
   v2add,
@@ -47,9 +55,9 @@ import {
   v2iFloor,
   v2iRound,
   v2lerp,
+  v2manhattanDist,
   v2same,
   v2sub,
-  v3copy,
   Vec2,
   vec2,
   Vec3,
@@ -61,6 +69,7 @@ import {
   getEffWall,
 } from '../common/crawler_script';
 import {
+  BLOCK_MOSTLY,
   BLOCK_MOVE,
   BLOCK_VIS,
   CellDesc,
@@ -88,7 +97,6 @@ import { enemyVacate } from './ai';
 import { buildModeActive } from './crawler_build_mode';
 import {
   crawlerEntitiesAt,
-  crawlerEntityManager,
   entityBlocks,
   EntityCrawlerClient,
 } from './crawler_entity_client';
@@ -98,8 +106,11 @@ import {
   getScaledFrameDt,
 } from './crawler_play';
 import {
+  crawlerRenderFrameIndex,
+  crawlerRenderGameViewAngle,
   crawlerRenderGetPosOffs,
   crawlerRenderViewportGet,
+  DIM,
   RenderPrepParam,
   renderViewportShearGet,
 } from './crawler_render';
@@ -108,6 +119,19 @@ import { crawlerOnScreenButton } from './crawler_ui';
 import { statusPush } from './status';
 
 const { PI, abs, cos, floor, max, min, random, round, sin } = Math;
+
+declare module 'glov/client/actions' {
+  interface ActionRegistry {
+    run_forward: 0;
+    move_mod: 0;
+    turn_left: 0;
+    turn_right: 0;
+    move_left: 0;
+    move_right: 0;
+    move_forward: 0;
+    move_back: 0;
+  }
+}
 
 const WALK_TIME = 500; // 250-500
 const ROT_TIME = 250; // 150-250
@@ -144,6 +168,7 @@ type TickParam = {
 };
 type ControllerInputs = {
   forward: number;
+  forward_zoom: number;
   left: number;
   back: number;
   right: number;
@@ -180,6 +205,10 @@ let allow_overlap_via_door = false;
 // Requires ai/enemyVacate to be functional (may need online support)
 export function controllerAllowOverlapViaDoorToVacate(allow: boolean): void {
   allow_overlap_via_door = allow;
+}
+
+export function shiftDown(): boolean {
+  return Boolean(actionDown('move_mod'));
 }
 
 type StartMoveData = {
@@ -219,12 +248,15 @@ function startMove(
       statusPush('Build mode open_move bypassed').fade();
     }
   }
-  let blocked_vis = Boolean(blocked & BLOCK_VIS);
+  let blocked_vis = Boolean(blocked & (BLOCK_VIS | BLOCK_MOSTLY));
   let bumped_something = false;
   let going_through_door = false;
   if (blocked & BLOCK_MOVE) {
     bumped_something = true;
-  } else if (blocked & BLOCK_VIS) { // any door
+    if (dir === new_rot && !parent.is_repeating) {
+      script_api.status('move_blocked', 'MOVE_HIT_WALL');
+    }
+  } else if (blocked_vis) { // any door
     going_through_door = true;
     // cur.double_time = 0;
   }
@@ -246,10 +278,15 @@ function startMove(
       if (allow_overlap_via_door) {
         bumped_something = bumped_entity = false;
       } else {
-        script_api.status('move_blocked', 'The door won\'t budge.');
+        bumped_entity = false;
+        if (game_state.level!.isSecretDoor(cur_pos, dir, script_api)) {
+          script_api.status('move_blocked', 'MOVE_HIT_SECRETDOOR');
+        } else {
+          script_api.status('move_blocked', 'MOVE_HIT_DOOR');
+        }
       }
     } else if (!is_facing_ent) {
-      script_api.status('move_blocked', 'Something blocks your way.');
+      script_api.status('move_blocked', 'MOVE_HIT_MONSTER');
     } else {
       on_bump_entity?.(blocked_ent!);
     }
@@ -964,10 +1001,13 @@ class CrawlerControllerQueued2 extends CrawlerControllerInstantStep {
       if (!blend.started) {
         // !textureLoadCount() is maybe a hack - it ensures we don't step out of the stairs while
         //   the level art is still loading
-        if (textureLoadCount()) {
-          this.is_blend_stopped = true;
-          break;
-        }
+        //   - yup, with new smoother/streaming texture loads, this causes long movement stalls
+        //     maybe just enable this logic if we're in a cell that causes fade and/or have not
+        //     done any movement since level loading finished?
+        // if (textureLoadCount()) {
+        //   this.is_blend_stopped = true;
+        //   break;
+        // }
         if (!last_blend || last_blend.finished) {
           if (did_start_finish) {
             this.is_blend_stopped = true;
@@ -1083,7 +1123,10 @@ class CrawlerControllerQueued2 extends CrawlerControllerInstantStep {
   }
 }
 
-export type ControllerHotzones = Record<'left' | 'right' | 'forward' | 'back', Box>;
+export type ControllerHotzones = Record<'left' | 'right' | 'forward' | 'back', Box> & {
+  forward_zoom?: Box;
+  touch_only: boolean;
+};
 let touch_hotzones: ControllerHotzones;
 export function crawlerControllerTouchHotzonesAuto(): void {
   let viewport = crawlerRenderViewportGet();
@@ -1103,6 +1146,7 @@ export function crawlerControllerTouchHotzonesAuto(): void {
     w: viewport.w - left.w - right.w,
     h: floor(viewport.h * 0.84),
   };
+  // maybe: auto forward_zoom that's the middle 25%?
   let back = {
     ...forward,
     y: forward.y + forward.h,
@@ -1110,6 +1154,7 @@ export function crawlerControllerTouchHotzonesAuto(): void {
   };
   touch_hotzones = {
     left, right, forward, back,
+    touch_only: true,
   };
 }
 
@@ -1163,6 +1208,7 @@ export type CrawlerControllerConstructorParam = {
   on_pre_move?: () => void;
   on_player_move?: (old_pos: Vec2, new_pos: Vec2, move_dir: DirType) => void;
   on_move_start?: (pos: Vec2) => void;
+  on_turn_start?: (target_dir: DirType) => void;
   on_enter_cell?: (pos: Vec2) => void;
   flush_vis_data?: (force: boolean) => void;
   repeat_hasher?: (pos: ROVec2) => string | null;
@@ -1177,6 +1223,7 @@ export class CrawlerController {
   on_pre_move?: () => void; // called immediately before _queuing_ a new movement
   on_player_move?: (old_pos: Vec2, new_pos: Vec2, move_dir: DirType) => void;
   on_move_start?: (pos: Vec2) => void;
+  on_turn_start?: (target_dir: DirType) => void;
   on_enter_cell?: (pos: Vec2) => void;
   flush_vis_data?: (force: boolean) => void;
   repeat_hasher?: (pos: ROVec2) => string | null;
@@ -1192,11 +1239,15 @@ export class CrawlerController {
     this.on_pre_move = param.on_pre_move;
     this.on_player_move = param.on_player_move;
     this.on_move_start = param.on_move_start;
+    this.on_turn_start = param.on_turn_start;
     this.on_enter_cell = param.on_enter_cell;
     this.setControllerType(param.controller_type || 'queued2');
     this.script_api.setController(this);
   }
 
+  setOnTurnStart(fn: (target_dir: DirType) => void): void {
+    this.on_turn_start = fn;
+  }
   setOnPlayerMove(fn: (old_pos: Vec2, new_pos: Vec2, move_dir: DirType) => void): void {
     this.on_player_move = fn;
   }
@@ -1232,7 +1283,7 @@ export class CrawlerController {
   cam_pos_z_offs = 0.5;
   cam_pos: Vec3 = vec3(0, 0, 0);
   mode: 'modeCrawl' | 'modeFreecam' = 'modeCrawl';
-  fade_override = 0;
+  fade_override = 0; // from move_blockers
   move_blocker: MoveBlocker | null = null;
   transitioning_floor = false;
   fade_alpha = 0;
@@ -1244,6 +1295,7 @@ export class CrawlerController {
   last_finished_rot: DirType = 0;
   last_type: CellDesc | undefined;
   path_to: Vec2 | null = null;
+  path_to_set_this_frame = false;
   path_to_last_step = 0;
   last_action_time = 0;
   last_action_hash = 0; // dx + dy * 8 + rot * 64;
@@ -1276,8 +1328,48 @@ export class CrawlerController {
     return this.entity_manager.getMyEnt();
   }
 
+  load_level_unfade = 0;
+  load_level_time = 0; // ms since it started
+  load_level_fadeout_time = 500;
+  isLoadingLevel(): number { // ms
+    return this.load_level_time;
+  }
+  isLoadingLevelFadeout(): number { // 0-1
+    if (this.load_level_unfade) {
+      return this.load_level_unfade / this.load_level_fadeout_time;
+    }
+    return 0;
+  }
+  startLoadingLevel(): void {
+    textureSetIsLoading(true);
+    this.load_level_time = 1;
+    this.setFadeOverride(1);
+    this.setMoveBlocker(this.moveBlockLoadingLevel.bind(this));
+    this.loading_level = true;
+  }
+  finishLoadingLevel(): void {
+    textureSetIsLoading(false);
+    this.setFadeOverride(0);
+    this.load_level_time = 0;
+  }
   moveBlockLoadingLevel(): boolean {
-    return this.loading_level;
+    // moraff: this whole system probably breaks smooth unfade coming out of stairs!
+    let dt = getScaledFrameDt();
+    this.load_level_time += dt;
+    if (this.loading_level || textureLoadCount()) {
+      this.load_level_unfade = 0;
+      this.setFadeOverride(1);
+      return true;
+    }
+    this.load_level_unfade += dt;
+    let t = this.load_level_unfade / this.load_level_fadeout_time;
+    if (t > 1) {
+      this.finishLoadingLevel();
+      return false;
+    } else {
+      this.setFadeOverride(1 - t);
+      return true;
+    }
   }
   initHaveLevel(floor_id: number, from_my_ent: boolean): void {
     this.game_state.setLevelActive(floor_id);
@@ -1290,9 +1382,7 @@ export class CrawlerController {
     assert(this.entity_manager.hasMyEnt());
     let floor_id = this.myEnt().data.floor;
     assert.equal(typeof floor_id, 'number');
-    this.setFadeOverride(1);
-    this.setMoveBlocker(this.moveBlockLoadingLevel.bind(this));
-    this.loading_level = true;
+    this.startLoadingLevel();
     this.game_state.getLevelForFloorAsync(floor_id, () => {
       this.loading_level = false;
       this.initHaveLevel(floor_id, true);
@@ -1303,9 +1393,7 @@ export class CrawlerController {
   reloadLevel(): void {
     let floor_id = this.game_state.floor_id;
     assert(floor_id >= 0);
-    this.setFadeOverride(1);
-    this.setMoveBlocker(this.moveBlockLoadingLevel.bind(this));
-    this.loading_level = true;
+    this.startLoadingLevel();
     this.game_state.getLevelForFloorAsync(floor_id, () => {
       this.loading_level = false;
       this.initHaveLevel(floor_id, false);
@@ -1331,7 +1419,7 @@ export class CrawlerController {
   }
 
   getFadeAlpha(): number {
-    return this.fade_alpha;
+    return this.applyFadeLate();
   }
   getFadeColor(): number {
     return this.fade_v;
@@ -1358,18 +1446,22 @@ export class CrawlerController {
 
   teleport(new_pos: Vec2): void {
     this.applyPlayerMove('teleport', [new_pos[0], new_pos[1], this.last_dest_rot]);
-    this.initPos(true);
+    const { game_state } = this;
+    let level = game_state.level!;
+    this.playerMoveFinish(level, [new_pos[0], new_pos[1]]); // trigger events, like chutes
+    this.initPos(true); // also needed, I guess
   }
 
   doPlayerMotion(param: PlayerMotionParam): void {
     this.fade_v = 0;
     this.fade_alpha = 0;
+    this.last_tick_positions = null;
 
     if (!this.canRun()) {
       return;
     }
 
-    if ((engine.DEBUG || buildModeActive()) && keyDownEdge(KEYS.F2)) {
+    if ((engine.DEBUG || engine.defines.FREECAM || buildModeActive()) && keyDownEdge(KEYS.F2)) {
       this.mode = this.mode === 'modeFreecam' ? 'modeCrawl' : 'modeFreecam';
       if (this.mode === 'modeCrawl') {
         v2floor(this.game_state.pos, this.freecam_pos);
@@ -1424,6 +1516,69 @@ export class CrawlerController {
 
   pathTo(target_x: number, target_y: number): void {
     this.path_to = [target_x, target_y];
+    this.path_to_set_this_frame = true;
+    if (this.repeat_hasher) {
+      this.last_repeat_hash = this.repeat_hasher(this.last_dest_pos);
+    }
+  }
+
+  pathToStraightAhead(): boolean {
+    const { game_state, last_dest_pos, last_dest_rot: dir, script_api } = this;
+    const { level } = game_state;
+    assert(level);
+
+    const dx = DX[dir];
+    const dy = DY[dir];
+
+    let target = [last_dest_pos[0], last_dest_pos[1]];
+    do {
+      let cell = level.getCell(target[0], target[1]);
+      if (!cell) {
+        break;
+      }
+      let wall = getEffWall(script_api, cell, dir);
+      if (!wall.open_move || !wall.open_vis) {
+        break;
+      }
+      target[0] += dx;
+      target[1] += dy;
+    } while (true);
+    if (target[0] !== last_dest_pos[0] || target[1] !== last_dest_pos[1]) {
+      this.pathTo(target[0], target[1]);
+      return true;
+    }
+    return false;
+  }
+
+  canGoForward(): number {
+    const { game_state, last_dest_pos, last_dest_rot: dir, script_api } = this;
+    const { level, floor_id } = game_state;
+    if (!level) {
+      return 0;
+    }
+
+    const dx = DX[dir];
+    const dy = DY[dir];
+
+    let target: JSVec2 = [last_dest_pos[0], last_dest_pos[1]];
+    do {
+      let cell = level.getCell(target[0], target[1]);
+      if (!cell) {
+        break;
+      }
+      let wall = getEffWall(script_api, cell, dir);
+      if (!wall.open_move || !wall.open_vis) {
+        break;
+      }
+      target[0] += dx;
+      target[1] += dy;
+      if (entityBlocks(floor_id, target, true)) {
+        target[0] -= dx;
+        target[1] -= dy;
+        break;
+      }
+    } while (true);
+    return v2manhattanDist(target, last_dest_pos);
   }
 
   getEntInFront(include_non_blockers: boolean): Entity | null {
@@ -1441,7 +1596,7 @@ export class CrawlerController {
     if (!level.wallsBlock(last_dest_pos, last_dest_rot, script_api)) {
       v2add(temp_pos, last_dest_pos, DXY[last_dest_rot]);
       if (include_non_blockers) {
-        let ent_list = crawlerEntitiesAt(crawlerEntityManager(), temp_pos, game_state.floor_id, false);
+        let ent_list = crawlerEntitiesAt(temp_pos, game_state.floor_id, false);
         if (!ent_list.length) {
           return null;
         }
@@ -1485,18 +1640,13 @@ export class CrawlerController {
     new_pos: JSVec3,
     resp_func?: NetErrorCallback
   ): void {
-    let my_ent = this.myEnt();
-    if (this.entity_manager.isOnline()) {
-      my_ent.applyBatchUpdate({
-        field: CrawlerController.PLAYER_MOVE_FIELD,
-        action_id,
-        data_assignments: {
-          pos: new_pos,
-        },
-      }, resp_func);
-    } else {
-      v3copy(my_ent.data.pos, new_pos);
-    }
+    this.myEnt().applyBatchUpdate({
+      field: CrawlerController.PLAYER_MOVE_FIELD,
+      action_id,
+      data_assignments: {
+        pos: new_pos,
+      },
+    }, resp_func);
   }
 
   applyPlayerFloorChange(
@@ -1505,24 +1655,17 @@ export class CrawlerController {
     reason: string | undefined,
     resp_func: NetErrorCallback
   ): void {
-    let my_ent = this.myEnt();
-    if (this.entity_manager.isOnline()) {
-      my_ent.applyBatchUpdate({
-        field: CrawlerController.PLAYER_MOVE_FIELD,
-        action_id: 'floorchange',
-        payload: {
-          reason,
-        },
-        data_assignments: {
-          pos: new_pos,
-          floor: new_floor,
-        },
-      }, resp_func);
-    } else {
-      v3copy(my_ent.data.pos, new_pos);
-      my_ent.data.floor = new_floor;
-      resp_func(null);
-    }
+    this.myEnt().applyBatchUpdate({
+      field: CrawlerController.PLAYER_MOVE_FIELD,
+      action_id: 'floorchange',
+      payload: {
+        reason,
+      },
+      data_assignments: {
+        pos: new_pos,
+        floor: new_floor,
+      },
+    }, resp_func);
   }
 
   getMapUpdateThisFrame(): boolean {
@@ -1680,6 +1823,7 @@ export class CrawlerController {
   pit_target_key?: string;
   pit_target_pos?: JSVec3;
   moveBlockPit(): boolean {
+    textureSetIsLoading(true);
     this.pit_time += this.controllerIsAnimating() ? 0 : getScaledFrameDt();
     let pit_progress = this.pit_time / pit_times[this.pit_stage];
     if (pit_progress > 1) {
@@ -1694,7 +1838,15 @@ export class CrawlerController {
       this.cam_pos_z_offs = 0.5 - easeIn(pit_progress, 2);
       this.fade_override = clamp(pit_progress * 2 - 1, 0, 1);
     } else {
-      this.cam_pos_z_offs = 0.5;
+      this.cam_pos_z_offs = 0;
+      this.post_floor_transition = () => {
+        this.cam_pos_z_offs = 1;
+        this.fade_override = 1;
+        this.ladder_time = 0;
+        this.ladder_stage = 0;
+        this.ladder_is_up = false;
+        this.setMoveBlocker(this.moveBlockLadderFinish.bind(this));
+      };
       this.goToFloor(this.pit_target_floor, this.pit_target_key, 'pit', this.pit_target_pos);
       // still returning true, because move_blocker is modified in the above call
     }
@@ -1723,6 +1875,7 @@ export class CrawlerController {
   ladder_target_pos!: JSVec3;
   ladder_is_up!: boolean;
   moveBlockLadder(): boolean {
+    textureSetIsLoading(true);
     this.ladder_time += this.controllerIsAnimating() ? 0 : getScaledFrameDt();
     let ladder_progress = this.ladder_time / ladder_time;
     if (ladder_progress > 1) {
@@ -1750,7 +1903,7 @@ export class CrawlerController {
     return true;
   }
   moveBlockLadderFinish(): boolean {
-    this.ladder_time += this.controllerIsAnimating() ? 0 : getScaledFrameDt();
+    this.ladder_time += this.controllerIsAnimating() || textureLoadCount() ? 0 : getScaledFrameDt();
     let ladder_progress = this.ladder_time / ladder_time;
     if (ladder_progress > 1) {
       ladder_progress = 0;
@@ -1765,6 +1918,7 @@ export class CrawlerController {
       return true;
     } else {
       this.cam_pos_z_offs = 0.5;
+      textureSetIsLoading(false);
       return false;
     }
   }
@@ -1825,7 +1979,6 @@ export class CrawlerController {
     v2copy(this.move_from_pos, last_finished_pos);
     this.move_from_dir = dirFromDelta([finished_pos[0] - last_finished_pos[0], finished_pos[1] - last_finished_pos[1]]);
     v2copy(last_finished_pos, finished_pos);
-    this.map_update_this_frame = true;
     let type = new_cell && new_cell.desc || level.default_open_cell;
     if (type !== this.last_type) {
       this.last_type = type;
@@ -1883,10 +2036,14 @@ export class CrawlerController {
         playUISound(wall2.sound_id);
       }
 
-      if (cell2 && cell2.desc.swapped.sound_id === null) {
+      let sound_id = cell2 && cell2.desc.swapped.sound_id;
+      if (sound_id === null) {
         // no sound
       } else {
-        playUISound(cell2 && cell2.desc.swapped.sound_id || 'footstep');
+        if (!sound_id) {
+          sound_id = level.getProp('footstep') as string | undefined | null;
+        }
+        playUISound(sound_id || 'footstep');
       }
 
       if (this.on_player_move) {
@@ -1909,13 +2066,21 @@ export class CrawlerController {
       v2copy(this.prev_pos, this.last_dest_pos);
       v2copy(this.last_dest_pos, new_pos);
     }
-    this.last_dest_rot = new_rot;
+    let dir_changed = new_rot !== this.last_dest_rot;
+    if (dir_changed) {
+      this.last_dest_rot = new_rot;
+    }
 
     this.applyPlayerMove(action_id, [new_pos[0], new_pos[1], new_rot],
       pos_changed ? this.resyncPosOnError.bind(this) : undefined);
 
-    if (!buildModeActive() && pos_changed) {
-      this.on_move_start?.(new_pos);
+    if (!buildModeActive()) {
+      if (pos_changed) {
+        this.on_move_start?.(new_pos);
+      }
+      if (dir_changed) {
+        this.on_turn_start?.(new_rot);
+      }
     }
   }
 
@@ -1923,19 +2088,23 @@ export class CrawlerController {
     let level = this.game_state.level!;
     this.script_api.setLevel(level);
     this.script_api.setPos(pos);
+    // this is effectively the previous frame's index, since we haven't rendered yet this frame,
+    //   which is what we want because that is what the map view expects,
+    //   and should not actually cause it to be rendered this frame.
+    let frame_idx = crawlerRenderFrameIndex();
     // Could just do behind us, but this makes the map a little more stable
     for (let dir = 0 as DirType; dir < 4; ++dir) {
       let blocks = level.wallsBlock(pos, dir, this.script_api);
-      if (!(blocks & BLOCK_VIS)) {
+      if (!(blocks & (BLOCK_VIS | BLOCK_MOSTLY))) {
         let cell = level.getCell(pos[0] + DX[dir], pos[1] + DY[dir]);
         if (cell) {
-          cell.visible_frame = getFrameIndex() - 1;
+          cell.visible_frame = frame_idx;
         }
       }
     }
     let cell = level.getCell(pos[0], pos[1]);
     if (cell) {
-      cell.visible_frame = getFrameIndex() - 1;
+      cell.visible_frame = frame_idx;
     }
   }
 
@@ -1986,14 +2155,23 @@ export class CrawlerController {
     this.path_to = null;
   }
 
-  applyFade(positions: TickPositions): void {
-    let { game_state, script_api } = this;
+  last_tick_positions: TickPositions | null = null;
+  applyFadeEarly(positions: TickPositions): void {
+    this.last_tick_positions = positions;
+  }
+  applyFadeLate(): number {
+    let max_alpha = max(this.fade_override, this.fade_alpha);
+    let { game_state, script_api, last_tick_positions } = this;
+    if (!last_tick_positions) {
+      return max_alpha;
+    }
     let level = game_state.level!;
-    let { pos, angle } = game_state;
-    let { wall_transits } = positions;
-    let max_alpha = this.fade_override;
+    let { pos } = game_state;
+    let { wall_transits } = last_tick_positions;
+    let angle = crawlerRenderGameViewAngle();
     let pos_offs = crawlerRenderGetPosOffs();
     let cur_angle_as_rot = angle / (PI/2);
+    const znear = engine.ZNEAR / DIM;
     for (let ii = 0; ii < wall_transits.length; ++ii) {
       let transit = wall_transits[ii];
       let cur_cell = level.getCell(transit.pos[0], transit.pos[1]);
@@ -2006,9 +2184,9 @@ export class CrawlerController {
         continue;
       }
       let pos_through_door_angle = dirMod(cur_angle_as_rot - transit.dir + 4);
-      let cutoff0 = (1 - pos_offs[1]) / 2;
+      let cutoff0 = (1 - pos_offs[1]) / 2 - znear;
       let cutoff1 = (1 - pos_offs[0]) / 2;
-      let cutoff2 = (1 + pos_offs[1]) / 2;
+      let cutoff2 = (1 + pos_offs[1]) / 2 + znear;
       let cutoff3 = (1 + pos_offs[0]) / 2;
       let cutoff;
       if (pos_through_door_angle < 1) {
@@ -2044,7 +2222,7 @@ export class CrawlerController {
       // this.fade_v = next_cell.type === CellType.STAIRS_IN || next_cell.type === CellType.STAIRS_OUT ||
       //   cur_cell.type === CellType.STAIRS_IN || cur_cell.type === CellType.STAIRS_OUT ? 1 : 0;
     }
-    this.fade_alpha = max_alpha;
+    return max_alpha;
   }
 
   checkRepeatHash(force: boolean): boolean {
@@ -2061,6 +2239,7 @@ export class CrawlerController {
     return ret;
   }
 
+  was_at_rest = false;
   approx_pos = vec2();
   modeCrawl(param: PlayerMotionParam): void {
     const frame_timestamp = getFrameTimestamp();
@@ -2093,9 +2272,22 @@ export class CrawlerController {
     if (no_move) { // was: disable_player_impulse
       this.path_to = null;
     }
+    if (this.path_to) {
+      // cancel for cancelling of zoom-forward, etc
+      if (actionDown('cancel') || actionDown('accept')) {
+        if (this.path_to_set_this_frame) {
+          // don't clear it until these are released
+        } else {
+          this.path_to = null;
+        }
+      } else {
+        this.path_to_set_this_frame = false;
+      }
+    }
 
     let down: ControllerInputs = {
       forward: 0,
+      forward_zoom: 0,
       left: 0,
       back: 0,
       right: 0,
@@ -2105,6 +2297,7 @@ export class CrawlerController {
     type ValidKeys = keyof ControllerInputs;
     let down_edge = {
       forward: 0,
+      forward_zoom: 0,
       left: 0,
       back: 0,
       right: 0,
@@ -2119,10 +2312,10 @@ export class CrawlerController {
       frame: number,
       disabled: boolean,
       key: ValidKeys,
-      keys: number[],
-      pads: number[],
-      toggled_down?: boolean,
-      touch_hotzone?: Box,
+      action: ActionKey,
+      no_vis_ui_override: boolean,
+      toggled_down: boolean,
+      touch_hotzone: Box | undefined,
     ): void {
       let z;
       let ret = crawlerOnScreenButton({
@@ -2131,15 +2324,15 @@ export class CrawlerController {
         z,
         w: button_w, h: button_w,
         frame,
-        keys,
-        pads,
-        no_visible_ui,
+        actions: [action],
+        no_visible_ui: no_visible_ui || no_vis_ui_override,
         do_up_edge: false,
         disabled,
         button_sprites,
         touch_hotzone,
         is_movement: !(key === 'turn_left' || key === 'turn_right'),
         show_hotkeys,
+        key,
       });
       down_edge[key] += ret.down_edge;
       down[key] += ret.down;
@@ -2151,82 +2344,40 @@ export class CrawlerController {
     // Old: forward attacks: let forward_frame = entityBlocks(game_state.floor_id, temp_pos, true) ? 11 : 1;
     let forward_frame = 1;
     if (show_buttons) {
-      let keys_turn_left = [KEYS.Q];
-      let keys_forward = [KEYS.W];
-      let keys_turn_right = [KEYS.E];
-      let keys_left = [KEYS.A];
-      let keys_back = [KEYS.S];
-      let keys_right = [KEYS.D];
-      if (!build_mode) {
-        keys_turn_left.push(KEYS.NUMPAD7);
-        keys_forward.push(KEYS.NUMPAD8);
-        keys_turn_right.push(KEYS.NUMPAD9);
-        keys_left.push(KEYS.NUMPAD4);
-        keys_back.push(KEYS.NUMPAD2, KEYS.NUMPAD5);
-        keys_right.push(KEYS.NUMPAD6);
-      }
-      let pad_turn_left: number[] = [];
-      let pad_forward: number[] = [];
-      let pad_turn_right: number[] = [];
-      let pad_left: number[] = [];
-      let pad_back: number[] = [];
-      let pad_right: number[] = [];
-      if (uiHandlingNav()) {
-        // hotkeys, but no nav keys
-      } else {
-        keys_forward.push(KEYS.UP);
-        keys_back.push(KEYS.DOWN);
-        pad_turn_left.push(PAD.LEFT);
-        pad_forward.push(PAD.UP);
-        pad_turn_right.push(PAD.RIGHT);
-        pad_left.push(PAD.LEFT_BUMPER);
-        pad_back.push(PAD.DOWN);
-        pad_right.push(PAD.RIGHT_BUMPER);
-      }
-      if (settings.turn_toggle) {
-        let t = keys_turn_left;
-        keys_turn_left = keys_left;
-        keys_left = t;
-        t = keys_turn_right;
-        keys_turn_right = keys_right;
-        keys_right = t;
-        t = pad_turn_left;
-        pad_turn_left = pad_left;
-        pad_left = t;
-        t = pad_turn_right;
-        pad_turn_right = pad_right;
-        pad_right = t;
-      }
-      if (!uiHandlingNav()) {
-        // not affected by turn_toggle
-        keys_turn_left.push(KEYS.LEFT);
-        keys_turn_right.push(KEYS.RIGHT);
-      }
-
       let left_hotzone: Box | undefined;
       let forward_hotzone: Box | undefined;
+      let forward_zoom_hotzone: Box | undefined;
       let back_hotzone: Box | undefined;
       let right_hotzone: Box | undefined;
       if (!uiHandlingNav() && !build_mode &&
-        // Only do touch hotzone on touch devices - except always in development
+        // By default, only do touch hotzone on touch devices - except always in development
         //   so we catch any subtle bugs with input even ordering in dialogs and such
-        (inputTouchMode() || engine.DEBUG)
+        (!touch_hotzones.touch_only || (inputTouchMode() || engine.DEBUG))
       ) {
         // do touch controls on the viewport
         if (disabled_move && !disabled_rotate) {
           ({ left: left_hotzone, right: right_hotzone } = touch_hotzones);
         } else if (!disabled_move && !disabled_rotate) {
-          ({ left: left_hotzone, right: right_hotzone, forward: forward_hotzone, back: back_hotzone } = touch_hotzones);
+          ({
+            left: left_hotzone,
+            right: right_hotzone,
+            forward: forward_hotzone,
+            back: back_hotzone,
+            forward_zoom: forward_zoom_hotzone,
+          } = touch_hotzones);
         }
       }
 
-      button(0, 0, 0, disabled_rotate, 'turn_left', keys_turn_left, pad_turn_left, false, left_hotzone);
+      button(0, 0, 0, disabled_rotate, 'turn_left', 'turn_left', false, false, left_hotzone);
+      let shift_down = shiftDown();
+      button(-1, 0, forward_frame, soft_disable ? false : disabled_move, 'forward_zoom',
+        shift_down ? 'move_forward' : 'run_forward', true, false, forward_zoom_hotzone);
       button(1, 0, forward_frame, soft_disable ? false : disabled_move, 'forward',
-        keys_forward, pad_forward, false, forward_hotzone);
-      button(2, 0, 2, disabled_rotate, 'turn_right', keys_turn_right, pad_turn_right, false, right_hotzone);
-      button(0, 1, 3, soft_disable ? false : disabled_move, 'left', keys_left, pad_left);
-      button(1, 1, 4, soft_disable ? false : disabled_move, 'back', keys_back, pad_back, false, back_hotzone);
-      button(2, 1, 5, soft_disable ? false : disabled_move, 'right', keys_right, pad_right);
+        'move_forward', false, false, forward_hotzone);
+      button(2, 0, 2, disabled_rotate, 'turn_right', 'turn_right', false, false, right_hotzone);
+      button(0, 1, 3, soft_disable ? false : disabled_move, 'left', 'move_left', false, false, undefined);
+      button(1, 1, 4, soft_disable ? false : disabled_move, 'back', 'move_back', false, false, back_hotzone);
+      button(2, 1, 5, soft_disable ? false : disabled_move, 'right', 'move_right', false, false, undefined);
     }
 
     let level = game_state.level!;
@@ -2235,7 +2386,6 @@ export class CrawlerController {
       this.player_controller.cancelQueuedMoves?.(but_allow_rotate && !no_rotate);
     }
     if (this.loading_level) {
-      this.fade_alpha = this.fade_override;
       return;
     }
     if (!no_move || !no_rotate || soft_disable) {
@@ -2256,7 +2406,7 @@ export class CrawlerController {
         dx += down_edge.left;
         dx -= down_edge.right;
         let dy = 0;
-        dy += down_edge.forward;
+        dy += down_edge.forward + down_edge.forward_zoom;
         dy -= down_edge.back;
         if (dx || dy) {
           if (frame_timestamp - this.last_action_time < KEY_REPEAT_TIME_MOVE_RATE &&
@@ -2268,8 +2418,16 @@ export class CrawlerController {
           if (soft_disable) {
             soft_disable();
           } else {
-            this.on_pre_move?.();
-            this.startRelativeMove(dx, dy);
+            if (down_edge.forward_zoom) {
+              // Shift + move = go to end
+              this.on_pre_move?.();
+              if (!this.pathToStraightAhead()) {
+                this.startRelativeMove(dx, dy);
+              }
+            } else {
+              this.on_pre_move?.();
+              this.startRelativeMove(dx, dy);
+            }
           }
         }
       }
@@ -2340,7 +2498,7 @@ export class CrawlerController {
           rot: eff_rot,
         };
         let path = pathFind(level, cur.pos[0], cur.pos[1], cur.rot,
-          this.path_to[0], this.path_to[1], build_mode, crawlerScriptAPI());
+          this.path_to[0], this.path_to[1], true, crawlerScriptAPI());
         if (!path || path.length === 1) {
           this.path_to = null;
         } else {
@@ -2384,7 +2542,7 @@ export class CrawlerController {
     let positions = this.player_controller.tickMovement(tick_param);
     dt = tick_param.dt;
 
-    this.applyFade(positions);
+    this.applyFadeEarly(positions);
 
     this.applyForceFace(game_state, dt);
 
@@ -2417,11 +2575,22 @@ export class CrawlerController {
           this.player_controller.cancelAllMoves?.(but_allow_rotate && !no_rotate);
         }
       }
+      // note: if this move was finished because of queuing another move, we will
+      //   not yet be in the right spot, but it's better than nothing?
+      this.map_update_this_frame = true;
     }
     if (positions.finished_rot !== this.last_finished_rot) {
       this.last_finished_rot = positions.finished_rot;
       this.map_update_this_frame = true;
     }
+    let at_rest = !this.player_controller.isAnimating(1);
+    if (at_rest && !this.was_at_rest) {
+      // This catches when the above update fires prematurely due to a move being
+      //   finished and then blending into a bump (which never triggers a change
+      //   in finished_pos)
+      this.map_update_this_frame = true;
+    }
+    this.was_at_rest = at_rest;
 
     this.flagCellNextToUsVisible(temp_pos);
   }
@@ -2577,4 +2746,74 @@ export class CrawlerController {
 
 export function crawlerControllerCreate(param: CrawlerControllerConstructorParam): CrawlerController {
   return new CrawlerController(param);
+}
+
+export function crawlerControllerStartup(): void {
+  bindLayerRegister('movement', 5);
+  actionRegister('run_forward', { prevent_down_trickle: true });
+  actionRegister('turn_left', { prevent_down_trickle: false });
+  actionRegister('turn_right', { prevent_down_trickle: false });
+  actionRegister('move_left', { prevent_down_trickle: false });
+  actionRegister('move_right', { prevent_down_trickle: false });
+  actionRegister('move_forward', { prevent_down_trickle: false });
+  actionRegister('move_back', { prevent_down_trickle: false });
+
+  actionRegister('move_mod');
+  actionBindKB('SHIFT', 'move_mod');
+  actionBindPad('RIGHT_TRIGGER', 'move_mod');
+  actionBindPad('LEFT_TRIGGER', 'move_mod');
+
+  // actionBindKB('UP', 'run_forward', MOD_SHIFT);
+  // actionBindKB('W', 'run_forward', MOD_SHIFT);
+  // actionBindKB('NUMPAD8', 'run_forward', MOD_SHIFT);
+
+  actionBindPad('UP', 'move_forward');
+  actionBindPad('DOWN', 'move_back');
+  actionBindPad('LEFT', 'turn_left');
+  actionBindPad('RIGHT', 'turn_right');
+  actionBindPad('LSTICK_UP', 'move_forward');
+  actionBindPad('LSTICK_LEFT', 'turn_left');
+  actionBindPad('LSTICK_DOWN', 'move_back');
+  actionBindPad('LSTICK_RIGHT', 'turn_right');
+  actionBindPad('RSTICK_UP', 'move_forward');
+  actionBindPad('RSTICK_LEFT', 'turn_left');
+  actionBindPad('RSTICK_DOWN', 'move_back');
+  actionBindPad('RSTICK_RIGHT', 'turn_right');
+  actionBindPad('LEFT_BUMPER', 'move_left');
+  actionBindPad('RIGHT_BUMPER', 'move_right');
+
+  actionBindKB('W', 'move_forward', 0);
+  actionBindKB('A', 'move_left', 0);
+  actionBindKB('S', 'move_back', 0);
+  actionBindKB('D', 'move_right', 0);
+  actionBindKB('Q', 'turn_left', 0);
+  actionBindKB('E', 'turn_right', 0);
+
+  actionBindKB('UP', 'move_forward', 0);
+  actionBindKB('DOWN', 'move_back', 0);
+  actionBindKB('LEFT', 'turn_left', 0);
+  actionBindKB('RIGHT', 'turn_right', 0);
+
+  actionBindKB('NUMPAD7', 'turn_left', 0);
+  actionBindKB('NUMPAD9', 'turn_right', 0);
+  actionBindKB('NUMPAD8', 'move_forward', 0);
+  actionBindKB('NUMPAD4', 'move_left', 0);
+  actionBindKB('NUMPAD5', 'move_back', 0);
+  actionBindKB('NUMPAD2', 'move_back', 0);
+  actionBindKB('NUMPAD6', 'move_right', 0);
+
+  if (debugDefineIsSet('IJKL')) {
+    // convenient set for checking if any hardcoded arrows/wasd/enter/space/etc is used
+    actionBindKB('I', 'move_forward', 0);
+    actionBindKB('J', 'turn_left', 0);
+    actionBindKB('K', 'move_back', 0);
+    actionBindKB('L', 'turn_right', 0);
+  }
+  if (debugDefineIsSet('YGHJ')) {
+    // second set for checking if any hardcoded arrows/wasd/enter/space/etc is used
+    actionBindKB('Y', 'move_forward', 0);
+    actionBindKB('G', 'turn_left', 0);
+    actionBindKB('H', 'move_back', 0);
+    actionBindKB('J', 'turn_right', 0);
+  }
 }

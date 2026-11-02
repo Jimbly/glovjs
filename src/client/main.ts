@@ -37,7 +37,7 @@ import { netInit } from 'glov/client/net';
 import * as settings from 'glov/client/settings';
 import { settingsSet } from 'glov/client/settings';
 import { shadersSetInternalDefines } from 'glov/client/shaders';
-import { SPOT_NAVTYPE_SIMPLE, spotSetNavtype } from 'glov/client/spot';
+import { SPOT_NAVTYPE_SIMPLE, spotSetAutofocusNonPad, spotSetNavtype } from 'glov/client/spot';
 import { spriteSetGet } from 'glov/client/sprite_sets';
 import { textureDefaultFilters } from 'glov/client/textures';
 import { uiSetPanelColor } from 'glov/client/ui';
@@ -70,6 +70,7 @@ Z.FLOATERS = 125;
 Z.DIALOG = 140;
 Z.STATUS = 160;
 Z.CHAT_FOCUSED = 100;
+Z.FLOATERS = 250;
 
 let fonts: Font[] | undefined;
 
@@ -295,11 +296,16 @@ export function main(): void {
   markdownImageRegisterAutoAtlas('demo');
 
   spotSetNavtype(SPOT_NAVTYPE_SIMPLE);
+  spotSetAutofocusNonPad(true);
 
   crawlerBuildModeStartup({
     font: build_font,
     button_height: 11,
+    // palette_config_size: 32,
     cell_props: [
+    ],
+    level_props: [
+      'footstep',
     ],
   });
   playStartup();

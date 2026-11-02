@@ -1,7 +1,7 @@
 import assert from 'assert';
 import { getFrameDt, getFrameIndex } from 'glov/client/engine';
-import { FontStyle, fontStyleColored } from 'glov/client/font';
-import { markdownAuto } from 'glov/client/markdown';
+import { FontStyle } from 'glov/client/font';
+import { markdownAuto, MarkdownCache, MarkdownDims } from 'glov/client/markdown';
 import * as ui from 'glov/client/ui';
 import {
   UIBox,
@@ -9,6 +9,7 @@ import {
   uiTextHeight,
 } from 'glov/client/ui';
 import { vec4 } from 'glov/common/vmath';
+import { dialogTextStyle } from './dialog_system';
 
 const { floor, ceil } = Math;
 
@@ -19,12 +20,14 @@ class StatusMessage {
   text: string;
   key?: string;
   style: FontStyle;
+  mdcache?: MarkdownCache;
+  mddims?: MarkdownDims;
   constructor(text: string, style: FontStyle) {
     this.text = text;
     this.style = style;
   }
-  fade(): void {
-    this.counter = this.time_fade - getFrameDt();
+  fade(after_ms?: number): void {
+    this.counter = this.time_fade - getFrameDt() - (after_ms || 0);
   }
 }
 
@@ -33,10 +36,8 @@ function statusReset(): void {
   msgs = [];
 }
 
-let style_status = fontStyleColored(null, 0x000000ff);
-
 export function statusPush(text: string, style?: FontStyle): StatusMessage {
-  let msg = new StatusMessage(text, style || style_status);
+  let msg = new StatusMessage(text, style || dialogTextStyle());
   if (msgs) {
     msgs.push(msg);
   }
@@ -50,6 +51,7 @@ export function statusSet(key: string, text: string, style?: FontStyle): StatusM
       if (msg.key === key) {
         msg.text = text;
         msg.counter = 0;
+        msg.mdcache = undefined;
         return msg;
       }
     }
@@ -92,8 +94,20 @@ export function statusTick(viewport: UIBox & {
     }
     let size = uiTextHeight();
     let font = uiGetFont();
-    let dims = font.dims(msg.style, w, 0, size, msg.text);
-    y -= pad_bottom + dims.h;
+    if (!msg.mdcache) {
+      msg.mdcache = {};
+      msg.mddims = markdownAuto({
+        cache: msg.mdcache,
+        no_draw: true,
+        font_style: msg.style,
+        text_height: size,
+        w,
+        align: font.ALIGN.HCENTER|font.ALIGN.HWRAP,
+        text: msg.text,
+      });
+    }
+    // let dims = font.dims(msg.style, w, 0, size, msg.text);
+    y -= pad_bottom + msg.mddims!.h;
     markdownAuto({
       font_style: msg.style,
       text_height: size,
@@ -102,7 +116,7 @@ export function statusTick(viewport: UIBox & {
       text: msg.text,
       alpha,
     });
-    let text_w = dims.w;
+    let text_w = msg.mddims!.w;
     text_w += HPAD * 2;
     temp_color[3] = alpha;
     let x0 = x + floor((w - text_w)/2);
@@ -111,7 +125,7 @@ export function statusTick(viewport: UIBox & {
       x: x0,
       y: y - pad_top, z: z - 1,
       w: x1 - x0,
-      h: dims.h + pad_top + pad_bottom,
+      h: msg.mddims!.h + pad_top + pad_bottom,
       color: temp_color,
     });
     y -= pad_top;

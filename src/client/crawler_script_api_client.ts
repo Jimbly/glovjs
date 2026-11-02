@@ -3,6 +3,7 @@ import {
   mashString,
   randCreate,
 } from 'glov/common/rand_alea';
+import { TSMap } from 'glov/common/types';
 import { isInteger } from 'glov/common/util';
 import {
   ROVec2,
@@ -30,6 +31,7 @@ import {
 } from './crawler_entity_client';
 import { dialog } from './dialog_system';
 import { statusSet } from './status';
+import { TEXT } from './text';
 
 export type CrawlerScriptLocalData = {
   keys?: string[];
@@ -86,7 +88,10 @@ class CrawlerScriptAPIClientBase {
     return this.level.getCell(x, y);
   }
   status(key: string, message: string): void {
-    statusSet(key, message);
+    let status = statusSet(key, (TEXT as TSMap<string>)[message] || message);
+    if (key === 'move_blocked') {
+      status.fade(250);
+    }
   }
   dialog(key: string, param?: string): void {
     dialog(key, param);

@@ -38,11 +38,12 @@ export type BillboardBiasOpts = {
   biasF: [number, number];
   biasR: [number, number];
   biasIn: [number, number, number, number?]; // Not relevant for monsters, just one value will do?
+  biasDiag?: number; // if they are diagonal from us, shift horizontally this much
   bias_viewplane_offset?: boolean;
 };
 
 export function billboardBias(draw_pos: Vec2, pos: ROVec2, opts: Partial<BillboardBiasOpts>): void {
-  let { biasL, biasF, biasR, biasIn, bias_viewplane_offset } = opts;
+  let { biasL, biasF, biasR, biasIn, biasDiag, bias_viewplane_offset } = opts;
 
   if (!biasL || !biasF || !biasR || !biasIn) {
     return;
@@ -106,6 +107,14 @@ export function billboardBias(draw_pos: Vec2, pos: ROVec2, opts: Partial<Billboa
   v2addScale(draw_pos, draw_pos, v2temp, bias_phys * DIM);
   // Offset `bias_vew` towards view plane
   v2addScale(draw_pos, draw_pos, view_vec, bias_view * DIM);
+  if (biasDiag) {
+    // Offset by diagonal factor perpendicular to view direction
+    let factor = rel_angle / (PI/4);
+    if (abs(factor) < 2) {
+      factor = 1 - abs(1 - factor); // 0..1..2 -> 0..1..0
+      v2addScale(draw_pos, draw_pos, right_vec, biasDiag * factor * DIM);
+    }
+  }
   // If in the same cell, alternate offsetting to the right as well
   v2addScale(draw_pos, draw_pos, right_vec, bias_in_offs * bias_in_sign * DIM);
   // Also optional vertical offset

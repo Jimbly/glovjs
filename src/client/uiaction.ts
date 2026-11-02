@@ -1,18 +1,20 @@
 import assert from 'assert';
 
 export abstract class UIAction {
-  abstract tick(): void;
+  abstract tick(dt: number): void;
   declare name: string;
   declare is_overlay_menu: boolean; // Interrupts other activity
   declare is_fullscreen_ui: boolean; // Causes any dialogs to be centered on the screen, not the 3D viewport
   declare esc_cancels: boolean;
-  declare dim_music: number;
+  declare dim_music: number | null; // null means "use default dimming if is_fullscreen_ui is set"
+  declare spot_simple_nav: boolean; // disable WASD for nav, if they're used for hotkeys
 }
 UIAction.prototype.name = 'UnknownAction';
 UIAction.prototype.is_overlay_menu = false;
 UIAction.prototype.is_fullscreen_ui = false;
 UIAction.prototype.esc_cancels = false;
-UIAction.prototype.dim_music = 0;
+UIAction.prototype.dim_music = null;
+UIAction.prototype.spot_simple_nav = false;
 
 let cur_action: UIAction | null = null;
 
@@ -37,6 +39,6 @@ export function uiActionCurrent(): UIAction | null {
   return cur_action;
 }
 
-export function uiActionTick(): void {
-  cur_action?.tick();
+export function uiActionTick(dt: number): void {
+  cur_action?.tick(dt);
 }

@@ -2,19 +2,18 @@ export const AI_CLAIM_TIME = 2000;
 
 import assert from 'assert';
 import { debugDefineIsSet, getFrameTimestamp } from 'glov/client/engine';
-import { EntityManager } from 'glov/common/entity_base_common';
+import { ClientEntityManagerInterface } from 'glov/client/entity_manager_client';
 import { TSMap } from 'glov/common/types';
-import { sign } from 'glov/common/util';
+import { empty, sign } from 'glov/common/util';
 import {
   ROVec2,
   v2copy,
   v2dist,
   v2manhattanDist,
+  v2same,
   v3copy,
-  Vec2,
 } from 'glov/common/vmath';
 import { CRAWLER_TURN_BASED } from '../common/crawler_config';
-import { entSamePos } from '../common/crawler_entity_common';
 import type { CrawlerScriptAPI } from '../common/crawler_script';
 import {
   BLOCK_MOVE,
@@ -29,9 +28,9 @@ import {
   JSVec2,
   JSVec3,
 } from '../common/crawler_state';
-import { crawlerEntFactory, EntityCrawlerClient } from './crawler_entity_client';
+import { crawlerEntFactory, EntityCrawlerClient, INDEX_FLOOR, INDEX_POS, indexPosKey } from './crawler_entity_client';
 import { crawlerGameState, crawlerScriptAPI, TurnBasedStepReason } from './crawler_play';
-import { EntityClient } from './entity_game_client';
+import { entitiesAt, EntityClient } from './entity_game_client';
 import { attackPlayer, myEnt } from './play';
 import { statusSet } from './status';
 
@@ -47,24 +46,14 @@ function randomFrom<T>(arr: T[]): T {
   return arr[floor(random() * arr.length)];
 }
 
-function entitiesAt<T extends Entity>(
-  entity_manager: EntityManager<T>,
-  pos: Vec2,
-  floor_id: number,
-  skip_fading_out: boolean
-): T[] {
-  return entity_manager.entitiesFind((ent) => entSamePos(ent, pos) && ent.data.floor === floor_id, skip_fading_out);
-}
-
 let temp_pos: JSVec2 = [0, 0];
-export function entitiesAdjacentTo<T extends Entity>(
+export function entitiesAdjacentTo(
   game_state: CrawlerState,
-  entity_manager: EntityManager<T>,
   floor_id: number,
   pos: ROVec2,
   script_api: CrawlerScriptAPI,
-): T[] {
-  let ret: T[] = [];
+): Entity[] {
+  let ret: Entity[] = [];
   let level = game_state.levels[floor_id];
   script_api.setLevel(level);
   script_api.setPos(pos);
@@ -74,7 +63,7 @@ export function entitiesAdjacentTo<T extends Entity>(
     }
     temp_pos[0] = pos[0] + DX[dir];
     temp_pos[1] = pos[1] + DY[dir];
-    let ents = entitiesAt(entity_manager, temp_pos, floor_id, true);
+    let ents = entitiesAt(temp_pos, floor_id, true);
     if (ents.length) {
       ret = ret.concat(ents);
     }
@@ -106,6 +95,7 @@ export type EntityPatrol = Entity & {
 
 export type HunterOpts = {
   radius: number;
+  player_blocks: boolean; // if true, will only try to get adjacent
   see_through_walls: boolean;
 };
 export type HunterState = {
@@ -117,14 +107,23 @@ export type EntityHunter = Entity & {
   hunter_state: HunterState;
   hunter_opts: HunterOpts;
   aiHunt: (game_state: CrawlerState, script_api: CrawlerScriptAPI, payload: AIStepPayload) => boolean;
+  aiHuntUpdateTarget: (game_state: CrawlerState, script_api: CrawlerScriptAPI) => boolean;
 };
 
 
 export function aiIgnoreErrors(err: unknown): void {
-  console.log(`Ignoring error sending AI update: ${err}`);
+  if (err) {
+    console.log(`Ignoring error sending AI update: ${err}`);
+  }
 }
 
-function isEnemy(ent: Entity): boolean {
+let hunt_radius: number | null = null;
+// If null, uses the radius on hunter options
+export function aiHunterSetRadius(radius: number | null): void {
+  hunt_radius = radius;
+}
+
+export function isEnemy(ent: Entity): boolean {
   return ent.isEnemy();
 }
 
@@ -181,13 +180,16 @@ export function aiTraitsClientStartup(): void {
           profilerStopFunc();
           return false;
         }
-        if (entitiesAt(this.entity_manager, new_pos, floor_id, true).length) {
+        if (entitiesAt(new_pos, floor_id, true).length) {
           profilerStopFunc();
           return false;
         }
         this.applyAIUpdate('ai_move', {
           pos: new_pos,
         }, undefined, aiIgnoreErrors);
+        if ((this as Entity as EntityHunter).aiHuntUpdateTarget) {
+          (this as Entity as EntityHunter).aiHuntUpdateTarget(game_state, script_api);
+        }
         profilerStopFunc();
         return true;
       },
@@ -240,7 +242,7 @@ export function aiTraitsClientStartup(): void {
         //   return;
         // }
         let new_pos: JSVec3 = [pos[0] + DX[dir], pos[1] + DY[dir], pos[2]];
-        let ents = entitiesAt(this.entity_manager, new_pos, floor_id, true);
+        let ents = entitiesAt(new_pos, floor_id, true);
         ents = ents.filter(isEnemy);
         if (ents.length) {
           profilerStopFunc();
@@ -270,31 +272,28 @@ export function aiTraitsClientStartup(): void {
       ai_move_rand_time: 100,
     },
     default_opts: {
-      radius: 3,
+      radius: 3, // only used if hunt_radius is not set
+      player_blocks: false,
       see_through_walls: false,
     },
     methods: {
-      aiHunt: function (
+      aiHuntUpdateTarget: function (
         this: EntityHunter,
         game_state: CrawlerState,
         script_api: CrawlerScriptAPI,
-        payload: AIStepPayload,
       ): boolean {
-        profilerStartFunc();
-        // if they can see the player, update target pos to that pos
-        // if they have a target pos, attempt to move towards it
-        // if there's no clear path to target, give up
-
-        // in range?
-        let pos = this.getData<JSVec3>('pos')!;
         let player_pos = myEnt().getData<JSVec3>('pos')!;
         let floor_id = this.getData<number>('floor');
         assert(typeof floor_id === 'number');
         let level = game_state.levels[floor_id];
-        let distance = v2dist(player_pos, pos);
         // let volume = lerp(min(distance/5, 1), 1, 0.25);
         let can_see = false;
-        const { radius, see_through_walls } = this.hunter_opts;
+        let { radius, see_through_walls } = this.hunter_opts;
+        if (hunt_radius !== null) {
+          radius = hunt_radius;
+        }
+        let pos = this.getData<JSVec3>('pos')!;
+        let distance = v2dist(player_pos, pos);
         if (distance <= radius) {
 
           // can see?
@@ -318,6 +317,27 @@ export function aiTraitsClientStartup(): void {
             can_see = true;
           }
         }
+        return can_see;
+      },
+      aiHunt: function (
+        this: EntityHunter,
+        game_state: CrawlerState,
+        script_api: CrawlerScriptAPI,
+        payload: AIStepPayload,
+      ): boolean {
+        profilerStartFunc();
+        // if they can see the player, update target pos to that pos
+        // if they have a target pos, attempt to move towards it
+        // if there's no clear path to target, give up
+        // if they can see the player before or after their move, update their target
+
+        let floor_id = this.getData<number>('floor');
+        assert(typeof floor_id === 'number');
+        let level = game_state.levels[floor_id];
+        // let volume = lerp(min(distance/5, 1), 1, 0.25);
+        const { player_blocks } = this.hunter_opts;
+        let can_see = this.aiHuntUpdateTarget(game_state, script_api);
+        let pos = this.getData<JSVec3>('pos')!;
 
         if (!this.hunter_state.has_target) {
           profilerStopFunc();
@@ -359,8 +379,9 @@ export function aiTraitsClientStartup(): void {
             dx = 0;
           }
           let new_pos = [pos[0] + sign(dx), pos[1]];
-          if (level.getCell(new_pos[0], new_pos[1])?.props?.noai ||
-            level.getCell(new_pos[0], new_pos[1])?.events?.length
+          if (level.getCell(new_pos[0], new_pos[1])?.props?.noai
+          // moraff: allow walking on pits! just require noai going forward?
+          // || level.getCell(new_pos[0], new_pos[1])?.events?.length
           ) {
             // avoid going onto events (e.g. stairs in/out)
             dx = 0;
@@ -373,8 +394,9 @@ export function aiTraitsClientStartup(): void {
             dy = 0;
           }
           let new_pos = [pos[0], pos[1] + sign(dy)];
-          if (level.getCell(new_pos[0], new_pos[1])?.props?.noai ||
-            level.getCell(new_pos[0], new_pos[1])?.events?.length
+          if (level.getCell(new_pos[0], new_pos[1])?.props?.noai
+          // moraff: allow walking on pits! just require noai going forward?
+          // || level.getCell(new_pos[0], new_pos[1])?.events?.length
           ) {
             // avoid going onto events (e.g. stairs in/out)
             dy = 0;
@@ -402,16 +424,20 @@ export function aiTraitsClientStartup(): void {
 
         if (dx) {
           let new_pos: JSVec3 = [pos[0] + DX[xdir!], pos[1] + DY[xdir!], pos[2]];
-          let ents = entitiesAt(this.entity_manager, new_pos, floor_id, true);
-          ents = ents.filter(isEnemy);
+          let ents = entitiesAt(new_pos, floor_id, true);
+          if (!player_blocks) {
+            ents = ents.filter(isEnemy);
+          }
           if (ents.length) {
             dx = 0;
           }
         }
         if (dy) {
           let new_pos: JSVec3 = [pos[0] + DX[ydir!], pos[1] + DY[ydir!], pos[2]];
-          let ents = entitiesAt(this.entity_manager, new_pos, floor_id, true);
-          ents = ents.filter(isEnemy);
+          let ents = entitiesAt(new_pos, floor_id, true);
+          if (!player_blocks) {
+            ents = ents.filter(isEnemy);
+          }
           if (ents.length) {
             dy = 0;
           }
@@ -445,6 +471,10 @@ export function aiTraitsClientStartup(): void {
           pos: new_pos,
           last_pos: pos,
         }, undefined, aiIgnoreErrors);
+        // update visibility _after_ the move, so that if they stepped to where
+        //   the player is now visible, and then the player steps away, they get noticed.
+        assert(v2same(new_pos, this.getData<JSVec3>('pos')!));
+        this.aiHuntUpdateTarget(game_state, script_api);
         profilerStopFunc();
         return true;
       },
@@ -463,25 +493,16 @@ export function aiTraitsClientStartup(): void {
 export function enemyVacate(ent_in: EntityCrawlerClient): void {
   let ent = ent_in as Entity;
   let { entity_manager } = ent;
-  let { entities } = entity_manager;
 
-  let blocked: TSMap<true> = {};
   let { floor_id } = crawlerGameState();
   let level = crawlerGameState().level!;
-  for (let ent_id_str in entities) {
-    let other = entities[ent_id_str]!;
-    if (other.data.floor === floor_id) {
-      let pos = other.data.pos;
-      blocked[`${pos[0]},${pos[1]}`] = true;
-    }
-  }
 
   let preferred_dir = myEnt().data.pos[2];
   let done: TSMap<true> = {};
   let script_api = crawlerScriptAPI();
   let todo: JSVec2[] = [];
   function search(pos: JSVec2): void {
-    let key = `${pos[0]},${pos[1]}`;
+    let key = indexPosKey(floor_id, pos[0], pos[1]);
     if (done[key]) {
       return;
     }
@@ -489,11 +510,12 @@ export function enemyVacate(ent_in: EntityCrawlerClient): void {
 
     for (let ii = 0; ii < 4; ++ii) {
       let dir = dirMod(ii + preferred_dir);
-      if (!level.wallsBlock(pos, dir, script_api)) {
+      if (!(level.wallsBlock(pos, dir, script_api) & BLOCK_MOVE)) {
         let nx = pos[0] + DX[dir];
         let ny = pos[1] + DY[dir];
-        let nkey = `${nx},${ny}`;
-        if (!blocked[nkey]) {
+        let nkey = indexPosKey(floor_id, nx, ny);
+        let probe = entity_manager.indexedGet(INDEX_POS, nkey);
+        if (empty(probe)) {
           // move here
           todo.length = 0;
           ent.applyAIUpdate('ai_move', {
@@ -522,10 +544,9 @@ function isLivingPlayer(ent: Entity): boolean {
   return ent.isPlayer() && ent.isAlive();
 }
 
-function foeNear<T extends Entity>(game_state: CrawlerState, ent: T, script_api: CrawlerScriptAPI): T | null {
+function foeNear(game_state: CrawlerState, ent: Entity, script_api: CrawlerScriptAPI): Entity | null {
   // search, needs game_state, returns list of foes
-  let ents: T[] = entitiesAdjacentTo(game_state,
-    ent.entity_manager as unknown as EntityManager<T>,
+  let ents: Entity[] = entitiesAdjacentTo(game_state,
     ent.data.floor, ent.getData('pos')!, script_api);
   ents = ents.filter(isLivingPlayer);
   if (ents.length) {
@@ -553,7 +574,7 @@ function aiDoEnemy(
 
   // enemy attack logic goes here
   if (random() < 0.01 || CRAWLER_TURN_BASED) {
-    attackPlayer(ent, target_ent, 'BAM!');
+    attackPlayer(ent, target_ent, 'hit', 'BAM!');
   }
 
   profilerStopFunc();
@@ -564,7 +585,7 @@ function aiDoEnemy(
 export function aiDoFloor(params: {
   floor_id: number;
   game_state: CrawlerState;
-  entity_manager: EntityManager<Entity>;
+  entity_manager: ClientEntityManagerInterface<Entity>;
   defines: Partial<Record<string, true>>;
   ai_pause: boolean;
   script_api: CrawlerScriptAPI;
@@ -587,7 +608,7 @@ export function aiDoFloor(params: {
     return;
   }
   let frame_timestamp = getFrameTimestamp();
-  let entities = entity_manager.entities;
+  let floor_ents = entity_manager.indexedGet(INDEX_FLOOR, floor_id);
   let level = game_state.levels[floor_id];
   if (level.getProp('aipause')) {
     return;
@@ -595,10 +616,9 @@ export function aiDoFloor(params: {
   profilerStartFunc();
   script_api.setLevel(level);
   let player_pos = myEnt().getData('pos')! as ROVec2;
-  for (let ent_id in entities) {
-    let ent = entities[ent_id]!;
-    if (ent.data.floor !== floor_id || ent.fading_out || ent.is_player || !ent.isAlive()) {
-      // not on current floor
+  for (let ent_id in floor_ents) {
+    let ent = floor_ents[ent_id]!;
+    if (ent.fading_out || ent.is_player || !ent.isAlive()) {
       continue;
     }
 
@@ -646,7 +666,7 @@ export function aiDoFloor(params: {
 export function aiStepFloor(params: {
   floor_id: number;
   game_state: CrawlerState;
-  entity_manager: EntityManager<Entity>;
+  entity_manager: ClientEntityManagerInterface<Entity>;
   defines: Partial<Record<string, true>>;
   ai_pause: boolean;
   script_api: CrawlerScriptAPI;
@@ -668,18 +688,17 @@ export function aiStepFloor(params: {
   if (ai_pause) {
     return;
   }
-  let entities = entity_manager.entities;
   let level = game_state.levels[floor_id];
   if (level.getProp('aipause')) {
     return;
   }
   profilerStartFunc();
+  let floor_ents = entity_manager.indexedGet(INDEX_FLOOR, floor_id);
   script_api.setLevel(level);
   let player_pos = myEnt().getData('pos')! as ROVec2;
-  for (let ent_id in entities) {
-    let ent = entities[ent_id]!;
-    if (ent.data.floor !== floor_id || ent.fading_out || ent.is_player || !ent.isAlive()) {
-      // not on current floor
+  for (let ent_id_str in floor_ents) {
+    let ent = floor_ents[ent_id_str]!;
+    if (ent.fading_out || ent.is_player || !ent.isAlive()) {
       continue;
     }
 

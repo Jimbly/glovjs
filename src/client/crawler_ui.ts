@@ -1,3 +1,4 @@
+import { actionDown, actionEdge, ActionKey } from 'glov/client/actions';
 import * as engine from 'glov/client/engine';
 import { ALIGN, Font, FontStyle, fontStyle } from 'glov/client/font';
 import { Box } from 'glov/client/geom_types';
@@ -5,13 +6,6 @@ import * as input from 'glov/client/input';
 import {
   inputPadMode,
   inputTouchMode,
-  keyDown,
-  keyDownEdge,
-  KEYS,
-  keyUpEdge,
-  padButtonDown,
-  padButtonDownEdge,
-  padButtonUpEdge,
 } from 'glov/client/input';
 import {
   spot,
@@ -70,30 +64,36 @@ export function crawerUISetHotkeyFont(
   hotkey_font_align = align;
 }
 
-const PADNAMES = [
-  'A',
-  'B',
-  'X',
-  'Y',
-  'LB',
-  'RB',
-  'LT',
-  'RT',
-  'Back',
-  '▶', // START
-  'LS',
-  'RS',
-  // '↑', // don't show these, should be obvious from the buttons
-  // '↓',
-  // '←',
-  // '→',
-];
+// const PADNAMES = [
+//   'A',
+//   'B',
+//   'X',
+//   'Y',
+//   'LB',
+//   'RB',
+//   'LT',
+//   'RT',
+//   'Back',
+//   '▶', // START
+//   'LS',
+//   'RS',
+//   // '↑', // don't show these, should be obvious from the buttons
+//   // '↓',
+//   // '←',
+//   // '→',
+// ];
 
 type ButtonState = {
   seen_down_edge: boolean;
 };
 function allocButtonState(): ButtonState {
   return { seen_down_edge: false };
+}
+
+export type FocusCallback = (hotzone: Box, key: string) => void;
+let focus_callback: null | FocusCallback = null;
+export function crawlerUISetFocusCallback(cb: FocusCallback | null): void {
+  focus_callback = cb;
 }
 
 export type CrawlerNavButtonRet = {
@@ -105,8 +105,7 @@ export function crawlerOnScreenButton(param: {
   x: number; y: number; z?: number;
   w: number; h: number;
   frame: number;
-  keys: number[];
-  pads: number[];
+  actions: ActionKey[];
   no_visible_ui: boolean;
   do_up_edge: boolean;
   disabled: boolean;
@@ -114,16 +113,18 @@ export function crawlerOnScreenButton(param: {
   touch_hotzone?: Box;
   is_movement: boolean;
   show_hotkeys: boolean;
+  key: string; // only for focus_callback
 }): CrawlerNavButtonRet {
   const {
     x, y, z, w, h,
-    frame, keys, pads,
+    frame, actions,
     no_visible_ui,
     do_up_edge,
     disabled,
     touch_hotzone,
     is_movement,
     show_hotkeys,
+    key,
   } = param;
 
   let visible_hotkey: string | undefined;
@@ -131,20 +132,22 @@ export function crawlerOnScreenButton(param: {
     if (inputTouchMode()) {
       // No hotkeys
     } else if (inputPadMode()) {
-      if (pads && pads.length) {
-        let pad = pads[0];
-        visible_hotkey = PADNAMES[pad];
-      }
+      // TODO: get name of primary controller bind from `actions`
+      // if (pads && pads.length) {
+      //   let pad = pads[0];
+      //   visible_hotkey = PADNAMES[pad];
+      // }
     } else {
       // keyboard hotkeys (note: removed show_hotkeys from parent here)
-      if (keys.length) {
-        let idx = keys[0];
-        if (idx >= KEYS.A && idx <= KEYS.Z) {
-          visible_hotkey = String.fromCharCode(idx);
-        } else if (idx === KEYS.ESC) {
-          visible_hotkey = 'ESC';
-        }
-      }
+      // TODO: get name of primary keyboard bind from `actions`
+      // if (keys.length) {
+      //   let idx = keys[0];
+      //   if (idx >= KEYS.A && idx <= KEYS.Z) {
+      //     visible_hotkey = String.fromCharCode(idx);
+      //   } else if (idx === KEYS.ESC) {
+      //     visible_hotkey = 'ESC';
+      //   }
+      // }
     }
   }
 
@@ -177,14 +180,15 @@ export function crawlerOnScreenButton(param: {
       }
       state = spot_state;
       if (do_up_edge && button_state.seen_down_edge) {
-        nav_ret.up_edge+=ret;
+        nav_ret.up_edge += ret;
       }
     }
     if (touch_hotzone) {
       if (input.mouseOver({
         ...touch_hotzone,
-        peek: true,
+        peek_touch: true,
       })) {
+        focus_callback?.(touch_hotzone, key);
         if (input.mouseDownEdge(touch_hotzone)) {
           playUISound(sound_button);
           nav_ret.down_edge++;
@@ -195,36 +199,19 @@ export function crawlerOnScreenButton(param: {
         }
       }
     }
-    for (let ii = 0; ii < keys.length; ++ii) {
-      if (keyDownEdge(keys[ii])) {
+    for (let ii = 0; ii < actions.length; ++ii) {
+      let action = actions[ii];
+      if (actionEdge(action)) {
         nav_ret.down_edge++;
         button_state.seen_down_edge = true;
-      }
-      if (keyDown(keys[ii])) {
-        nav_ret.down++;
-      }
-      if (keyUpEdge(keys[ii]) && button_state.seen_down_edge) {
         if (do_up_edge && !disabled) {
           nav_ret.up_edge++;
           spotSetPadMode(true);
           playUISound(sound_button);
         }
       }
-    }
-    for (let ii = 0; ii < pads.length; ++ii) {
-      if (padButtonDownEdge(pads[ii])) {
-        nav_ret.down_edge++;
-        button_state.seen_down_edge = true;
-      }
-      if (padButtonDown(pads[ii])) {
+      if (actionDown(action)) {
         nav_ret.down++;
-      }
-      if (padButtonUpEdge(pads[ii]) && button_state.seen_down_edge) {
-        if (do_up_edge && !disabled) {
-          nav_ret.up_edge++;
-          spotSetPadMode(true);
-          playUISound(sound_button);
-        }
       }
     }
   }

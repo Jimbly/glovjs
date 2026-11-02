@@ -68,7 +68,7 @@ class DeadAction extends UIAction {
 }
 DeadAction.prototype.name = 'Dead';
 DeadAction.prototype.is_overlay_menu = true;
-DeadAction.prototype.is_fullscreen_ui = false;
+DeadAction.prototype.is_fullscreen_ui = true;
 DeadAction.prototype.dim_music = 1;
 
 export function deadOpen(): void {

@@ -1,7 +1,8 @@
 export const BLOCK_OPEN = 0;
 export const BLOCK_MOVE = 1;
 export const BLOCK_VIS = 2;
-export type BlockType = typeof BLOCK_OPEN | typeof BLOCK_MOVE | typeof BLOCK_VIS;
+export const BLOCK_MOSTLY = 4; // mostly opaque / block fighting, interacting, biasing
+export type BlockType = typeof BLOCK_OPEN | typeof BLOCK_MOVE | typeof BLOCK_VIS | typeof BLOCK_MOSTLY;
 
 export type VisualOpts = { _opaque: 'visualopts' };
 type CrawlerVisual = {
@@ -31,6 +32,7 @@ export type WallDesc = {
   ascii_char?: string;
   open_vis: boolean;
   open_move: boolean;
+  mostly_opaque?: boolean; // prevents billboard biasing toward it
   advertise_other_side: boolean;
   sound_id?: string;
   build_hide?: boolean;
@@ -86,6 +88,7 @@ export type CellDesc = {
 };
 export type CellDescs = Partial<Record<string, CellDesc>> & { open: CellDesc };
 export type VstyleDesc = {
+  inherit?: string;
   id: string;
   cell_swaps: Partial<Record<string, string>>;
   wall_swaps: Partial<Record<string, string>>;
@@ -121,10 +124,11 @@ import {
   fileBaseName,
   FSAPI,
 } from 'glov/common/fsapi';
-import { DataObject } from 'glov/common/types';
+import { DataObject, TSMap } from 'glov/common/types';
 import {
   callEach,
   clone,
+  defaultsDeep,
   easeInOut,
   empty,
   lerp,
@@ -197,9 +201,23 @@ export function dirMod(v: number): DirType {
   return v % 4 as DirType;
 }
 
-let last_vstyle: VstyleDesc | null = null;
+let identity_vstyle: VstyleDesc = {
+  id: '',
+  cell_swaps: {},
+  wall_swaps: {},
+  fog_params: vec3(0.003, 0.001, 800.0),
+  background_color: vec3(0,0,0),
+  fog_color: vec3(0,0,0),
+};
+
+let on_apply_vstyle: ((vstyle: VstyleDesc) => void) | null = null;
+export function crawlerOnApplyVstyle(cb: (vstyle: VstyleDesc) => void): void {
+  on_apply_vstyle = cb;
+}
+
+let active_vstyle: VstyleDesc = identity_vstyle;
 function crawlerApplyVstyle(vstyle: VstyleDesc): void {
-  last_vstyle = vstyle;
+  active_vstyle = vstyle;
   let { cell_swaps, wall_swaps } = vstyle;
   for (let key in descs.wall) {
     let wall_desc = descs.wall[key]!;
@@ -219,6 +237,11 @@ function crawlerApplyVstyle(vstyle: VstyleDesc): void {
       dataError(`vstyle swaps "${key}" to unknown celldef: "${cell_swaps[key]}"`);
     }
   }
+  on_apply_vstyle?.(vstyle);
+}
+
+export function crawlerVstyle(): VstyleDesc {
+  return active_vstyle;
 }
 
 let inv_base64_char_table = (function () {
@@ -449,14 +472,6 @@ function serializeCell(cell: CrawlerCell): CrawlerCellSerialized {
 }
 
 let dummy_cell: CrawlerCell;
-let identity_vstyle: VstyleDesc = {
-  id: '',
-  cell_swaps: {},
-  wall_swaps: {},
-  fog_params: vec3(0.003, 0.001, 800.0),
-  background_color: vec3(0,0,0),
-  fog_color: vec3(0,0,0),
-};
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export type CrawlerLevelState = {
@@ -500,13 +515,13 @@ export class CrawlerLevel {
   props: CrawlerCellProps = {};
   paths: CrawlerLevelPaths = {};
   default_open_cell = descs.cell.open;
-  vstyle: VstyleDesc = identity_vstyle;
+  vstyle_id: string = 'default';
   seed: string = 'dummyseed';
   // constructor() {
   // }
 
   hasVstyle(): boolean {
-    return this.vstyle !== identity_vstyle;
+    return this.vstyle_id !== 'default';
   }
 
   getVisString(): string {
@@ -521,8 +536,8 @@ export class CrawlerLevel {
         str.push(base64CharTable[v]);
         str.push(base64CharTable[c-1]);
         c = 0;
-        v = nextv;
       }
+      v = nextv;
       c++;
     }
     str.push(base64CharTable[v]);
@@ -530,22 +545,49 @@ export class CrawlerLevel {
     return str.join('');
   }
 
-  applyVisString(str: string): void {
+  applyVisString(str: string, script_api: CrawlerScriptAPI): void {
     assert.equal(str.length % 2, 0);
     let cell_idx = 0;
     let str_idx = 0;
-    let { cells } = this;
+    let { cells, w } = this;
     while (cell_idx < cells.length && str_idx < str.length) {
       let v = inv_base64_char_table[str[str_idx++]];
       let c = inv_base64_char_table[str[str_idx++]] + 1;
       if (v) {
         while (c && cell_idx < cells.length) {
-          if (!cells[cell_idx].visible_bits) {
-            if (!cells[cell_idx].desc.auto_evict) {
+          let cell = cells[cell_idx];
+          if (!cell.visible_bits) {
+            if (!cell.desc.auto_evict) {
               this.seen_cells++;
             }
           }
-          cells[cell_idx++].visible_bits |= v;
+          cell.visible_bits |= v;
+          if (v) {
+            if (!cell.desc.open_vis) {
+              cell.visible_bits = 0;
+            } else if (!cell.desc.open_move) {
+              cell.visible_bits &= ~(VIS_VISITED|VIS_PASSED_NORTH|VIS_PASSED_EAST);
+            } else {
+              // we're open, but are the neighbors?
+              if (cell.visible_bits & (VIS_PASSED_NORTH|VIS_PASSED_EAST)) {
+                let x = cell_idx % w;
+                let y = (cell_idx - x) / w;
+                let pos: JSVec2 = [x, y];
+                if (cell.visible_bits & VIS_PASSED_NORTH) {
+                  if (this.wallsBlock(pos, NORTH, script_api) & BLOCK_MOVE) {
+                    cell.visible_bits &= ~VIS_PASSED_NORTH;
+                  }
+                }
+                if (cell.visible_bits & VIS_PASSED_EAST) {
+                  if (this.wallsBlock(pos, EAST, script_api) & BLOCK_MOVE) {
+                    cell.visible_bits &= ~VIS_PASSED_EAST;
+                  }
+                }
+              }
+            }
+          }
+
+          cell_idx++;
           --c;
         }
       } else {
@@ -568,9 +610,7 @@ export class CrawlerLevel {
   }
 
   setVstyle(id: string): void {
-    let vstyle_desc = descs.vstyle[id || 'default'];
-    assert(vstyle_desc);
-    this.vstyle = vstyle_desc;
+    this.vstyle_id = id || 'default';
   }
 
   resetState(): void {
@@ -725,8 +765,9 @@ export class CrawlerLevel {
     let cur_cell = this.getCell(pos[0], pos[1]);
     let ret = BLOCK_OPEN; // 0
     if (cur_cell) {
-      let wall_desc = getEffWall(script_api, cur_cell, dir);
-      if (!wall_desc.open_move) {
+      // base used for physical queries - swapping the visuals on a secret door shouldn't solidify it!
+      let wall_desc_base = getEffWall(script_api, cur_cell, dir);
+      if (!wall_desc_base.open_move) {
         ret |= BLOCK_MOVE;
       } else {
         let neighbor_cell = this.getCell(pos[0] + DX[dir], pos[1] + DY[dir]);
@@ -737,11 +778,26 @@ export class CrawlerLevel {
           }
         }
       }
-      if (!wall_desc.open_vis) { // e.g. doors
+      let wall_desc_swapped = wall_desc_base.swapped; // used for visual query
+      if (!wall_desc_swapped.open_vis) { // e.g. doors
         ret |= BLOCK_VIS;
+      }
+      if (wall_desc_swapped.mostly_opaque) { // e.g. doors with windows
+        ret |= BLOCK_MOSTLY;
       }
     }
     return ret as BlockType;
+  }
+
+  wallsBlockBias(pos: ROVec2, dir: DirType, script_api: CrawlerScriptAPI): boolean {
+    let cur_cell = this.getCell(pos[0], pos[1]);
+    if (cur_cell) {
+      let wall_desc = getEffWall(script_api, cur_cell, dir).swapped;
+      if (!wall_desc.open_vis || wall_desc.mostly_opaque) { // e.g. doors
+        return true;
+      }
+    }
+    return false;
   }
 
   isSecretDoor(pos: ROVec2, dir: DirType, script_api: CrawlerScriptAPI): boolean {
@@ -769,18 +825,32 @@ export class CrawlerLevel {
     script_api: CrawlerScriptAPI,
     vis_block?: ((this: CrawlerLevel, x: number, y: number, dir: DirType, script_api: CrawlerScriptAPI) => boolean),
   ): boolean {
+    return this.simpleVisCheckInternal(
+      pos0,
+      pos1,
+      [pos1[0] + 0.5, pos1[1] + 0.5],
+      script_api, vis_block);
+  }
+
+  simpleVisCheckInternal(
+    ipos0: ROVec2,
+    ipos1: ROVec2,
+    fpos1: ROVec2,
+    script_api: CrawlerScriptAPI,
+    vis_block?: ((this: CrawlerLevel, x: number, y: number, dir: DirType, script_api: CrawlerScriptAPI) => boolean),
+  ): boolean {
     let check = (vis_block || this.visBlockNormal).bind(this);
     let max_steps = 100;
-    let ix = pos0[0];
-    let x0 = ix + 0.5;
-    let iy = pos0[1];
-    let y0 = iy + 0.5;
-    let targetx = pos1[0];
-    let targety = pos1[1];
-    let dx = targetx - ix;
+    let ix = ipos0[0];
+    let x0 = ipos0[0] + 0.5;
+    let iy = ipos0[1];
+    let y0 = ipos0[1] + 0.5;
+    let targetx = ipos1[0];
+    let targety = ipos1[1];
+    let dx = fpos1[0] - x0;
     let signdx = sign(dx);
     const xdir = dx > 0 ? EAST : WEST;
-    let dy = targety - iy;
+    let dy = fpos1[1] - y0;
     let signdy = sign(dy);
     const ydir = dy > 0 ? NORTH : SOUTH;
 
@@ -825,6 +895,25 @@ export class CrawlerLevel {
       }
     }
     return true;
+  }
+
+  // Checks from center of tile at pos0 to target positions in tile at pos1
+  rayVisCheck(
+    pos0: ROVec2,
+    pos1: ROVec2,
+    script_api: CrawlerScriptAPI,
+    targets?: Readonly<ROVec2[]>,
+    vis_block?: ((this: CrawlerLevel, x: number, y: number, dir: DirType, script_api: CrawlerScriptAPI) => boolean),
+  ): boolean {
+    targets = targets || [[0.5, 0.5]];
+    for (let ii = 0; ii < targets.length; ++ii) {
+      let target_offs = targets[ii];
+      let target = [pos1[0] + target_offs[0], pos1[1] + target_offs[1]] as const;
+      if (this.simpleVisCheckInternal(pos0, pos1, target, script_api, vis_block)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   fromASCII(source: string[]): void {
@@ -888,7 +977,7 @@ export class CrawlerLevel {
       initial_entities: this.initial_entities,
       initial_state: this.initial_state,
       state: this.state,
-      vstyle: this.vstyle.id,
+      vstyle: this.vstyle_id === 'default' ? '' : this.vstyle_id,
       seed: this.seed,
       props: this.props,
       paths: this.paths,
@@ -1110,12 +1199,33 @@ export class CrawlerState {
     this.resetAllLevels();
   }
 
+  vstyle_swaps: TSMap<string> = Object.create(null);
+  setVstyleSwap(src: string, dst: string | null): void {
+    let changed = false;
+    if (dst) {
+      if (this.vstyle_swaps[src] !== dst) {
+        this.vstyle_swaps[src] = dst;
+        changed = true;
+      }
+    } else {
+      if (this.vstyle_swaps[src]) {
+        delete this.vstyle_swaps[src];
+        changed = true;
+      }
+    }
+    if (changed && this.level && this.level.vstyle_id === src) {
+      let vid = src;
+      crawlerApplyVstyle(descs.vstyle[this.vstyle_swaps[vid] || vid] || identity_vstyle);
+    }
+  }
+
   setLevelActive(floor_id: number): void {
     assert(this.hasLevel(floor_id));
     // this.getLevelForFloor(floor_id);
     this.floor_id = floor_id;
     this.level = this.levels[floor_id];
-    crawlerApplyVstyle(this.level.vstyle);
+    let vid = this.level.vstyle_id;
+    crawlerApplyVstyle(descs.vstyle[this.vstyle_swaps[vid] || vid] || identity_vstyle);
     // eslint-disable-next-line @typescript-eslint/no-use-before-define
     celltypeFinalizeReferences();
   }
@@ -1135,6 +1245,22 @@ export class CrawlerState {
 
   hasLevel(floor_id: number): boolean {
     return Boolean(this.levels[floor_id]);
+  }
+
+  resetLevels(predicate: (floor_id: number) => boolean): void {
+    for (let floor_id_str in this.levels) {
+      let floor_id = Number(floor_id_str);
+      if (this.levels_loading[floor_id]) {
+        continue;
+      }
+      if (predicate(floor_id)) {
+        let level = this.levels[floor_id];
+        if (this.level === level) {
+          this.level = null;
+        }
+        delete this.levels[floor_id];
+      }
+    }
   }
 
   levels_loading: Partial<Record<number, LevelCB[]>> = {};
@@ -1260,16 +1386,30 @@ function walltypeLoad(filename: string): WallDesc {
   return wall_desc;
 }
 
+function vstyleApplyInheritance(vstyle: VstyleDesc): void {
+  if (!vstyle.inherit) {
+    return;
+  }
+  let parent = descs.vstyle[vstyle.inherit];
+  if (!parent) {
+    return dataError(`Vstyle "${vstyle.id}" inheriting from  unknown vstyle "${vstyle.inherit}"`);
+  }
+  defaultsDeep(vstyle, parent);
+}
+
 function vstyleLoad(filename: string): VstyleDesc {
-  let vstyle_desc = fs.getFile<VstyleDesc>(filename, 'jsobj');
+  let vstyle_desc = clone(fs.getFile<VstyleDesc>(filename, 'jsobj'));
   let id = fileBaseName(filename);
   vstyle_desc.id = id;
+  return vstyle_desc;
+}
+
+function vstyleApplyDefaults(vstyle_desc: VstyleDesc): void { // *after* inheritance
   vstyle_desc.cell_swaps = vstyle_desc.cell_swaps || {};
   vstyle_desc.wall_swaps = vstyle_desc.wall_swaps || {};
   vstyle_desc.background_color = vstyle_desc.background_color || identity_vstyle.background_color;
   vstyle_desc.fog_params = vstyle_desc.fog_params || identity_vstyle.fog_params;
   vstyle_desc.fog_color = vstyle_desc.fog_color || identity_vstyle.fog_color;
-  return vstyle_desc;
 }
 
 let no_corners: Partial<Record<string, Record<CornerDetailType, CrawlerVisual[]>>> = {};
@@ -1340,7 +1480,7 @@ function walltypeFinalizeReferences(): void {
 }
 
 function vstyleFinalizeReferences(): void {
-  crawlerApplyVstyle(last_vstyle || identity_vstyle);
+  crawlerApplyVstyle(active_vstyle || identity_vstyle);
 }
 
 function reloadDesctype(set: 'wall' | 'cell' | 'vstyle', new_desc: CellDesc | WallDesc | VstyleDesc): void {
@@ -1376,8 +1516,21 @@ function reloadCelltype(path: string): void {
 
 function reloadVstyle(path: string): void {
   let new_desc = vstyleLoad(path);
+  vstyleApplyInheritance(new_desc);
+  vstyleApplyDefaults(new_desc);
   reloadDesctype('vstyle', new_desc);
+  // reload all who may inherit from this
+  for (let vstyle_id in descs.vstyle) {
+    let other = descs.vstyle[vstyle_id]!;
+    if (other.inherit === new_desc.id) {
+      let other_desc = vstyleLoad(`vstyles/${other.id}.vstyle`);
+      vstyleApplyInheritance(other_desc);
+      vstyleApplyDefaults(other_desc);
+      reloadDesctype('vstyle', other_desc);
+    }
+  }
   vstyleFinalizeReferences();
+  celltypeFinalizeReferences(); // change in swaps may impact default_corners
 }
 
 
@@ -1422,6 +1575,11 @@ export function crawlerLoadData(fs_in: FSAPI): void {
     let filename = files[ii];
     let obj = vstyleLoad(filename);
     vstyle_descs[obj.id] = obj;
+  }
+  for (let vstyle_id in vstyle_descs) {
+    let vstyle = vstyle_descs[vstyle_id]!;
+    vstyleApplyInheritance(vstyle);
+    vstyleApplyDefaults(vstyle);
   }
 
   // validate and look up references

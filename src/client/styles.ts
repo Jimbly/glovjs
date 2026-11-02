@@ -12,3 +12,9 @@ export const style_text = fontStyle(null, {
   outline_color: 0x000000ff,
 });
 export const style_damage = style_text;
+export const style_incoming_miss = style_text;
+export const style_incoming_damage = style_text;
+
+export const style_hotkey = fontStyle(style_text, {
+  color: 0x80FF80ff,
+});

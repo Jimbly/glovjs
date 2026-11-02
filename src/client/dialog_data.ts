@@ -1,5 +1,4 @@
 /* eslint prefer-template:off, @stylistic/max-len:off, @typescript-eslint/no-unused-vars:off */
-export const SHUTTLE_COST = 100;
 import { cmd_parse } from 'glov/client/cmds';
 import { ALIGN } from 'glov/client/font';
 import { inputTouchMode } from 'glov/client/input';
@@ -15,6 +14,7 @@ import {
   CrawlerScriptAPI,
   CrawlerScriptEventMapIcon,
 } from '../common/crawler_script';
+import { INDEX_FLOOR } from './crawler_entity_client';
 import { crawlerController, crawlerScriptAPI } from './crawler_play';
 import {
   DialogParam,
@@ -49,7 +49,7 @@ export function keyClear(name: string): void {
 
 function killEntWhereIStand(type_id: string): void {
   let api = crawlerScriptAPI();
-  let ents = entitiesAt(entityManager(), api.pos, api.getFloor(), true);
+  let ents = entitiesAt(api.pos, api.getFloor(), true);
   ents = ents.filter((ent) => {
     return ent.type_id === type_id;
   });
@@ -60,11 +60,10 @@ function killEntWhereIStand(type_id: string): void {
 
 function killEntOnFloor(type_id: string): void {
   let api = crawlerScriptAPI();
-  let { entities } = entityManager();
-  let floor_id = api.getFloor();
-  for (let key in entities) {
-    let ent = entities[key]!;
-    if (!ent.fading_out && ent.type_id === type_id && ent.data.floor === floor_id) {
+  let floor_ents = entityManager().indexedGet(INDEX_FLOOR, api.getFloor());
+  for (let ent_id_str in floor_ents) {
+    let ent = floor_ents[ent_id_str]!;
+    if (!ent.fading_out && ent.type_id === type_id) {
       entityManager().deleteEntity(ent.id, 'story');
     }
   }

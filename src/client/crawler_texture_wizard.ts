@@ -3,7 +3,6 @@ import { autoAtlas, autoAtlasOnImage } from 'glov/client/autoatlas';
 import { editBox } from 'glov/client/edit_box';
 import { filewatchOn } from 'glov/client/filewatch';
 import { ALIGN, fontStyleColored } from 'glov/client/font';
-import { KEYS } from 'glov/client/input';
 import {
   button,
   buttonText,
@@ -70,9 +69,11 @@ function textureWizardFindUnused(): void {
   dirty = false;
   let used = Object.create(null);
 
-  let ignore_file = webFSGetFile('atlases/ignored', 'jsobj') as IgnoreFile;
-  for (let ii = 0; ii < ignore_file.tiles.length; ++ii) {
-    used[ignore_file.tiles[ii]] = true;
+  if (webFSExists('atlases/ignored')) {
+    let ignore_file = webFSGetFile('atlases/ignored', 'jsobj') as IgnoreFile;
+    for (let ii = 0; ii < ignore_file.tiles.length; ++ii) {
+      used[ignore_file.tiles[ii]] = true;
+    }
   }
 
   function add(atlas: string, tile: string | string[], where: string): void {
@@ -496,7 +497,7 @@ export function crawlerTextureWizard(): void {
     x: x1 - button_width,
     y: y1 - button_height,
     z,
-    hotkey: KEYS.ESC,
+    hotaction: 'cancel',
     text: 'Not now',
   })) {
     unused = [];

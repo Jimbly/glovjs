@@ -24,3 +24,9 @@ export const SOUND_DATA = {
   //   volume: 1,
   // }],
 } satisfies Partial<Record<string, UISoundID | string | string[] | UISoundID[]>>;
+
+export type GameSoundID = keyof typeof SOUND_DATA;
+
+export function validSoundID(test: string): test is GameSoundID {
+  return Boolean((SOUND_DATA as Partial<Record<string, unknown>>)[test]);
+}

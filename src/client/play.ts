@@ -1,6 +1,15 @@
 import assert from 'assert';
+import {
+  actionBindKB,
+  actionBindPad,
+  actionEdge,
+  ActionKey,
+  actionRegister,
+} from 'glov/client/actions';
 import { autoResetSkippedFrames } from 'glov/client/auto_reset';
 import { autoAtlasSwap } from 'glov/client/autoatlas';
+import { bindKB, bindLayerRegister } from 'glov/client/binds';
+import { blend } from 'glov/client/blend';
 import { cmd_parse } from 'glov/client/cmds';
 import * as engine from 'glov/client/engine';
 import { ClientEntityManagerInterface } from 'glov/client/entity_manager_client';
@@ -9,15 +18,15 @@ import {
   Font,
   fontStyleAlpha,
 } from 'glov/client/font';
-import * as input from 'glov/client/input';
 import {
-  keyDown,
+  inputClick,
+  inputPadMode,
+  inputTouchMode,
   keyDownEdge,
   KEYS,
-  keyUpEdge,
-  PAD,
-  padButtonUpEdge,
+  mousePos,
 } from 'glov/client/input';
+import { markdownSetColorStyle } from 'glov/client/markdown_renderables';
 import { ClientChannelWorker, netSubs } from 'glov/client/net';
 import * as settings from 'glov/client/settings';
 import {
@@ -25,9 +34,16 @@ import {
   settingsSet,
 } from 'glov/client/settings';
 import {
+  SPOT_NAVTYPE_EXTENDED,
+  SPOT_NAVTYPE_SIMPLE,
+  spotSetNavtype,
+  spotSuppressPad,
+} from 'glov/client/spot';
+import {
   Sprite,
   spriteCreate,
 } from 'glov/client/sprites';
+import { textureLoadCount, texturesDelayStreamingPostLoad } from 'glov/client/textures';
 import * as transition from 'glov/client/transition';
 import {
   ButtonStateString,
@@ -43,7 +59,7 @@ import {
   EntityID,
   TSMap,
 } from 'glov/common/types';
-import { clamp, easeIn, easeOut, ridx } from 'glov/common/util';
+import { clamp, easeIn, easeOut, ridx, spiralPos } from 'glov/common/util';
 import {
   JSVec2,
   JSVec3,
@@ -57,19 +73,21 @@ import {
   vec3,
   vec4,
 } from 'glov/common/vmath';
-import { CRAWLER_IS_ONLINE, CRAWLER_TURN_BASED } from '../common/crawler_config';
+import { CRAWLER_EVICT_OVERLAPPING_ENTS, CRAWLER_IS_ONLINE, CRAWLER_TURN_BASED } from '../common/crawler_config';
 import {
+  BLOCK_MOVE,
   CrawlerLevel,
   crawlerLoadData,
   dirMod,
+  DirType,
 } from '../common/crawler_state';
+import { gameEntityTraitsCommonStartup } from '../common/game_entity_traits_common';
 import {
   aiDoFloor,
   aiStepFloor,
   AIStepPayload,
   aiTraitsClientStartup,
 } from './ai';
-import { blend } from './blend';
 // import './client_cmds';
 import {
   buildModeActive,
@@ -83,6 +101,7 @@ import {
   controllerOnBumpEntity,
   CrawlerController,
   crawlerControllerTouchHotzonesAuto,
+  shiftDown,
 } from './crawler_controller';
 import {
   crawlerEntFactory,
@@ -130,17 +149,26 @@ import {
 import { crawlerScriptAPIDummyServer } from './crawler_script_api_client';
 import { crawlerOnScreenButton } from './crawler_ui';
 import { dialogNameRender } from './dialog_data';
-import { dialogMoveLocked, dialogReset, dialogRun, dialogStartup } from './dialog_system';
 import {
+  dialogActive,
+  dialogMoveLocked,
+  dialogReset,
+  dialogRun,
+  dialogStartup,
+} from './dialog_system';
+import {
+  entitiesAt,
   EntityClient,
+  entityClientConstructor,
   entityManager,
-  gameEntityTraitsClientStartup,
 } from './entity_game_client';
 import {
   game_height,
   game_width,
   MOVE_BUTTON_H,
   MOVE_BUTTON_W,
+  MOVE_BUTTON_XPAD,
+  MOVE_BUTTON_YPAD,
   render_height,
   render_width,
   VIEWPORT_X0,
@@ -150,13 +178,16 @@ import { levelGenTest } from './level_gen_test';
 import { chatUI } from './main';
 import { tickMusic } from './music';
 import { renderAppStartup } from './render_app';
-import { SOUND_DATA } from './sound_data';
+import { GameSoundID } from './sound_data';
 import {
   statusPush,
+  statusSet,
   statusTick,
 } from './status';
 import {
-  style_damage,
+  style_hotkey,
+  style_incoming_damage,
+  style_incoming_miss,
   style_text,
 } from './styles';
 import { uiActionClear, uiActionCurrent, uiActionTick } from './uiaction';
@@ -169,8 +200,15 @@ const { atan2, exp, floor, max, min, random, round, PI } = Math;
 declare module 'glov/client/settings' {
   export let ai_pause: 0 | 1; // TODO: move to ai.ts
   export let show_fps: 0 | 1;
-  export let turn_toggle: 0 | 1;
   export let depixel: 0 | 1;
+}
+
+declare module 'glov/client/actions' {
+  interface ActionRegistry {
+    menu: 0;
+    map: 0;
+    build_mode: 0;
+  }
 }
 
 // const ATTACK_WINDUP_TIME = 1000;
@@ -234,7 +272,7 @@ export function randInt(range: number): number {
   return floor(random() * range);
 }
 
-export function playSoundFromEnt(ent: Entity, sound_id: keyof typeof SOUND_DATA): void {
+export function playSoundFromEnt(ent: Entity, sound_id: GameSoundID): void {
   let pos = ent.getData<JSVec3>('pos')!;
 
   playUISound(sound_id, {
@@ -243,30 +281,31 @@ export function playSoundFromEnt(ent: Entity, sound_id: keyof typeof SOUND_DATA)
   });
 }
 
-export function playSound(sound_id: keyof typeof SOUND_DATA): void {
+export function playSound(sound_id: GameSoundID): void {
   playUISound(sound_id);
 }
 
 function aiStep(reason: TurnBasedStepReason): void {
+  if (buildModeActive()) {
+    return;
+  }
   // playSound('button_click');
   let game_state = crawlerGameState();
-  if (!buildModeActive()) {
-    let script_api = crawlerScriptAPI();
-    script_api.is_visited = true; // Always visited for AI
-    let payload: AIStepPayload = {
-      reason,
-    };
-    aiStepFloor({
-      floor_id: game_state.floor_id,
-      game_state,
-      entity_manager: entityManager(),
-      defines: engine.defines,
-      ai_pause: Boolean(settings.ai_pause || engine.defines.LEVEL_GEN),
-      script_api,
-      distance_limit: 9,
-      payload,
-    });
-  }
+  let script_api = crawlerScriptAPI();
+  script_api.is_visited = true; // Always visited for AI
+  let payload: AIStepPayload = {
+    reason,
+  };
+  aiStepFloor({
+    floor_id: game_state.floor_id,
+    game_state,
+    entity_manager: entityManager(),
+    defines: engine.defines,
+    ai_pause: Boolean(settings.ai_pause || engine.defines.LEVEL_GEN),
+    script_api,
+    distance_limit: 9,
+    payload,
+  });
 }
 
 function drawBar(
@@ -331,6 +370,7 @@ type IncomingDamage = {
   start: number;
   msg: string;
   from: number; // 0 = front, 1 = right, 2 = back, etc
+  style: string;
   pos?: JSVec2;
 };
 let incoming_damage: IncomingDamage[] = [];
@@ -415,17 +455,20 @@ function drawStatsOverViewport(): void {
       }
     }
 
-    if (elapsed < BLINK_TIME && floater.msg !== 'MISS') {
+    if (elapsed < BLINK_TIME && floater.style !== 'miss') {
       blink = min(blink, elapsed / BLINK_TIME);
     }
     let float = 0.5 + 0.5 * easeOut(min(elapsed / 250, 1), 2);
     let floaty = easeOut(elapsed / (FLOATER_TIME + FLOATER_FADE), 2) * 10;
     let posx = VIEWPORT_X0 + (floater.pos[0] + 0.5) * DAMAGE_GRID_CELL_W;
     let posy = VIEWPORT_Y0 + render_height - (floater.pos[1] + 0.5) * DAMAGE_HEIGHT;
-    font.drawSizedAligned(fontStyleAlpha(style_damage, alpha),
+    let damage_height = (floater.style === 'miss' || floater.style === 'whiff' ? 0.667 : 1) * DAMAGE_HEIGHT;
+    let font_style = floater.style === 'miss' || floater.style === 'whiff' ?
+      style_incoming_miss : style_incoming_damage;
+    font.drawSizedAligned(fontStyleAlpha(font_style, alpha),
       posx - 400,
       posy + floaty, Z.FLOATERS,
-      DAMAGE_HEIGHT * float, ALIGN.HVCENTER | ALIGN.HWRAP,
+      damage_height * float, ALIGN.HVCENTER | ALIGN.HWRAP,
       800, 0, floater.msg);
   }
   if (blink < 1) {
@@ -524,13 +567,15 @@ function doEngagedEnemy(): void {
   }
 }
 
-function moveBlocked(): boolean {
-  return false;
-}
-
 // TODO: move into crawler_play?
 const MSG_STEP_DELAY = 200; // set to non-zero to delay multiple floaters added at the same time
-export function addFloater(ent_id: EntityID, message: string | null, anim?: string, blink_good?: boolean): void {
+export function addFloater(
+  ent_id: EntityID,
+  message: string | null,
+  anim?: string,
+  blink_good?: boolean,
+  size_mult?: number
+): void {
   let ent = crawlerEntityManager().getEnt(ent_id);
   if (ent) {
     if (message) {
@@ -538,14 +583,22 @@ export function addFloater(ent_id: EntityID, message: string | null, anim?: stri
         ent.floaters = [];
       }
       let start = engine.frame_timestamp;
+      let yoffs = 0;
       if (ent.floaters.length) {
-        start = max(start, ent.floaters[ent.floaters.length - 1].start + MSG_STEP_DELAY);
+        let last_start = ent.floaters[ent.floaters.length - 1].start;
+        if (last_start >= start) {
+          // happened on this frame, or was delayed until after it
+          start = max(start, ent.floaters[ent.floaters.length - 1].start + MSG_STEP_DELAY);
+          yoffs = ent.floaters.length;
+        }
       }
       ent.floaters.push({
         start,
         msg: message,
         blink_good,
-        yoffs: ent.floaters.length,
+        yoffs,
+        size_mult,
+        xoffs: random() * 2 - 1,
       });
     }
     if (ent.triggerAnimation && anim) {
@@ -556,14 +609,18 @@ export function addFloater(ent_id: EntityID, message: string | null, anim?: stri
 
 export function autosave(): void {
   if (engine.defines.NOAUTOSAVE) {
-    statusPush('Skipped auto-save.');
+    if (engine.DEBUG) {
+      statusPush('Skipped auto-save.').fade();
+    }
     return;
   }
   crawlerSaveGame('auto');
-  statusPush('Auto-saved.');
+  if (engine.DEBUG) {
+    statusPush('Auto-saved.').fade();
+  }
 }
 
-export function attackPlayer(source: Entity, target: Entity, message: string): void {
+export function attackPlayer(source: Entity, target: Entity, style: string, message: string): void {
   assert.equal(myEnt(), target);
   let dx = source.data.pos[0] - target.data.pos[0];
   let dy = source.data.pos[1] - target.data.pos[1];
@@ -573,6 +630,7 @@ export function attackPlayer(source: Entity, target: Entity, message: string): v
     start: engine.frame_timestamp,
     msg: message,
     from: rot,
+    style,
   });
 
   let dss = (source as unknown as EntityDrawableSprite).drawable_sprite_state;
@@ -594,7 +652,30 @@ const MOVE_BUTTONS_Y0 = 179;
 
 
 function useNoText(): boolean {
-  return input.inputTouchMode() || input.inputPadMode() || settings.turn_toggle;
+  return Boolean(inputTouchMode() || inputPadMode());
+}
+
+function checkForAutoEvict(): void {
+  let pos = controller.getEffPos();
+  let game_state = crawlerGameState();
+  let { level } = game_state;
+  if (!level) {
+    return;
+  }
+  let cur_cell = level.getCell(pos[0], pos[1]);
+  if (!cur_cell || !cur_cell.desc.auto_evict) {
+    return;
+  }
+  if (controller.forceMoveBackwards()) {
+    return;
+  }
+  for (let dir = 0 as DirType; dir < 4; ++dir) {
+    if (!(level.wallsBlock(pos, dir, crawlerScriptAPI()) & BLOCK_MOVE)) {
+      controller.forceMove(dir);
+      return;
+    }
+  }
+  assert(false, 'on an auto_evict, but nowhere to go!');
 }
 
 function playCrawl(): void {
@@ -604,11 +685,12 @@ function playCrawl(): void {
     return profilerStopFunc();
   }
 
-  const is_dead = !myEnt().isAlive();
+  let me = myEnt();
+  const is_dead = !me.isAlive();
   // if (!controller.hasMoveBlocker() && is_dead) {
   //   controller.setMoveBlocker(moveBlockDead);
   // }
-  if (!uiActionCurrent() && is_dead) {
+  if (!uiActionCurrent() && !dialogActive() && is_dead) {
     deadOpen();
   }
 
@@ -619,10 +701,18 @@ function playCrawl(): void {
   let up_edge: Record<ValidKeys, number> = {
     menu: 0,
   };
+  let did_up_edge = false;
 
   let dt = getScaledFrameDt();
 
+  if ((dialogMoveLocked() || uiActionCurrent()) && mapViewActive()) {
+    mapViewSetActive(false);
+  }
   const frame_map_view = mapViewActive();
+
+  spotSetNavtype(uiActionCurrent()?.spot_simple_nav ?
+    SPOT_NAVTYPE_SIMPLE : SPOT_NAVTYPE_EXTENDED);
+
   const is_fullscreen_ui = uiActionCurrent()?.is_fullscreen_ui;
   let dialog_viewport = {
     ...DIALOG_RECT,
@@ -659,24 +749,30 @@ function playCrawl(): void {
     });
   }
 
+  if (engine.DEBUG) {
+    texturesDelayStreamingPostLoad();
+  }
 
   let button_x0: number;
   let button_y0: number;
 
-  let disabled = controller.hasMoveBlocker();
+  let disabled = controller.hasMoveBlocker() || locked_dialog;
 
   function crawlerButton(
     rx: number, ry: number,
     frame: number,
+    // label_key: TextKey,
     key: ValidKeys,
-    keys: number[],
-    pads: number[],
-    toggled_down?: boolean
+    actions: ActionKey[],
+    toggled_down?: boolean,
+    tooltip?: string,
+    double_bind?: [ActionKey, ActionKey],
   ): void {
     let z = Z.UI;
     let no_visible_ui = frame_map_view;
     let my_disabled = disabled;
     if (key === 'menu') {
+      // always show this button
       no_visible_ui = false;
       if (frame_map_view) {
         z = Z.MAP + 1;
@@ -685,8 +781,9 @@ function playCrawl(): void {
       } else {
         z = Z.MENUBUTTON;
       }
-      if (overlay_menu_up && !toggled_down) {
+      if ((overlay_menu_up || is_fullscreen_ui) && !toggled_down) {
         my_disabled = true;
+        no_visible_ui = true;
       }
     } else {
       if (overlay_menu_up && toggled_down) {
@@ -695,6 +792,9 @@ function playCrawl(): void {
         my_disabled = my_disabled || overlay_menu_up;
       }
     }
+
+    let xx = button_x0 + (MOVE_BUTTON_W + MOVE_BUTTON_XPAD) * rx;
+    let yy = button_y0 + (MOVE_BUTTON_H + MOVE_BUTTON_YPAD) * ry;
     // font.draw({
     //   style: style_text,
     //   x: button_x0 + (BUTTON_W + 2) * rx,
@@ -705,13 +805,12 @@ function playCrawl(): void {
     //   text: label,
     // });
     let ret = crawlerOnScreenButton({
-      x: button_x0 + (MOVE_BUTTON_W + 2) * rx,
-      y: button_y0 + (MOVE_BUTTON_H + 2) * ry,
+      x: xx,
+      y: yy,
       z,
       w: MOVE_BUTTON_W, h: MOVE_BUTTON_H,
       frame,
-      keys,
-      pads,
+      actions,
       no_visible_ui,
       do_up_edge: true,
       disabled: my_disabled,
@@ -720,10 +819,14 @@ function playCrawl(): void {
         toggled_down ? button_sprites_down : button_sprites,
       is_movement: false,
       show_hotkeys: false,
+      key,
     });
     // down_edge[key] += ret.down_edge;
     down[key] += ret.down;
-    up_edge[key] += ret.up_edge;
+    if (ret.up_edge && !did_up_edge) {
+      did_up_edge = true;
+      up_edge[key] += ret.up_edge;
+    }
   }
 
 
@@ -731,13 +834,12 @@ function playCrawl(): void {
   button_x0 = 317;
   button_y0 = 3;
   let menu_up = frame_map_view || build_mode || overlay_menu_up;
-  let menu_keys = [KEYS.ESC];
-  let menu_pads = [PAD.START];
+  let menu_actions: ActionKey[] = ['menu'];
   if (menu_up) {
-    menu_pads.push(PAD.B, PAD.BACK);
+    menu_actions.push('cancel');
   }
   crawlerButton(0, 0, menu_up ? 10 : 6,
-    'menu', menu_keys, menu_pads, pauseMenuActive());
+    'menu', menu_actions, pauseMenuActive());
   // if (!build_mode) {
   //   crawlerButton(0, 1, 7, 'inv', [KEYS.I], [PAD.Y], inventory_up);
   //   if (up_edge.inv) {
@@ -745,7 +847,7 @@ function playCrawl(): void {
   //   }
   // }
 
-  uiActionTick();
+  uiActionTick(dt);
 
   // Note: moved earlier so player motion doesn't interrupt it
   if (!frame_map_view) {
@@ -753,11 +855,11 @@ function playCrawl(): void {
       // Do game UI/stats here
       drawStatsOverViewport();
       doEngagedEnemy();
-      // crawlerButton(2, 0, inventory_frame, 'inventory', [KEYS.I], []);
+      // crawlerButton(2, 0, inventory_frame, 'inventory', ['inv']);
     }
     // Do modal UIs here
   } else {
-    if (input.click({ button: 2 })) {
+    if (inputClick({ button: 2 })) {
       mapViewToggle();
     }
   }
@@ -778,6 +880,10 @@ function playCrawl(): void {
   //   }
   // }
 
+  if (!locked_dialog && !controller.controllerIsAnimating(1) && !menu_up && !controller.hasMoveBlocker()) {
+    checkForAutoEvict();
+  }
+
   profilerStart('doPlayerMotion');
   controller.doPlayerMotion({
     dt,
@@ -786,7 +892,7 @@ function playCrawl(): void {
     no_visible_ui: frame_map_view || build_mode || !DO_MOVEMENT_BUTTONS,
     button_w: MOVE_BUTTON_W,
     button_sprites: useNoText() ? button_sprites_notext : button_sprites,
-    disable_move: moveBlocked() || overlay_menu_up,
+    disable_move: overlay_menu_up,
     disable_player_impulse: Boolean(locked_dialog),
     show_buttons: !locked_dialog,
     do_debug_move: engine.defines.LEVEL_GEN || build_mode,
@@ -800,23 +906,25 @@ function playCrawl(): void {
   button_y0 = MOVE_BUTTONS_Y0;
 
   let build_mode_allowed = engine.DEBUG || chatUI().getAccessObj().access?.sysadmin;
-  if (build_mode_allowed && keyUpEdge(KEYS.B)) {
-    if (!netSubs().loggedIn()) {
-      modalDialog({
-        text: 'Cannot enter build mode - not logged in',
-        buttons: { ok: null },
-      });
-    } else if (!build_mode_allowed) {
-      modalDialog({
-        text: 'Cannot enter build mode - access denied',
-        buttons: { ok: null },
-      });
-    } else {
-      crawlerBuildModeActivate(!build_mode);
-      if (crawlerCommWant()) {
-        return profilerStopFunc();
+  if (build_mode_allowed) {
+    if (actionEdge('build_mode')) {
+      if (!netSubs().loggedIn()) {
+        modalDialog({
+          text: 'Cannot enter build mode - not logged in',
+          buttons: { ok: null },
+        });
+      } else if (!build_mode_allowed) {
+        modalDialog({
+          text: 'Cannot enter build mode - access denied',
+          buttons: { ok: null },
+        });
+      } else {
+        crawlerBuildModeActivate(!build_mode);
+        if (crawlerCommWant()) {
+          return profilerStopFunc();
+        }
+        uiActionClear();
       }
-      uiActionClear();
     }
   }
 
@@ -842,7 +950,7 @@ function playCrawl(): void {
     }
   }
 
-  if (!overlay_menu_up && (keyDownEdge(KEYS.M) || padButtonUpEdge(PAD.BACK))) {
+  if (!overlay_menu_up && actionEdge('map')) {
     playSound('button_click');
     mapViewToggle();
   }
@@ -891,10 +999,15 @@ function playCrawl(): void {
     });
   }
 
-  statusTick(dialog_viewport);
+  statusTick({
+    ...dialog_viewport,
+    z: overlay_menu_up ? Z.MODAL + 100 : Z.STATUS,
+  });
 
   profilerStopFunc();
 }
+
+let last_tex_load_count = 0;
 
 export function play(dt: number): void {
   profilerStartFunc();
@@ -906,25 +1019,37 @@ export function play(dt: number): void {
   }
   profilerStart('top');
 
+  if (engine.DEBUG) {
+    let tex_load_count = textureLoadCount();
+    if (tex_load_count || last_tex_load_count) {
+      let stat = statusSet('texload', `${tex_load_count} textures loading...`);
+      if (!tex_load_count) {
+        stat.fade();
+      }
+    }
+    last_tex_load_count = tex_load_count;
+  }
+
   screen_shake = 0;
 
   let overlay_menu_up = Boolean(uiActionCurrent()?.is_overlay_menu || dialogMoveLocked());
+  // const is_fullscreen_ui = uiActionCurrent()?.is_fullscreen_ui;
 
   tickMusic(game_state.level?.props.music as string || null); // || 'default_music'
   crawlerPlayTopOfFrame(overlay_menu_up, false);
+  if (mapViewActive()) {
+    spotSuppressPad();
+  }
 
   profilerStopStart('mid');
 
-  if (keyDownEdge(KEYS.F3)) {
-    settingsSet('show_fps', 1 - settings.show_fps);
-  }
   if (keyDownEdge(KEYS.F)) {
     settingsSet('filter', 1 - settings.filter);
   }
   if (keyDownEdge(KEYS.G)) {
     const types = ['instant', 'instantblend', 'queued', 'queued2'];
     let type_idx = types.indexOf(controller.getControllerType());
-    type_idx = (type_idx + (keyDown(KEYS.SHIFT) ? -1 : 1) + types.length) % types.length;
+    type_idx = (type_idx + (shiftDown() ? -1 : 1) + types.length) % types.length;
     controller.setControllerType(types[type_idx]);
     statusPush(`Controller: ${types[type_idx]}`);
   }
@@ -934,7 +1059,7 @@ export function play(dt: number): void {
 
   profilerStopStart('render');
   if (0) {
-    let shear = clamp(input.mousePos()[0]/game_width* 2 - 1, -1, 1);
+    let shear = clamp(mousePos()[0]/game_width* 2 - 1, -1, 1);
     renderViewportShear(shear);
     font.draw({
       x: 100, y: 100,
@@ -947,7 +1072,10 @@ export function play(dt: number): void {
 
   renderSet3DOffset(calcAttackCameraOffs());
   renderSetScreenShake(screen_shake);
-  crawlerPrepAndRenderFrame(false);
+  crawlerPrepAndRenderFrame({
+    is_last_viewport: true,
+    is_main_viewport: true,
+  });
 
   if (!buildModeActive() && game_state.floor_id >= 0 && !CRAWLER_TURN_BASED) {
     let script_api = crawlerScriptAPI();
@@ -973,10 +1101,23 @@ export function play(dt: number): void {
 }
 
 function onPlayerMove(old_pos: Vec2, new_pos: Vec2): void {
+  if (buildModeActive()) {
+    return;
+  }
   // let game_state = crawlerGameState();
   // aiOnPlayerMoved(game_state, myEnt(), old_pos, new_pos,
   //   settings.ai_pause || engine.defines.LEVEL_GEN, script_api);
-  crawlerTurnBasedMovePreStart();
+  let level = crawlerGameState().level;
+  // let cell = level?.getCell(new_pos[0], new_pos[1]);
+  // let target_is_event = cell && cell.props && cell.props.noai;
+  let cell = level?.getCell(old_pos[0], old_pos[1]);
+  let source_is_autoevict = cell && cell.desc.auto_evict;
+
+  if (source_is_autoevict) {
+    // no AI ticking, etc
+  } else {
+    crawlerTurnBasedMovePreStart();
+  }
 }
 
 function onInitPos(): void {
@@ -986,6 +1127,7 @@ function onInitPos(): void {
 function playInitShared(online: boolean): void {
   controller = crawlerController();
 
+  // controller.setOnTurnStart(onTurnStart);
   controller.setOnPlayerMove(onPlayerMove);
   controller.setOnInitPos(onInitPos);
 
@@ -1020,11 +1162,6 @@ settingsRegister({
     type: cmd_parse.TYPE_INT,
     range: [0, 1],
   },
-  turn_toggle: {
-    default_value: 0,
-    type: cmd_parse.TYPE_INT,
-    range: [0, 1],
-  },
   depixel: {
     is_toggle: true,
     default_value: 0,
@@ -1042,7 +1179,10 @@ cmd_parse.register({
   cmd: 'save',
   help: 'Immediately trigger an auto-save',
   func: function (str, resp_func) {
-    autosave();
+    crawlerSaveGame('auto');
+    if (engine.DEBUG) {
+      statusPush('Auto-saved.').fade();
+    }
     resp_func();
   },
 });
@@ -1057,9 +1197,126 @@ function applyAtlasSwaps(): void {
   });
 }
 
+function levelSolid(level: CrawlerLevel, x: number, y: number): boolean {
+  return !level.getCell(x, y)?.desc.open_move;
+}
+
+function posIsEmpty(x: number, y: number): boolean {
+  let game_state = crawlerGameState();
+  let level = game_state.level!;
+  if (levelSolid(level, x, y)) {
+    return false;
+  }
+  if (entitiesAt([x, y], game_state.floor_id, true).length) {
+    return false;
+  }
+  let cell = level.getCell(x, y);
+  assert(cell);
+  if (cell.events) {
+    for (let ii = 0; ii < cell.events.length; ++ii) {
+      // let event = cell.events[ii];
+      // if (event.id === 'teleporter' || event.id === 'shop') {
+      //   return false;
+      // }
+    }
+  }
+  return true;
+}
+
+function findEmptyPos(): JSVec2 {
+  let level = crawlerGameState().level!;
+  let retries = 0;
+  while (true) {
+    let x = floor(random() * level.w);
+    let y = floor(random() * level.h);
+    if (posIsEmpty(x, y)) {
+      return [x, y];
+    }
+    ++retries;
+    assert(retries < 10000);
+  }
+}
+
+function relocate(): void {
+  let pos = findEmptyPos();
+  crawlerController().teleport(pos);
+}
+
+
 function initLevel(cem: ClientEntityManagerInterface<Entity>, floor_id: number, level: CrawlerLevel): void {
+  if (buildModeActive()) {
+    return;
+  }
+
+  let me = myEnt();
+  assert.equal(me.data.floor, floor_id);
+
+  if (!level.getCell(me.data.pos[0], me.data.pos[1])?.desc.open_move) {
+    // presumably loaded an old save game and there's now a solid cell here
+    let oldx = me.data.pos[0];
+    let oldy = me.data.pos[1];
+    relocate();
+    entityManager().actionListFlush();
+    assert(oldx !== me.data.pos[0] || oldy !== me.data.pos[1]);
+  }
+
+  if (CRAWLER_EVICT_OVERLAPPING_ENTS) {
+    // teleport entities overlapping me to a random nearby location (happens
+    // during normal gameplay when entering on a different ladder)
+    let ents = entitiesAt(me.data.pos, floor_id, true);
+    ents.forEach((ent) => {
+      if (ent === me) {
+        return;
+      }
+      if (!ent.is_enemy) {
+        return;
+      }
+      // teleport away nearby
+      // find empty spot
+      let pos = ent.data.pos;
+      for (let ii = 1; ii < 1000; ++ii) {
+        let delta = spiralPos(ii);
+        let new_pos: JSVec3 = [pos[0] + delta[0], pos[1] + delta[1], pos[2]];
+        let cell = level.getCell(new_pos[0], new_pos[1]);
+        if (cell && cell.desc.open_move) {
+          if (entitiesAt(new_pos, floor_id, true).length) {
+            continue;
+          }
+          ent.moveTo(new_pos);
+          return;
+        }
+      }
+      assert(false); // no place to send them?!
+    });
+  }
   dialogReset();
 }
+
+function playActionsInit(): void {
+  bindLayerRegister('non_user_bind', 20);
+
+  actionRegister('menu');
+  actionBindKB('ESC', 'menu');
+  actionBindPad('START', 'menu');
+
+  actionRegister('map');
+  actionBindKB('M', 'map');
+  actionBindKB('X', 'map');
+  actionBindPad('BACK', 'map');
+
+  if (engine.DEBUG) {
+    bindKB({
+      key: 'F3',
+      action: 'cmd',
+      cmd: 'fps',
+      layer: 'non_user_bind',
+    });
+  }
+
+  actionRegister('build_mode');
+  actionBindKB('B', 'build_mode', 0, 'non_user_bind');
+}
+
 
 export function playStartup(): void {
   font = uiGetFont();
@@ -1096,10 +1353,10 @@ export function playStartup(): void {
   crawlerEntityClientStartupEarly();
   let ent_factory = crawlerEntFactory<Entity>();
   aiTraitsClientStartup();
-  gameEntityTraitsClientStartup(ent_factory);
+  gameEntityTraitsCommonStartup(ent_factory);
   crawlerEntityTraitsClientStartup({
     name: 'EntityClient',
-    Ctor: EntityClient,
+    Ctor: entityClientConstructor(),
   });
   crawlerRenderEntitiesStartup({
     font
@@ -1208,5 +1465,9 @@ export function playStartup(): void {
     // style_map_name: fontStyle(...)
     compass_border_w: 6,
   });
+
+  markdownSetColorStyle('hotkey', style_hotkey);
+
   applyAtlasSwaps();
+  playActionsInit();
 }

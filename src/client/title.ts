@@ -1,3 +1,4 @@
+import * as camera2d from 'glov/client/camera2d';
 import {
   DEBUG,
   debugDefineIsSet,
@@ -57,7 +58,7 @@ function title(dt: number): void {
   let y = 40;
   if (ALLOW_ONLINE || DEBUG) {
     let next_y = account_ui.showLogin({
-      x: 10,
+      x: camera2d.x0() + 10,
       y: 10,
       pad: 2,
       text_w: 120,

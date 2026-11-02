@@ -1,6 +1,13 @@
 import assert from 'assert';
 import { alphaDraw, opaqueDraw } from 'glov/client/draw_list';
-import { BUCKET_ALPHA, BUCKET_OPAQUE, FACE_CUSTOM, FACE_XY } from 'glov/client/dyn_geom';
+import {
+  BUCKET_ALPHA,
+  BUCKET_OPAQUE,
+  dynGeomForward,
+  dynGeomRight,
+  FACE_CUSTOM,
+  FACE_XY,
+} from 'glov/client/dyn_geom';
 import {
   getFrameIndex,
   getFrameTimestamp,
@@ -19,7 +26,11 @@ import {
 import * as settings from 'glov/client/settings';
 import type { spineCreate } from 'glov/client/spine';
 import type { SpriteAnimation, SpriteAnimationParam } from 'glov/client/sprite_animation';
-import type { Sprite, SpriteParamBase, TextureOptions } from 'glov/client/sprites';
+import type {
+  Sprite,
+  SpriteParamBase,
+  TextureOptions,
+} from 'glov/client/sprites';
 import { uiTextHeight } from 'glov/client/ui';
 import { dataErrorEx } from 'glov/common/data_error';
 import {
@@ -38,21 +49,29 @@ import {
   ROVec3,
   ROVec4,
   v2addScale,
+  v2copy,
   v2dist,
   v2distSq,
+  v2floor,
   v2scale,
   v2set,
   v3copy,
+  v3scale,
   v3set,
   v4copy,
   v4set,
   Vec2,
   vec2,
+  Vec3,
   vec3,
   vec4,
-  xaxis,
-  yaxis,
 } from 'glov/common/vmath';
+import {
+  EAST,
+  NORTH,
+  SOUTH,
+  WEST,
+} from '../common/crawler_state';
 import {
   billboardBias,
   BillboardBiasOpts,
@@ -62,19 +81,29 @@ import { buildModeActive } from './crawler_build_mode';
 import {
   crawlerEntityManager,
   crawlerGetSpawnDescs,
+  crawlerMyEntOptional,
+  EntDrawParam,
   EntityCrawlerClient,
   EntityDraw2DOpts,
   EntityDrawOpts,
   entityPosManager,
+  INDEX_FLOOR,
   myEntID,
 } from './crawler_entity_client';
-import { crawlerController, crawlerGameState, getScaledFrameDt } from './crawler_play';
 import {
+  crawlerController,
+  crawlerGameState,
+  crawlerScriptAPI,
+  getScaledFrameDt,
+} from './crawler_play';
+import {
+  crawlerRenderFrameIndex,
   crawlerRenderGameViewAngle,
   crawlerRenderGetShader,
   crawlerRenderViewportGet,
   DIM,
   HDIM,
+  MINDIM,
   passesSplitCheck,
   renderCamPos,
   ShaderType,
@@ -84,7 +113,7 @@ import {
 } from './crawler_render';
 import { style_floater } from './styles';
 
-const { ceil, floor } = Math;
+const { abs, ceil, floor, max, min, PI } = Math;
 
 let font: Font;
 
@@ -92,7 +121,7 @@ export type EntityDrawSubOpts = {
   dt: number;
   use_near: boolean;
   shader_params: Partial<Record<string, ROVec2|ROVec3|ROVec4|number[]>>;
-  draw_pos: ROVec3;
+  draw_pos: Vec3;
   color: ROVec4;
 };
 
@@ -115,7 +144,7 @@ export type DrawableSpriteOpts = {
   sprite: Sprite; // assigned at load time
   sprite_near?: Sprite; // assigned at load time
   sprite_hybrid?: Sprite; // assigned at load time
-  scale: number;
+  scale: JSVec2; // either number or Vec2 in data files
   hflip_random: boolean;
   do_alpha?: boolean;
   tint_colors?: [JSVec4, JSVec4, JSVec4][];
@@ -138,6 +167,8 @@ export type DrawableSpriteState = {
   anim_update_frame: number;
   grow_at?: number;
   grow_time?: number;
+  grow_start?: number;
+  grow_finish?: number;
   surge_at?: number;
   surge_time?: number;
   anim_offs: number; // random offset assigned at creation
@@ -187,9 +218,8 @@ export function isEntityDrawableSprite(ent: Entity): ent is EntityDrawableSprite
   return Boolean((ent as EntityDrawableSprite).drawable_sprite_state);
 }
 
-
-const { abs, min } = Math;
-
+let temp_color = vec4();
+const draw_2d_origin = vec2(0.5, 1);
 export function drawableSpriteDraw2D(this: EntityDrawableSprite, param: EntityDraw2DOpts): void {
   let ent = this;
   let frame = ent.updateAnim(getScaledFrameDt());
@@ -200,6 +230,20 @@ export function drawableSpriteDraw2D(this: EntityDrawableSprite, param: EntityDr
   ) {
     sprite = sprite_near;
   }
+  let alpha = sprite.lazyLoad();
+  if (alpha !== 1) {
+    if (param.color) {
+      v4copy(temp_color, param.color);
+    } else {
+      v4set(temp_color, 1, 1, 1, 1);
+    }
+    temp_color[3] *= alpha;
+    param = {
+      ...param,
+      color: temp_color,
+    };
+  }
+
   let aspect = sprite.uidata && sprite.uidata.aspect ? sprite.uidata.aspect[frame] : 1;
   let { w, h } = param;
   if (aspect < w/h) {
@@ -207,11 +251,17 @@ export function drawableSpriteDraw2D(this: EntityDrawableSprite, param: EntityDr
   } else {
     h = abs(w / aspect);
   }
+  let y = param.y + param.h;
+  if (sprite.origin[1] !== 1) {
+    // vertically shifted, just draw centered instead
+    sprite = sprite.withOrigin(draw_2d_origin);
+    y -= (param.h - h) / 2;
+  }
   sprite.draw({
     ...param,
     w, h,
     x: param.x + param.w * 0.5,
-    y: param.y + param.h,
+    y,
     frame,
   });
 }
@@ -221,6 +271,8 @@ let color_temp2 = vec4();
 let draw_pos_temp2 = vec3();
 let pos_temp = vec3();
 let uvs_temp = vec4();
+let face_down = vec3();
+let temp_size = vec2();
 export function drawableSpriteDrawSub(this: EntityDrawableSprite, param: EntityDrawSubOpts): void {
   let ent = this;
   let frame = ent.updateAnim(param.dt);
@@ -232,7 +284,6 @@ export function drawableSpriteDrawSub(this: EntityDrawableSprite, param: EntityD
   } = param;
   let {
     grow_at,
-    grow_time,
     surge_at,
     surge_time,
     sprite,
@@ -242,13 +293,25 @@ export function drawableSpriteDrawSub(this: EntityDrawableSprite, param: EntityD
     sprite_shadow,
     hflip,
   } = ent.drawable_sprite_state;
-  let { scale, simple_anim } = ent.drawable_sprite_opts;
+  let { scale: scale_in, simple_anim } = ent.drawable_sprite_opts;
+  let hscale = scale_in[0];
+  let vscale = scale_in[1];
   if (grow_at) {
+    let {
+      grow_time,
+      grow_start,
+      grow_finish,
+    } = ent.drawable_sprite_state;
+    // default: blink up to bigger, then scale down
+    grow_start = grow_start === undefined ? 1.5 : grow_start;
+    grow_finish = grow_finish === undefined ? 1 : grow_finish;
     assert(typeof grow_time === 'number');
     let t = getFrameTimestamp() - grow_at;
     if (t < grow_time) {
       t /= grow_time;
-      scale *= 1 + easeIn(1 - t, 2) * 0.5;
+      let uniform_scale = lerp(easeOut(t, 2), grow_start, grow_finish);
+      hscale *= uniform_scale;
+      vscale *= uniform_scale;
     }
   }
   if (surge_at) {
@@ -267,17 +330,6 @@ export function drawableSpriteDrawSub(this: EntityDrawableSprite, param: EntityD
       draw_pos = pos_temp;
     }
   }
-  let force_alpha = false;
-  if (ent.fade_out_at) {
-    v4copy(color_temp2, color);
-    color_temp2[3] *= Math.max(0, 1 - (getFrameTimestamp() - ent.fade_out_at)/400);
-    color = color_temp2;
-  }
-  if (color[3] < 1) {
-    force_alpha = true;
-  }
-  let vscale = scale;
-  let hscale = scale;
   v2set(offs_temp, 0, 0);
   if (simple_anim && Array.isArray(simple_anim)) {
     for (let ii = 0; ii < simple_anim.length; ++ii) {
@@ -325,8 +377,29 @@ export function drawableSpriteDrawSub(this: EntityDrawableSprite, param: EntityD
   ) {
     sprite = sprite_near;
   }
+  let load_alpha = sprite.lazyLoad();
+  let force_alpha = false;
+  if (ent.fade_out_at || load_alpha < 1) {
+    v4copy(color_temp2, color);
+    if (ent.fade_out_at) {
+      color_temp2[3] *= Math.max(0, 1 - (getFrameTimestamp() - ent.fade_out_at)/400);
+    }
+    if (load_alpha < 1) {
+      color_temp2[3] *= load_alpha;
+    }
+    color = color_temp2;
+  }
+  if (color[3] < 1) {
+    force_alpha = true;
+  }
+
   let tint_colors = ent.drawable_sprite_opts.tint_colors;
   let shader_type: ShaderTypeEnum = ShaderType.SpriteFragment;
+  if (0) {
+    shader_type = ShaderType.SpriteAnisoFragment;
+    let tex0 = sprite.texs[0];
+    shader_params.tex0_size = tex0.getTexSizeShaderParams().tex0_size;
+  }
   if ((sprite.texs.length > 1 && tint_colors && tint_colors.length)) {
     shader_type = ShaderType.TintedSpriteFragment;
     let costume = min(ent.data.costume || 0, tint_colors.length);
@@ -353,44 +426,60 @@ export function drawableSpriteDrawSub(this: EntityDrawableSprite, param: EntityD
   }
   let shader = crawlerRenderGetShader(shader_type);
   let aspect = sprite.uidata && sprite.uidata.aspect ? sprite.uidata.aspect[frame] : 1;
-  sprite.draw3D({
+  if (aspect > 1) {
+    v2set(temp_size, MINDIM * hscale, MINDIM * vscale / aspect);
+  } else {
+    v2set(temp_size, MINDIM * aspect * hscale, MINDIM * vscale);
+  }
+
+  let draw_param: EntDrawParam = {
     pos: draw_pos,
-    offs: v2scale(offs_temp, offs_temp, DIM),
+    offs: v2scale(offs_temp, offs_temp, MINDIM),
     color,
-    size: [hscale * DIM * aspect, vscale * DIM],
+    size: temp_size,
     bucket: ent.drawable_sprite_opts.do_alpha === false && !force_alpha ? BUCKET_OPAQUE : BUCKET_ALPHA,
     facing: FACE_XY,
     vshader: crawlerRenderGetShader(ShaderType.SpriteVertex),
     shader,
     shader_params,
     uvs,
-  });
+    sprite_shadow,
+    hscale,
+    vscale,
+  };
+
+  if (ent.draw_cb) {
+    ent.draw_cb(draw_param);
+    ({ sprite_shadow } = draw_param);
+  }
+
+  sprite.draw3D(draw_param);
 
   if (sprite_shadow) {
     shader = crawlerRenderGetShader(ShaderType.SpriteFragment);
     aspect = sprite_shadow.uidata && sprite_shadow.uidata.aspect ? sprite_shadow.uidata.aspect[frame] : 1;
     v3copy(draw_pos_temp2, draw_pos);
     draw_pos_temp2[2] += 0.05;
-    let shadow_scale = ent.drawable_sprite_opts.shadow!.scale || scale;
+    let shadow_scale = ent.drawable_sprite_opts.shadow!.scale || hscale;
+    v3scale(face_down, dynGeomForward(), -1);
+    if (aspect > 1) {
+      v2set(temp_size, MINDIM * shadow_scale, MINDIM * shadow_scale / aspect);
+    } else {
+      v2set(temp_size, MINDIM * aspect * shadow_scale, MINDIM * shadow_scale);
+    }
     sprite_shadow.draw3D({
       pos: draw_pos_temp2,
-      //offs: v2scale(offs_temp, offs_temp, DIM),
+      //offs: v2scale(offs_temp, offs_temp, MINDIM),
       frame,
       color,
-      size: [DIM * aspect * shadow_scale, DIM * shadow_scale],
+      size: temp_size,
       bucket: BUCKET_OPAQUE,
       facing: FACE_CUSTOM,
-      face_right: yaxis,
-      face_down: xaxis,
+      face_right: dynGeomRight(),
+      face_down,
       vshader: crawlerRenderGetShader(ShaderType.SpriteVertex),
       shader,
       shader_params,
-    });
-  }
-
-  if (ent.draw_cb) {
-    ent.draw_cb({
-      pos: draw_pos,
     });
   }
 }
@@ -446,6 +535,9 @@ export function drawableSpineDrawSub(this: EntityDrawableSpine, param: EntityDra
 
 let billboard_quat = quat();
 let draw_pos = vec3();
+let draw_pos_orig = vec2();
+let world_pos_floor = vec2();
+let world_pos_ceil = vec2();
 let vhdim = vec3(HDIM, HDIM, HDIM);
 export function drawableDraw(this: EntityDrawable, param: EntityDrawOpts): void {
   let {
@@ -469,14 +561,49 @@ export function drawableDraw(this: EntityDrawable, param: EntityDrawOpts): void 
   //   angle = atan2(dy, dx);
   // }
 
-  // Face view direction - looks better at a 45 degree angle
   angle = crawlerRenderGameViewAngle();
 
   qRotateZ(billboard_quat, unit_quat, angle);
   v2addScale(draw_pos, vhdim, pos, DIM);
   draw_pos[2] = pos[2] * DIM + zoffs * DIM;
+  v2copy(draw_pos_orig, draw_pos);
+  v2floor(world_pos_floor, pos);
 
   billboardBias(draw_pos, pos, ent.drawable_opts);
+  let angle_dir = angle * 2 / PI; // -1..4
+  let yfactor = abs((angle_dir + 2) % 2 - 1);
+  // yfactor is 0..1 weighting of how perpendicular a Y shift is from our view
+  let xfactor = 1 - yfactor;
+  xfactor = max(0, xfactor * 2 - 1);
+  yfactor = max(0, yfactor * 2 - 1);
+  let draw_shift_x = draw_pos[0] - draw_pos_orig[0];
+  let draw_shift_y = draw_pos[1] - draw_pos_orig[1];
+  if (xfactor && draw_shift_x || yfactor && draw_shift_y) {
+    let level = crawlerGameState().level!;
+    if (xfactor && draw_shift_x) {
+      const dir = draw_shift_x > 0 ? EAST : WEST;
+      let block_factor = level.wallsBlockBias(world_pos_floor, dir, crawlerScriptAPI()) ? 1 : 0;
+      if (world_pos_floor[1] !== pos[1]) {
+        world_pos_ceil[0] = world_pos_floor[0];
+        world_pos_ceil[1] = ceil(pos[1]);
+        let other_factor = level.wallsBlockBias(world_pos_ceil, dir, crawlerScriptAPI()) ? 1 : 0;
+        block_factor = lerp(pos[1] - world_pos_floor[1], block_factor, other_factor);
+      }
+      draw_pos[0] -= draw_shift_x * xfactor * block_factor;
+    }
+    if (yfactor && draw_shift_y) {
+      const dir = draw_shift_y > 0 ? NORTH : SOUTH;
+
+      let block_factor = level.wallsBlockBias(world_pos_floor, dir, crawlerScriptAPI()) ? 1 : 0;
+      if (world_pos_floor[0] !== pos[0]) {
+        world_pos_ceil[0] = ceil(pos[0]);
+        world_pos_ceil[1] = world_pos_floor[1];
+        let other_factor = level.wallsBlockBias(world_pos_ceil, dir, crawlerScriptAPI()) ? 1 : 0;
+        block_factor = lerp(pos[1] - world_pos_floor[1], block_factor, other_factor);
+      }
+      draw_pos[1] -= draw_shift_y * yfactor * block_factor;
+    }
+  }
 
   let shader_params: Partial<Record<string, ROVec2|ROVec3|ROVec4|number[]>> = {
     lod_bias,
@@ -512,12 +639,20 @@ let ped_list: PerEntDataPair[];
 let build_mode_peds: PerEntData[] = [];
 
 export function crawlerEntInFront<T extends Entity>(): T | null {
+  if (!ent_in_front) {
+    return null;
+  }
+  let my_floor = crawlerMyEntOptional()?.getData('floor');
+  let ent_floor = ent_in_front.getData('floor');
+  if (my_floor === undefined || ent_floor === undefined || my_floor !== ent_floor) {
+    return null;
+  }
   return ent_in_front as T;
 }
 
 let include_non_blockers_in_front = false;
 
-export function crawlerRenderEntitiesPrep(): void {
+export function crawlerRenderEntitiesPrep(no_controller?: boolean): void {
   ped_list = [];
   ent_in_front = null;
   let game_state = crawlerGameState();
@@ -526,27 +661,24 @@ export function crawlerRenderEntitiesPrep(): void {
     return; // still loading
   }
 
-  let controller = crawlerController();
-  ent_in_front = controller.getEntInFront(include_non_blockers_in_front);
+  if (!no_controller) {
+    let controller = crawlerController();
+    ent_in_front = controller.getEntInFront(include_non_blockers_in_front);
+  }
 
   let build_mode = buildModeActive();
 
   // Gather and update entities
-  let entities = crawlerEntityManager().entities;
+  let floor_ents = crawlerEntityManager().indexedGet(INDEX_FLOOR, game_state.floor_id);
   let dt = getScaledFrameDt();
   let my_ent_id = myEntID();
   let entity_pos_manager = entityPosManager();
-  for (let ent_id_str in entities) {
-    let ent_id = Number(ent_id_str);
-    // let other_ent = entities[ent_id];
-    if (ent_id === my_ent_id) {
+  for (let ent_id_str in floor_ents) {
+    let ent = floor_ents[ent_id_str]!;
+    if (ent.id === my_ent_id) {
       continue;
     }
-    let ent = entities[ent_id]!;
-    if (ent.data.floor !== game_state.floor_id) {
-      continue;
-    }
-    let ped = entity_pos_manager.updateOtherEntity(ent_id, dt);
+    let ped = entity_pos_manager.updateOtherEntity(ent.id, dt);
     if (!ped) {
       continue;
     }
@@ -583,15 +715,13 @@ export function crawlerRenderEntitiesPrep(): void {
 let disable_internal_floaters = false;
 let color_temp = vec4(1, 1, 1, 1);
 let draw_pos_temp = vec3();
-export function crawlerRenderEntities(ent_set: SplitSet): void {
+export function crawlerRenderEntities(ent_set: SplitSet, ignore_vis: boolean): void {
   profilerStartFunc();
   // Draw other entities
-  let controller = crawlerController();
-  let ignore_vis = controller.ignoreVisibility();
   let dt = getScaledFrameDt();
   let game_state = crawlerGameState();
   let level = game_state.level!;
-  let frame_index = getFrameIndex();
+  let frame_index = crawlerRenderFrameIndex();
 
   for (let ped_idx = 0; ped_idx < ped_list.length; ++ped_idx) {
     let [ped, ent] = ped_list[ped_idx];
@@ -604,7 +734,8 @@ export function crawlerRenderEntities(ent_set: SplitSet): void {
       continue;
     }
 
-    v4set(color_temp, 1, 1, 1, ent.fade !== null ? ent.fade : 1);
+    let ent_alpha = ent.fade !== null ? ent.fade : 1;
+    v4set(color_temp, 1, 1, 1, ent_alpha);
     let cell = level.getCell(floor(pos[0]), floor(pos[1]));
     let is_vis = false;
     if (cell && cell.visible_frame === frame_index) {
@@ -666,12 +797,12 @@ export function crawlerRenderEntities(ent_set: SplitSet): void {
         ) {
           let { x, y, w, h } = crawlerRenderViewportGet();
           let float = easeOut(elapsed / (FLOATER_TIME + FLOATER_FADE), 2) * 20;
-          let text_height = uiTextHeight();
+          let text_height = uiTextHeight() * (floater.size_mult || 1);
           markdownAuto({
             font,
             font_style: style_floater,
             alpha,
-            x,
+            x: x + (floater.xoffs || 0) * text_height * 2,
             y: y + h/2 - float - 400 + (floater.yoffs || 0) * text_height,
             z: Z.FLOATERS,
             w, h: 400,

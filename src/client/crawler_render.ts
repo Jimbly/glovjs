@@ -5,6 +5,8 @@ export const DIM = 200; // horizontal / tile dimensions
 export const VDIM = floor(DIM / ASPECT);
 export const HDIM = DIM/2;
 export const HVDIM = floor(VDIM/2);
+export const MINDIM = min(DIM, VDIM);
+
 
 export const SPLIT_ALL = 0;
 export const SPLIT_NEAR = 1;
@@ -16,6 +18,7 @@ export const ShaderType = {
   ModelFragment: 'fmodel',
   SpriteVertex: 'vsprite',
   SpriteFragment: 'fsprite',
+  SpriteAnisoFragment: 'fsprite_aniso',
   SpriteBlendFragment: 'fsprite_blend',
   SpriteHybridFragment: 'fsprite_hybrid',
   TintedSpriteFragment: 'fspritetinted',
@@ -62,7 +65,7 @@ import {
   shadersAddGlobal,
   shadersBind,
 } from 'glov/client/shaders';
-import type { BucketType, Sprite } from 'glov/client/sprites';
+import type { BucketType, ShaderParams, Sprite } from 'glov/client/sprites';
 import {
   textureBindArray,
 } from 'glov/client/textures';
@@ -112,10 +115,11 @@ import {
   CellDesc,
   CrawlerCell,
   CrawlerState,
+  dirFromDelta,
+  dirMod,
   DirType,
   VIS_SEEN,
   VisualOpts,
-  VstyleDesc,
   WallDesc,
 } from '../common/crawler_state';
 import { billboardBias, BillboardBiasOpts } from './crawler_billboard_bias';
@@ -142,7 +146,11 @@ let split_dist_sq: number;
 
 let mat_obj = mat4();
 
-let frame_idx = 0;
+let frame_idx = 1000; // Not to be confused with engine.frame_index
+
+export function crawlerRenderFrameIndex(): number {
+  return frame_idx;
+}
 
 export type CrawlerViewport = Box & {
   rot?: number;
@@ -157,6 +165,7 @@ export function crawlerRenderViewportGet(): CrawlerViewport {
   return crawler_viewport;
 }
 
+// MAP visibility radius
 export function crawlerRenderVisRadiusSet(new_radius: number): void {
   vis_radius = new_radius;
 }
@@ -183,6 +192,8 @@ export function crawlerCalc3DViewport(): Vec4 {
   v4set(temp_viewport,
     upper_left[0], upper_left[1],
     view_size[0], view_size[1]);
+  assert(temp_viewport[2] > 0);
+  assert(temp_viewport[3] > 0);
   return temp_viewport;
 }
 
@@ -359,7 +370,8 @@ export function crawlerRenderStartup(): void {
     fsprite: shaderCreate('shaders/crawler_sprite3d.fp'),
     fsprite_blend: shaderCreate('shaders/crawler_sprite3d_blend.fp'),
     fsprite_hybrid: shaderCreate('shaders/crawler_sprite3d_hybrid.fp'),
-    fspritetinted: shaderCreate('shaders/crawler_sprite3d_tinted.fp'),
+    fspritetinted: shaderCreate({ filename: 'shaders/crawler_sprite3d.fp', defines: ['TINTED'] }),
+    fsprite_aniso: shaderCreate({ filename: 'shaders/crawler_sprite3d.fp', defines: ['ANISONEAREST'] }),
     vsprite: shaderCreate('shaders/crawler_sprite3d.vp'),
     fmodel: shaderCreate('shaders/crawler_model.fp'),
     fmodeltinted: shaderCreate('shaders/crawler_model_tinted.fp'),
@@ -380,6 +392,7 @@ type SimpleVisualOpts = {
   times?: number | number[];
   total_time?: number; // set at runtime
   color?: ROVec4;
+  do_hash?: boolean; // instead of animated
   do_split?: boolean;
   do_blend?: number;
   do_alpha?: boolean;
@@ -430,12 +443,15 @@ type SpriteParamPair = [
   {
     bucket: BucketType;
     shader: Shader;
+    shader_params?: ShaderParams;
     vshader: Shader;
     facing: number;
     color: ROVec4;
   }
 ];
 const null_null = [null, null] as const;
+let pos_hash = 0;
+let cell_pos = vec2(); // integer world position
 function simpleGetSpriteParam(
   visual: VisualOpts | undefined,
   opts: CrawlerDrawableOpts2,
@@ -446,13 +462,13 @@ function simpleGetSpriteParam(
   let color = opts.debug_visible ? color_hidden : unit_vec;
   let shader;
   let bucket: typeof BUCKET_OPAQUE | typeof BUCKET_ALPHA = BUCKET_OPAQUE;
-  if (!visual) {
+  let visual_opts = visual as unknown as (SimpleVisualOpts | undefined);
+  if (!visual_opts) {
     if (!passesSplitCheck(opts.split_set, false, opts.draw_dist_sq)) {
       return null_null;
     }
     sprite = ui.sprites.white;
   } else {
-    let visual_opts = visual as unknown as SimpleVisualOpts;
     if (!passesSplitCheck(opts.split_set, visual_opts.do_split || false, opts.draw_dist_sq)) {
       return null_null;
     }
@@ -461,26 +477,30 @@ function simpleGetSpriteParam(
     }
     let atlas_name = visual_opts.atlas || 'default';
     atlas_name = atlasAlias(atlas_name);
-    let { tile, do_blend } = visual_opts;
+    let { tile, do_blend, do_hash } = visual_opts;
     assert(tile);
     if (Array.isArray(tile)) {
-      let times = visual_opts.times || 250;
-      if (!Array.isArray(times)) {
-        let arr: number[] = [];
-        for (let ii = 0; ii < tile.length; ++ii) {
-          arr.push(times);
+      if (do_hash) {
+        tile = tile[pos_hash % tile.length];
+      } else {
+        let times = visual_opts.times || 250;
+        if (!Array.isArray(times)) {
+          let arr: number[] = [];
+          for (let ii = 0; ii < tile.length; ++ii) {
+            arr.push(times);
+          }
+          times = visual_opts.times = arr;
         }
-        times = visual_opts.times = arr;
-      }
-      let { total_time } = visual_opts;
-      if (!total_time) {
-        total_time = 0;
-        for (let ii = 0; ii < times.length; ++ii) {
-          total_time += times[ii];
+        let { total_time } = visual_opts;
+        if (!total_time) {
+          total_time = 0;
+          for (let ii = 0; ii < times.length; ++ii) {
+            total_time += times[ii];
+          }
+          visual_opts.total_time = total_time;
         }
-        visual_opts.total_time = total_time;
+        tile = frameFromAnim(tile, times, total_time);
       }
-      tile = frameFromAnim(tile, times, total_time);
     }
     sprite = autoAtlas(atlas_name, tile);
     if (sprite_key === 'sprite_centered') {
@@ -515,9 +535,20 @@ function simpleGetSpriteParam(
     }
   }
 
+  let shader_params: undefined | ShaderParams;
+  if (!shader) {
+    if (0) {
+      shader = crawlerRenderGetShader(ShaderType.SpriteAnisoFragment);
+      let tex0 = sprite.texs[0];
+      shader_params = tex0.getTexSizeShaderParams();
+    } else {
+      shader = crawlerRenderGetShader(ShaderType.SpriteFragment);
+    }
+  }
   return [sprite, {
     bucket,
-    shader: shader || crawlerRenderGetShader(ShaderType.SpriteFragment),
+    shader,
+    shader_params,
     vshader: crawlerRenderGetShader(ShaderType.SpriteVertex),
     facing: FACE_CUSTOM,
     color,
@@ -532,6 +563,8 @@ const dummy_opts: CrawlerDrawableOpts2 = {
   neighbor_h: 0,
 };
 function simpleGetThumbnail(visual: VisualOpts | undefined, desc: WallDesc | CellDesc): CrawlerThumbnailPair {
+  pos_hash = 0;
+  v2set(cell_pos, 0, 0);
   let [sprite, param] = simpleGetSpriteParam(visual, dummy_opts, desc.id, 'sprite');
   assert(sprite && param);
   return [sprite, {
@@ -672,7 +705,7 @@ function drawSimpleFiller(
 
 type SimpleBillboardRenderOpts = {
   height?: number;
-  width?: number;
+  width?: number; // if undefined, uses height and sprite aspect ratio
   offs?: Vec3;
   face_camera?: boolean;
 } & Partial<BillboardBiasOpts> & SimpleVisualOpts;
@@ -693,8 +726,14 @@ function drawSimpleBillboard(
     offs,
     face_camera,
   } = vopts;
+  height = height || 1;
   // Note: DIM, not VDIM, so that it's still square pixel aspect ratio?
-  v2set(temp_size, DIM * (width || 1), DIM * (height || 1));
+  if (width) {
+    v2set(temp_size, DIM * width, DIM * height);
+  } else {
+    v2set(temp_size, DIM * height * sprite.getAspect(), DIM * height);
+  }
+
   if (offs) {
     temp_pos[0] = offs[0] * DIM;
     temp_pos[1] = offs[1] * DIM;
@@ -721,6 +760,24 @@ function drawSimpleBillboard(
 const floor_detail_offs = vec3(0, 0, FLOOR_DETAIL_Z);
 const floor_face_right = vec3(1, 0, 0);
 const floor_face_down = vec3(0, -1, 0);
+let floor_uvs = vec4();
+function scaledFloorUVs(sprite: Sprite, scale: number, yflip: boolean): void {
+  let u0 = sprite.uvs[0];
+  let uw = sprite.uvs[2] - u0;
+  let v0 = sprite.uvs[1];
+  let vw = sprite.uvs[3] - v0;
+  let x = (cell_pos[0] / scale) % 1;
+  let y = (cell_pos[1] / scale) % 1;
+  if (yflip) {
+    y = 1 - 1/scale - y;
+  }
+  v4set(floor_uvs,
+    u0 + x * uw,
+    v0 + y * vw,
+    u0 + (x + 1/scale) * uw,
+    v0 + (y + 1/scale) * vw,
+  );
+}
 function drawSimpleFloor(
   rot: ROVec4, pos: ROVec3, visual: VisualOpts | undefined, opts: CrawlerDrawableOpts2,
   debug_id: string
@@ -739,18 +796,32 @@ function drawSimpleFloor(
   if (detail_layer) {
     v3iAddScale(temp_pos, floor_detail_offs, detail_layer);
   }
-  temp_pos[0] += offs[0] * DIM + (1 - scale) * HDIM;
-  temp_pos[1] -= offs[1] * DIM + (1 - scale) * HDIM;
-  temp_pos[2] += (offs[2] || 0) * DIM;
-  v2set(temp_size, DIM*scale, DIM*scale);
+  if (scale > 1 && isInteger(scale)) {
+    // do a single tile, but scale the UVs instead
+    v2set(temp_size, DIM, DIM);
+    scaledFloorUVs(sprite, scale, true);
+    sprite.draw3D({
+      ...param,
+      pos: temp_pos,
+      size: temp_size,
+      face_right: floor_face_right,
+      face_down: floor_face_down,
+      uvs: floor_uvs,
+    });
+  } else {
+    temp_pos[0] += offs[0] * DIM + (1 - scale) * HDIM;
+    temp_pos[1] -= offs[1] * DIM + (1 - scale) * HDIM;
+    temp_pos[2] += (offs[2] || 0) * DIM;
+    v2set(temp_size, DIM*scale, DIM*scale);
 
-  sprite.draw3D({
-    ...param,
-    pos: temp_pos,
-    size: temp_size,
-    face_right: floor_face_right,
-    face_down: floor_face_down,
-  });
+    sprite.draw3D({
+      ...param,
+      pos: temp_pos,
+      size: temp_size,
+      face_right: floor_face_right,
+      face_down: floor_face_down,
+    });
+  }
 }
 
 const ceiling_face_right = vec3(1, 0, 0);
@@ -774,17 +845,31 @@ function drawSimpleCeiling(
   if (detail_layer) {
     v3iAddScale(temp_pos, floor_detail_offs, -detail_layer);
   }
-  temp_pos[0] += offs[0] * DIM + (1 - scale) * HDIM;
-  temp_pos[1] += offs[1] * DIM + (1 - scale) * HDIM;
-  v2set(temp_size, DIM*scale, DIM*scale);
+  if (scale > 1 && isInteger(scale)) {
+    // do a single tile, but scale the UVs instead
+    v2set(temp_size, DIM, DIM);
+    scaledFloorUVs(sprite, scale, false);
+    sprite.draw3D({
+      ...param,
+      pos: temp_pos,
+      size: temp_size,
+      face_right: ceiling_face_right,
+      face_down: ceiling_face_down,
+      uvs: floor_uvs,
+    });
+  } else {
+    temp_pos[0] += offs[0] * DIM + (1 - scale) * HDIM;
+    temp_pos[1] += offs[1] * DIM + (1 - scale) * HDIM;
+    v2set(temp_size, DIM*scale, DIM*scale);
 
-  sprite.draw3D({
-    ...param,
-    pos: temp_pos,
-    size: temp_size,
-    face_right: ceiling_face_right,
-    face_down: ceiling_face_down,
-  });
+    sprite.draw3D({
+      ...param,
+      pos: temp_pos,
+      size: temp_size,
+      face_right: ceiling_face_right,
+      face_down: ceiling_face_down,
+    });
+  }
 }
 
 type SimpleCornerFloorRenderOpts = {
@@ -1157,34 +1242,26 @@ const opts_occluded: CrawlerDrawableOpts2 = {
 function drawCell(
   game_state: CrawlerState,
   cell: CrawlerCell,
-  pos: Vec2,
   pass: RenderPass,
-  ignore_vis: boolean,
-  vstyle: VstyleDesc,
+  is_occluded: boolean,
   script_api: CrawlerScriptAPIClient,
   split_set: SplitSet,
 ): void {
   let opts = opts_visible;
+  pos_hash = cell_pos[0] + cell_pos[1];
   let cell_desc = getEffCell(script_api, cell).swapped;
   if (!cell_desc.open_vis) {
     return; // should only get here with debug view
   }
-  if (cell.visible_frame !== frame_idx) {
-    // Not visible this frame
-    if (pass.neighbor_draw && cell.visible_adjacent_frame === frame_idx) {
-      // but, a neighbor is, so we should draw our details that extend in
-    } else {
-      if (DEBUG_VIS || ignore_vis) {
-        opts = opts_occluded;
-      } else {
-        return;
-      }
-    }
+
+  if (is_occluded) {
+    opts = opts_occluded;
   }
-  v2addScale(draw_pos, vhdim, pos, DIM);
+
+  v2addScale(draw_pos, vhdim, cell_pos, DIM);
   let our_h = opts.neighbor_h = draw_pos[2] = cell.h * VDIM;
   opts.split_set = split_set;
-  opts.draw_dist_sq = v2distSq(pos, game_state.pos);
+  opts.draw_dist_sq = v2distSq(cell_pos, game_state.pos);
 
   {
     let visuals = cell_desc.visuals_runtime[pass.name];
@@ -1327,6 +1404,7 @@ let corner_angles = new Array(4);
 function calcVisibility(
   game_state: CrawlerState,
   pos: Vec2,
+  frustum_pos: Vec2,
   angle: number,
   map_update_this_frame: boolean,
   script_api: CrawlerScriptAPIClient
@@ -1362,11 +1440,22 @@ function calcVisibility(
   //       check each wall, and clip each view against it
   //         reference: http://www.roguebasin.com/index.php?title=Precise_Permissive_Field_of_View
   //       add neighbors to BFS
-  let pos_idx = floor(pos[0]) + floor(pos[1]) * w;
+  let iposx = floor(pos[0]);
+  let iposy = floor(pos[1]);
+  let pos_idx = iposx + iposy * w;
   todo.length = 0;
   todo.push(pos_idx);
   let done: Partial<Record<number, true>> = {};
   done[pos_idx] = true;
+
+  let ignore_walls: [number, DirType][] = [];
+  let ifrustum_posx = floor(frustum_pos[0]);
+  let ifrustum_posy = floor(frustum_pos[1]);
+  if (iposx !== ifrustum_posx || iposy !== ifrustum_posy) {
+    let dir = dirFromDelta([ifrustum_posx - iposx, ifrustum_posy - iposy]);
+    ignore_walls.push([pos_idx, dir]);
+    ignore_walls.push([ifrustum_posx + ifrustum_posy * w, dirMod(dir + 2)]);
+  }
 
   let todo_idx = 0;
   while (todo_idx < todo.length && views.length) {
@@ -1397,6 +1486,16 @@ function calcVisibility(
     let angles = [];
     for (let ii = 0 as DirType; ii < 4; ++ii) {
       let wall_desc = getEffWall(script_api, cell, ii).swapped; // needed?
+      let open_vis = wall_desc.open_vis;
+      if (!open_vis) {
+        for (let jj = 0; jj < ignore_walls.length; ++jj) {
+          let elem = ignore_walls[jj];
+          if (elem[0] === idx && elem[1] === ii) {
+            // camera and frustum are on different sides of this wall, ignore it
+            open_vis = true;
+          }
+        }
+      }
       //let wall_desc = cell.walls[ii].swapped;
       let a1 = corner_angles[ii];
       let a2 = corner_angles[(ii+1)%4];
@@ -1406,7 +1505,7 @@ function calcVisibility(
         //   can we know this without calculating the atan2()s?
         last_blocked = false;
         if (DEBUG_VIS) {
-          log!.push(`  ${wall_desc.open_vis ? 'face' : 'wall'}` +
+          log!.push(`  ${open_vis ? 'face' : 'wall'}` +
             ` ${(a1*180/PI).toFixed(0)}:${(a2*180/PI).toFixed(0)} ignore`);
         }
         continue;
@@ -1422,13 +1521,13 @@ function calcVisibility(
       if (!face_visible) {
         last_blocked = false;
         if (DEBUG_VIS) {
-          log!.push(`  ${wall_desc.open_vis ? 'face' : 'wall'}` +
+          log!.push(`  ${open_vis ? 'face' : 'wall'}` +
             ` ${(a1*180/PI).toFixed(0)}:${(a2*180/PI).toFixed(0)} no vis`);
         }
         continue;
       }
       any_visible = true;
-      if (!wall_desc.open_vis) {
+      if (!open_vis) {
         if (DEBUG_VIS) {
           log!.push(`  wall ${(a1*180/PI).toFixed(0)}:${(a2*180/PI).toFixed(0)}`);
         }
@@ -1501,7 +1600,17 @@ function calcVisibility(
     for (let ii = 0 as DirType; ii < 4; ++ii) {
       let wall_desc = getEffWall(script_api, cell, ii).swapped; // needed?
       // let wall_desc = cell.walls[ii].swapped;
-      if (!wall_desc.open_vis) {
+      let open_vis = wall_desc.open_vis;
+      if (!open_vis) {
+        for (let jj = 0; jj < ignore_walls.length; ++jj) {
+          let elem = ignore_walls[jj];
+          if (elem[0] === idx && elem[1] === ii) {
+            // camera and frustum are on different sides of this wall, ignore it
+            open_vis = true;
+          }
+        }
+      }
+      if (!open_vis) {
         continue;
       }
       let xx = x + DX[ii];
@@ -1529,6 +1638,7 @@ function calcVisibility(
 let cam_pos = vec3();
 let target_pos = vec3(0, 0, HVDIM);
 let game_view_pos = vec2();
+let game_frustum_pos = vec2();
 let last_pos = vec3();
 export function renderCamPos(): ROVec3 {
   return cam_pos;
@@ -1583,6 +1693,9 @@ export function renderSet3DOffset(offs: ROVec3): void {
 }
 
 let ignore_vis: boolean;
+export function crawlerRenderIgnoreVis(): boolean {
+  return ignore_vis;
+}
 export type RenderPrepParam = {
   game_state: CrawlerState;
   cam_pos: Vec3;
@@ -1656,7 +1769,7 @@ export function renderPrep(param: RenderPrepParam): void {
     applyShear();
   }
 
-  frame_idx = engine.frame_index;
+  ++frame_idx;
   // same positional transformation logic, applied in game space, from player, not camera (if different (freeCam))
   game_view_angle = game_state.angle + (crawler_viewport.rot || 0);
   ca = cos(game_view_angle);
@@ -1665,10 +1778,13 @@ export function renderPrep(param: RenderPrepParam): void {
   game_view_pos[1] = game_state.pos[1] + 0.5 + pos_offs[1] * 0.5 * sa - pos_offs[0] * 0.5 * ca;
   game_view_angle += angle_offs;
 
-  calcVisibility(game_state, game_view_pos, game_view_angle, map_update_this_frame, script_api);
+  let znear = engine.ZNEAR / DIM;
+  game_frustum_pos[0] = game_view_pos[0] + znear * ca;
+  game_frustum_pos[1] = game_view_pos[1] + znear * sa;
+
+  calcVisibility(game_state, game_view_pos, game_frustum_pos, game_view_angle, map_update_this_frame, script_api);
 }
 
-let cell_pos = vec2();
 export function render(
   game_state: CrawlerState,
   script_api: CrawlerScriptAPIClient,
@@ -1680,14 +1796,46 @@ export function render(
     return;
   }
 
-  let { w, h, cells, vstyle } = level;
-  // for (let yy = -1; yy < 2; ++yy) {
-  //   for (let xx = -1; xx < 2; ++xx) {
-  //     v2set(cell_pos, floor(pos[0]) + xx, floor(pos[1]) + yy);
-  //     drawCell(cells[cell_pos[1]*w + cell_pos[0]], cell_pos);
-  //   }
-  // }
-  // gl.disable(gl.DEPTH_TEST);
+  let { w, h, cells } = level;
+
+  let cells_vis = [];
+  let cells_neighbors = [];
+  let cells_occluded = [];
+
+  for (let yy = 0; yy < h; ++yy) {
+    for (let xx = 0; xx < w; ++xx) {
+      let idx = yy * w + xx;
+      let cell = cells[idx];
+      if (!cell.desc.swapped.open_vis) {
+        continue;
+      }
+      if (cell.visible_frame === frame_idx) {
+        cells_vis.push(idx);
+      } else {
+        // Not visible this frame
+        if (cell.visible_adjacent_frame === frame_idx) {
+          // but, a neighbor is, so we should draw our details that extend in
+          cells_neighbors.push(idx);
+        } else {
+          if (DEBUG_VIS || ignore_vis) {
+            cells_occluded.push(idx);
+          }
+        }
+      }
+    }
+  }
+
+  function drawList(list: number[], pass_data: RenderPass, is_occluded: boolean): void {
+    for (let ii = 0; ii < list.length; ++ii) {
+      let idx = list[ii];
+      let cell = cells[idx];
+      let xx = idx % w;
+      let yy = floor(idx / w);
+      v2set(cell_pos, xx, yy);
+      drawCell(game_state, cell, pass_data, is_occluded, script_api, split_set);
+    }
+  }
+  // glDepthTest(false);
   // gl.depthMask(false);
   for (let pass = 0; pass < render_passes.length; ++pass) {
     let pass_data = render_passes[pass];
@@ -1695,7 +1843,7 @@ export function render(
       continue;
     }
     // if (pass === 2) {
-    //   gl.enable(gl.DEPTH_TEST);
+    //   glDepthTest(true);
     //   gl.depthMask(true);
     // }
     if (pass_data.alpha_blend) {
@@ -1704,13 +1852,13 @@ export function render(
       gl.disable(gl.BLEND);
     }
     pass_data.cb?.();
-    for (let yy = 0; yy < h; ++yy) {
-      for (let xx = 0; xx < w; ++xx) {
-        v2set(cell_pos, xx, yy);
-        drawCell(game_state, cells[cell_pos[1]*w + cell_pos[0]],
-          cell_pos, pass_data, ignore_vis, vstyle, script_api, split_set);
-      }
+    drawList(cells_vis, pass_data, false);
+    if (pass_data.neighbor_draw) {
+      drawList(cells_neighbors, pass_data, false);
+    } else if (ignore_vis) {
+      drawList(cells_neighbors, pass_data, true);
     }
+    drawList(cells_occluded, pass_data, true); // usually empty
     opaqueDraw();
     if (pass !== render_passes.length - 1) {
       alphaDraw(); // sort these with entities

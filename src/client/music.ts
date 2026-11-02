@@ -58,7 +58,11 @@ export function tickMusic(music_name: string | null, override_volume?: number): 
     return;
   }
 
-  soundMusicOverrideVolume(1 - (uiActionCurrent()?.dim_music || 0));
+  let dim_music = uiActionCurrent()?.dim_music;
+  if (typeof dim_music !== 'number' && uiActionCurrent()?.is_fullscreen_ui) {
+    dim_music = 0.7;
+  }
+  soundMusicOverrideVolume(1 - (dim_music || 0));
 
   if (playing_music_name !== music_name) {
     let cross = false;

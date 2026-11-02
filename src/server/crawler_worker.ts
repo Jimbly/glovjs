@@ -108,6 +108,10 @@ export class CrawlerWorker<
             type: 'player',
             floor: 0,
             pos: level.special_pos.stairs_in,
+            stats: {
+              hp: 10,
+              hp_max: 10,
+            },
           }, sem, src, join_payload, player_uid, function (err: null | string, ent?: Entity) {
             if (ent && payload.pos) {
               // This is only for transitioning from offline-play to online-build mode for the first time in a session
@@ -329,7 +333,12 @@ CrawlerWorker.registerClientHandler('texture_wizard_ignore', function (
   resp_func: NetResponseCallback<CrawlerLevelSerialized>
 ): void {
   const filename = `${CLIENT_DIR}/atlases/ignored.json`;
-  let filedata = JSON.parse(fs.readFileSync(filename, 'utf8'));
+  let filedata;
+  if (fs.existsSync(filename)) {
+    filedata = JSON.parse(fs.readFileSync(filename, 'utf8'));
+  } else {
+    filedata = { tiles: [] };
+  }
   if (!filedata.tiles.includes(data.key)) {
     filedata.tiles.push(data.key);
     fs.writeFileSync(filename, JSON.stringify(filedata, undefined, 2));

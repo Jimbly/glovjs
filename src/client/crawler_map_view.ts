@@ -1,4 +1,6 @@
 import assert from 'assert';
+import { actionEdge } from 'glov/client/actions';
+import { autoResetSkippedFrames } from 'glov/client/auto_reset';
 import { autoAtlas, autoAtlasTextureOpts } from 'glov/client/autoatlas';
 import * as camera2d from 'glov/client/camera2d';
 import * as engine from 'glov/client/engine';
@@ -7,6 +9,9 @@ import {
   fontStyle,
 } from 'glov/client/font';
 import * as input from 'glov/client/input';
+import {
+  inputPadMode,
+} from 'glov/client/input';
 import { shaderCreate } from 'glov/client/shaders';
 import {
   Sprite,
@@ -17,12 +22,16 @@ import {
 import * as ui from 'glov/client/ui';
 import {
   drawLine,
+  drawTooltip,
   uiTextHeight,
 } from 'glov/client/ui';
-import { merge } from 'glov/common/util';
+import { clamp, merge } from 'glov/common/util';
 import {
+  JSVec2,
+  ROVec2,
   ROVec4,
   rovec4,
+  v2set,
   vec2,
 } from 'glov/common/vmath';
 import {
@@ -50,13 +59,14 @@ import {
 } from '../common/crawler_state';
 import { pathFind } from '../common/pathfind';
 import { buildModeActive } from './crawler_build_mode';
-import { crawlerEntityManager } from './crawler_entity_client';
+import { crawlerEntityManager, INDEX_FLOOR } from './crawler_entity_client';
 import { crawlerController, crawlerSetLevelGenMode } from './crawler_play';
+import { crawlerRenderFrameIndex } from './crawler_render';
 import { CrawlerScriptAPIClient } from './crawler_script_api_client';
 
 type Shader = ReturnType<typeof shaderCreate>;
 
-const { floor, max, min, round, PI } = Math;
+const { ceil, floor, max, min, round, PI } = Math;
 
 let compass_sprite: Sprite;
 let sprite_mult: Shader;
@@ -140,7 +150,8 @@ export function mapViewLastProgress(): number {
 }
 
 let mouse_pos = vec2();
-let moved_since_fullscreen = false;
+let moved_since_fullscreen: false | 'mouse' | 'pad' = false;
+let pad_cursor_pos: JSVec2 = [0, 0];
 let color_rollover = rovec4(1,1,1,1);
 let color_path = rovec4(1,0.5,0,1);
 
@@ -174,12 +185,23 @@ export type CrawlerMapViewParam = {
   script_api: CrawlerScriptAPIClient;
   button_disabled: boolean;
   style_map_name_override?: FontStyle | null;
+  arrow_color?: ROVec4;
+  ent_vis_targets?: ROVec2[];
+  override_subtitle?: string;
+  hide_ents?: boolean;
 };
 
 let last_num_enemies: [number, number] = [0, 0];
 export function mapViewLastNumEnemies(): [number, number] {
   return last_num_enemies;
 }
+
+let map_rollover = false;
+export function mapViewRollover(): boolean {
+  return map_rollover;
+}
+
+let last_frame_idx = Infinity;
 
 export function crawlerMapViewDraw({
   game_state,
@@ -198,6 +220,10 @@ export function crawlerMapViewDraw({
   tile_size,
   step_size,
   style_map_name_override,
+  arrow_color,
+  ent_vis_targets,
+  override_subtitle,
+  hide_ents,
 }: CrawlerMapViewParam): void {
   const build_mode = buildModeActive();
   let { level } = game_state;
@@ -205,9 +231,10 @@ export function crawlerMapViewDraw({
     // still loading
     return;
   }
+  profilerStartFunc();
   script_api.setLevel(level);
   let entity_manager = crawlerEntityManager();
-  if (engine.DEBUG && input.keyDownEdge(input.KEYS.F4)) {
+  if ((engine.DEBUG || engine.defines.FREECAM) && input.keyDownEdge(input.KEYS.F4)) {
     engine.defines.FULL_VIS = !engine.defines.FULL_VIS;
   }
   let full_vis = engine.defines.FULL_VIS || build_mode;
@@ -216,6 +243,7 @@ export function crawlerMapViewDraw({
 
   const text_height = uiTextHeight();
 
+  map_rollover = false;
   if (!fullscreen) {
     let hover_area = {
       x, y, w, h,
@@ -225,23 +253,26 @@ export function crawlerMapViewDraw({
       hover_area.h += compass_h;
     }
     let { ret, state } = ui.buttonShared(hover_area);
-    if (state === 'rollover') {
-      const size = 1;
-      ui.drawRect(hover_area.x - size, hover_area.y - size,
-        hover_area.x + hover_area.w + size,
-        hover_area.y + hover_area.h + size,
-        Z.MAP - 1, color_rollover);
+    if (state === 'rollover' && !inputPadMode()) {
+      map_rollover = true;
+      if (1) {
+        const size = 1;
+        ui.drawRect(hover_area.x - size, hover_area.y - size,
+          hover_area.x + hover_area.w + size,
+          hover_area.y + hover_area.h + size,
+          Z.MAP - 1, color_rollover);
+      }
     }
     if (ret) {
       mapViewToggle();
     }
   }
 
-  let { entities } = entity_manager;
+  let floor_ents = entity_manager.indexedGet(INDEX_FLOOR, game_state.floor_id);
   let num_enemies = 0;
-  for (let ent_id in entities) {
-    let ent = entities[ent_id]!;
-    if (ent.isEnemy() && !ent.fading_out && ent.data.floor === game_state.floor_id) {
+  for (let ent_id_str in floor_ents) {
+    let ent = floor_ents[ent_id_str]!;
+    if (ent.isEnemy() && !ent.fading_out) {
       ++num_enemies;
     }
   }
@@ -251,7 +282,7 @@ export function crawlerMapViewDraw({
   //last_progress = level.seen_cells/level.total_cells;
   last_progress = total_enemies ? max(0, 1 - (num_enemies / total_enemies)) : 1;
   let floor_title = level.props.title as string || `Floor ${game_state.floor_id}`;
-  let floor_subtitle = level.props.subtitle as string || '';
+  let floor_subtitle = override_subtitle || level.props.subtitle as string || '';
   let eff_style_map_name = style_map_name_override === undefined ? style_map_name : style_map_name_override;
   if (fullscreen) {
     if (eff_style_map_name) {
@@ -325,6 +356,11 @@ export function crawlerMapViewDraw({
       ui.font.drawSizedAligned(eff_style_map_name, x, y + 1, z + 1, text_height,
         ui.font.ALIGN.HCENTER, w, 0, floor_title);
     }
+    if (eff_style_map_name && override_subtitle) {
+      // moraff-specific layout (and logic?)
+      ui.font.drawSizedAligned(eff_style_map_name, x, y + text_height + 16, z + 1, text_height * 0.75,
+        ui.font.ALIGN.HCENTER, w, 0, floor_subtitle);
+    }
     // Optional star for showing completion
     // if (level.seen_cells === level.total_cells && !num_enemies && level.props.map_show_star) {
     //   sprite_icons.draw({
@@ -337,6 +373,7 @@ export function crawlerMapViewDraw({
     // }
   }
 
+  let clip_rect = { x, y, w, h };
   if (fullscreen) {
     camera2d.push();
     camera2d.setNormalized();
@@ -381,9 +418,15 @@ export function crawlerMapViewDraw({
     z: z + 1,
     w: tile_size,
     h: tile_size,
+    color: arrow_color,
   });
-  for (let yy = 0; yy < level.h; ++yy) {
-    for (let xx = 0; xx < level.w; ++xx) {
+
+  let mapx0 = max(0, floor((clip_rect.x - x0) / step_size) - 1);
+  let mapx1 = min(level.w - 1, ceil((clip_rect.x + clip_rect.w - x0) / step_size) - 1);
+  let mapy0 = max(0, floor((y1 - (clip_rect.y + clip_rect.h)) / step_size) + 1);
+  let mapy1 = min(level.h - 1, ceil((y1 - clip_rect.y) / step_size));
+  for (let yy = mapy0; yy <= mapy1; ++yy) {
+    for (let xx = mapx0; xx <= mapx1; ++xx) {
       let cell = level.getCell(xx, yy)!;
       let cell_desc = getEffCell(script_api, cell);
       let visible = cell.visible_bits || full_vis && cell_desc.open_vis;
@@ -445,7 +488,7 @@ export function crawlerMapViewDraw({
           h: tile_size,
         });
       } else if (visible || detail_visible) {
-        let is_visible = cell.visible_frame === engine.frame_index - 1 || level_gen_test;
+        let is_visible = cell.visible_frame > last_frame_idx || level_gen_test;
         let icon = is_visible ? 'floor_visible_lit' : 'floor_visible_unlit';
         autoAtlas('map', icon).draw({
           x: x0 + xx * step_size,
@@ -577,11 +620,11 @@ export function crawlerMapViewDraw({
   }
 
   let vis_entities = {} as Partial<Record<number, boolean>>;
-  if (!level_gen_test && !build_mode) {
-    for (let ent_id in entities) {
-      let ent = entities[ent_id]!;
+  if (!level_gen_test && !build_mode && !hide_ents) {
+    for (let ent_id_str in floor_ents) {
+      let ent = floor_ents[ent_id_str]!;
       let icon = ent.map_icon;
-      if (icon && !ent.fading_out && ent.data.floor === game_state.floor_id) {
+      if (icon && !ent.fading_out) {
         let [xx,yy] = ent.data.pos;
         let vis = false;
         if (full_vis) {
@@ -591,8 +634,23 @@ export function crawlerMapViewDraw({
           vis = true;
         } else {
           let cell = level.getCell(xx, yy);
-          if (!cell || cell.visible_frame === engine.frame_index - 1 && cell.visible_bits) {
+          if (!cell) {
+            // outside the map?  something went wrong, just show it
             vis = true;
+          } else if (cell.visible_frame > last_frame_idx && cell.visible_bits) {
+            // cell is at least partially visible
+            if (ent_vis_targets) {
+              if (level.rayVisCheck(
+                [self_x, self_y],
+                [xx, yy],
+                script_api,
+                ent_vis_targets
+              )) {
+                vis = true;
+              }
+            } else {
+              vis = true;
+            }
           }
           if (ents_visible_outside_fog_of_war && cell?.visible_bits) {
             vis = true;
@@ -616,27 +674,68 @@ export function crawlerMapViewDraw({
 
   if (!level_gen_test) {
     if (fullscreen) {
-      if (input.mouseMoved() || input.mouseDownAnywhere()) {
-        moved_since_fullscreen = true;
+      if (autoResetSkippedFrames('mapview_pad_cursor') || actionEdge('cancel')) {
+        v2set(pad_cursor_pos, self_x, self_y);
       }
+      let opt_repeat = { repeat: true };
+      if (actionEdge('up', opt_repeat)) {
+        pad_cursor_pos[1]++;
+        moved_since_fullscreen = 'pad';
+      }
+      if (actionEdge('down', opt_repeat)) {
+        pad_cursor_pos[1]--;
+        moved_since_fullscreen = 'pad';
+      }
+      if (actionEdge('right', opt_repeat)) {
+        pad_cursor_pos[0]++;
+        moved_since_fullscreen = 'pad';
+      }
+      if (actionEdge('left', opt_repeat)) {
+        pad_cursor_pos[0]--;
+        moved_since_fullscreen = 'pad';
+      }
+      if (input.mouseMoved() || input.mouseDownAnywhere()) {
+        moved_since_fullscreen = 'mouse';
+      }
+      pad_cursor_pos[0] = clamp(pad_cursor_pos[0], 0, level.w - 1);
+      pad_cursor_pos[1] = clamp(pad_cursor_pos[1], 0, level.h - 1);
       input.mousePos(mouse_pos);
-      let mx = floor((mouse_pos[0] - x0 - 0.5) / step_size);
-      let my = floor((y1 - mouse_pos[1] + step_size + 0.5) / step_size);
+      let mx = -1;
+      let my = -1;
+      if (moved_since_fullscreen === 'mouse') {
+        mx = floor((mouse_pos[0] - x0 - 0.5) / step_size);
+        my = floor((y1 - mouse_pos[1] + step_size + 0.5) / step_size);
+        v2set(pad_cursor_pos, mx, my);
+      } else if (moved_since_fullscreen === 'pad') {
+        mx = pad_cursor_pos[0];
+        my = pad_cursor_pos[1];
+      }
       let mouse_cell = level.getCell(mx, my);
       if (mouse_cell && moved_since_fullscreen) { // && mouse_cell.visible_bits) {
         let mouse_frame: string | null = null;
+        if (
+          mouse_cell.desc.code === 'TRAPDOOR' &&
+          mouse_cell.visible_bits
+        ) { // moraff
+          let target = mouse_cell.getProp('target');
+          drawTooltip({
+            x: (mx + 2) * step_size + x0,
+            y: y1 - (my - 2) * step_size,
+            tooltip: `Trapdoor to ${target}`,
+          });
+        }
         if (build_mode) {
           // teleport
           if (mouse_cell.desc.open_move) {
             mouse_frame = 'pathfind_good';
-            if (input.click({
-              max_dist: Infinity, // allow drag in touch mode
-            })) {
-              mapViewSetActive(false);
-              crawlerController().floorAbsolute(game_state.floor_id, mx, my);
-            }
           } else {
             mouse_frame = 'pathfind_bad'; // error
+          }
+          if (input.click({
+            max_dist: Infinity, // allow drag in touch mode
+          }) || actionEdge('accept')) {
+            mapViewSetActive(false);
+            crawlerController().floorAbsolute(game_state.floor_id, mx, my);
           }
         } else if (allow_pathfind) {
           // pathfind
@@ -664,7 +763,7 @@ export function crawlerMapViewDraw({
             }
             if (input.click({
               max_dist: Infinity, // allow drag in touch mode
-            })) {
+            }) || actionEdge('accept')) {
               pathTo(mx, my);
             }
           } else {
@@ -688,6 +787,8 @@ export function crawlerMapViewDraw({
   }
 
   spriteClipPop();
+  last_frame_idx = crawlerRenderFrameIndex();
+  profilerStopFunc();
 }
 
 export function crawlerMapViewStartup(param: {

@@ -13,7 +13,7 @@ import {
   isLocal,
   isOnline,
 } from './crawler_entity_client';
-import { crawlerSaveGame } from './crawler_play';
+import { crawlerSaveGame, crawlerSavePlayTime } from './crawler_play';
 import {
   game_width,
 } from './globals';
@@ -25,6 +25,7 @@ import {
   uiActionActive,
   uiActionClear,
 } from './uiaction';
+import { bindUIOpen } from './uiaction_bind_ui';
 
 const { floor } = Math;
 
@@ -38,6 +39,13 @@ class PauseMenuAction extends UIAction {
         y: 50,
         z: Z.MODAL + 2,
         width: PAUSE_MENU_W,
+        // display: {
+        //   xpad: 40,
+        //   style_default: style_button_text,
+        //   style_selected: fontStyleColored(style_button_text_focused, COLOR_GOLD2),
+        //   style_down: style_button_text_focused,
+        //   use_markdown: true,
+        // },
       });
     }
     let items: MenuItem[] = [{
@@ -58,9 +66,10 @@ class PauseMenuAction extends UIAction {
       value_min: 0,
       value_max: 1,
     }, {
-      name: `Turn: ${settings.turn_toggle ? 'A/S/4/6/←/→': 'Q/E/7/9/LB/RB'}`,
+      name: 'Controls',
       cb: () => {
-        settingsSet('turn_toggle', 1 - settings.turn_toggle);
+        uiActionClear();
+        bindUIOpen();
       },
     }];
     if (isLocal()) {
@@ -115,6 +124,10 @@ PauseMenuAction.prototype.name = 'PauseMenu';
 PauseMenuAction.prototype.is_overlay_menu = true;
 
 export function pauseMenuOpen(): void {
+  // In case they're about to exit
+  crawlerSavePlayTime('manual');
+  crawlerSavePlayTime('auto');
+
   uiAction(new PauseMenuAction());
 }
 

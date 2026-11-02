@@ -1,45 +1,56 @@
-import assert from 'assert';
 import { getFrameTimestamp } from 'glov/client/engine';
 import { EntityBaseClient } from 'glov/client/entity_base_client';
 import { ClientEntityManagerInterface } from 'glov/client/entity_manager_client';
 import {
   ActionDataAssignments,
 } from 'glov/common/entity_base_common';
-import { TraitFactory } from 'glov/common/trait_factory';
 import {
   DataObject,
   NetErrorCallback,
-} from 'glov/common/types.js';
-import { clone } from 'glov/common/util';
-import type { ROVec2, ROVec3 } from 'glov/common/vmath';
-import { EntityCrawlerDataCommon, entSamePos } from '../common/crawler_entity_common';
-import type { JSVec3 } from '../common/crawler_state';
+} from 'glov/common/types';
+import type {
+  JSVec2,
+  JSVec3,
+  ROVec2,
+} from 'glov/common/vmath';
+import {
+  EntityCrawlerDataCommon,
+} from '../common/crawler_entity_common';
 import {
   crawlerEntClientDefaultDraw2D,
   crawlerEntClientDefaultOnDelete,
   crawlerEntityManager,
+  DEFAULT_SERIALIZE_IGNORED,
   EntityCrawlerClient,
   EntityDraw2DOpts,
   EntityDrawOpts,
   EntityOnDeleteSubParam,
   entityPosManager,
   Floater,
+  INDEX_POS,
+  indexPosKey,
 } from './crawler_entity_client';
 
 const { random } = Math;
 
 type Entity = EntityClient;
 
-export function entitiesAt(cem: ClientEntityManagerInterface<Entity>,
-  pos: [number, number] | ROVec2,
+export function entityManager(): ClientEntityManagerInterface<Entity> {
+  return crawlerEntityManager() as unknown as ClientEntityManagerInterface<Entity>;
+}
+
+export function entitiesAt(
+  pos: JSVec2 | ROVec2,
   floor_id: number,
   skip_fading_out: boolean
 ): Entity[] {
-  return cem.entitiesFind((ent) => entSamePos(ent, pos) && ent.data.floor === floor_id, skip_fading_out);
-}
-
-export function entityManager(): ClientEntityManagerInterface<Entity> {
-  return crawlerEntityManager() as ClientEntityManagerInterface<Entity>;
+  let entity_manager = entityManager();
+  let ents = entity_manager.indexedGet(INDEX_POS, indexPosKey(floor_id, pos[0], pos[1]));
+  let ret = Object.values(ents) as Entity[];
+  if (skip_fading_out) {
+    ret = ret.filter((ent) => !ent.fading_out);
+  }
+  return ret;
 }
 
 export type StatsData = {
@@ -57,18 +68,12 @@ export type EntityDataClient = {
   events_done?: Partial<Record<string, boolean>>;
 } & EntityCrawlerDataCommon;
 
-
-export class EntityClient extends EntityBaseClient implements EntityCrawlerClient {
+class EntityClient extends EntityBaseClient implements EntityCrawlerClient {
   declare entity_manager: ClientEntityManagerInterface<Entity>;
   declare data: EntityDataClient;
 
   floaters: Floater[];
   delete_reason?: string;
-
-  draw_cb?: (param: {
-    pos: ROVec3;
-  }) => void;
-  draw_cb_frame = 0;
 
   declare onDelete: (reason: string) => number;
   declare draw2D: (param: EntityDraw2DOpts) => void;
@@ -84,7 +89,7 @@ export class EntityClient extends EntityBaseClient implements EntityCrawlerClien
   declare blocks_player: boolean;
   declare ai_move_min_time: number;
   declare ai_move_rand_time: number;
-  declare display_name?: string;
+  declare display_name: string;
 
   constructor(data_in: DataObject) {
     super(data_in);
@@ -139,33 +144,28 @@ export class EntityClient extends EntityBaseClient implements EntityCrawlerClien
     }
     return is_initial ? 0 : 250;
   }
+
+  moveTo(pos: ROVec2): void {
+    this.applyAIUpdate('ai_move', {
+      pos: [pos[0], pos[1], this.data.pos[2] || 0],
+    }, undefined, function (err?: unknown): void {
+      if (err) {
+        throw err;
+      }
+    });
+  }
 }
 EntityClient.prototype.draw2D = crawlerEntClientDefaultDraw2D;
 EntityClient.prototype.onDelete = crawlerEntClientDefaultOnDelete;
 EntityClient.prototype.do_split = true;
 EntityClient.prototype.ai_move_min_time = 500;
 EntityClient.prototype.ai_move_rand_time = 500;
+EntityClient.prototype.display_name = '?';
+EntityClient.prototype.serialize_ignored = {
+  ...DEFAULT_SERIALIZE_IGNORED,
+};
+export type { EntityClient };
 
-export function gameEntityTraitsClientStartup(
-  ent_factory: TraitFactory<EntityClient, DataObject> // | TraitFactory<EntityServer, DataObject>
-): void {
-  ent_factory.registerTrait<StatsData, undefined>('stats_default', {
-    default_opts: {} as StatsData, // moraff hack
-    alloc_state: function (opts: StatsData, ent: Entity) {
-      // TODO: use a callback that doesn't actually need to allocate any state on the entity?
-      if (!ent.data.stats) {
-        const stats = ent.data.stats = clone(opts);
-        assert(stats.hp);
-        stats.hp_max = stats.hp;
-      }
-      return undefined;
-    }
-  });
-  ent_factory.extendTrait('enemy', {
-    properties: {
-      blocks_player: true,
-    },
-    // alloc_state: function (opts: unknown, ent: Entity) {
-    // },
-  });
+export function entityClientConstructor(): Constructor<EntityClient> {
+  return EntityClient;
 }

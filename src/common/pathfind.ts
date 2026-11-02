@@ -19,7 +19,7 @@ export function pathFind(
   ignore_visibility: boolean,
   script_api: CrawlerScriptAPI,
 ): number[] | null {
-  const { w, cells } = level;
+  const { w, h, cells } = level;
   let dest_idx = dest_x + dest_y * w;
   let start_idx = start_x + start_y * w;
   let seen = [] as boolean[];
@@ -81,6 +81,9 @@ export function pathFind(
     }
     let x2 = cx + DX[dir];
     let y2 = cy + DY[dir];
+    if (x2 < 0 || y2 < 0 || x2 >= w || y2 >= h) {
+      return;
+    }
     push(x2 + y2 * w, queue_idx, dir);
   }
   while (queue_idx < queue.length) {

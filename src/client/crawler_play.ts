@@ -1,4 +1,5 @@
 /* eslint comma-spacing:error */
+
 import assert from 'assert';
 import * as camera2d from 'glov/client/camera2d';
 import { ChatUIRunParam } from 'glov/client/chat_ui';
@@ -18,7 +19,8 @@ import {
 import * as engine from 'glov/client/engine';
 import { ClientEntityManagerInterface } from 'glov/client/entity_manager_client';
 import { fetch } from 'glov/client/fetch';
-import { framebufferEnd } from 'glov/client/framebuffer';
+import { framebufferEnd, framebufferStart } from 'glov/client/framebuffer';
+import { glDepthTest, glScissorTest } from 'glov/client/glstate';
 import {
   localStorageGetJSON,
   localStorageSet,
@@ -51,6 +53,9 @@ import type { EntityManagerEvent } from 'glov/common/entity_base_common';
 import {
   DataObject,
   ErrorCallback,
+  Rec,
+  TSMap,
+  VoidFunc,
 } from 'glov/common/types';
 import {
   callEach,
@@ -63,22 +68,22 @@ import {
   v3lerp,
   v4copy,
   Vec2,
-  vec3,
   Vec4,
   vec4,
   zero_vec,
 } from 'glov/common/vmath';
 import { CRAWLER_IS_ONLINE } from '../common/crawler_config';
+import { EntityCrawlerDataCommon } from '../common/crawler_entity_common';
 import '../common/crawler_events'; // side effects: register events
 import {
   CrawlerLevel,
   CrawlerLevelSerialized,
   CrawlerState,
+  crawlerVstyle,
   createCrawlerState,
   DX,
   DY,
   JSVec3,
-  VstyleDesc,
 } from '../common/crawler_state';
 import { LevelGenerator, levelGeneratorCreate } from '../common/level_generator';
 import { entitiesAdjacentTo } from './ai';
@@ -98,6 +103,7 @@ import {
 import {
   CrawlerController,
   crawlerControllerCreate,
+  crawlerControllerStartup,
 } from './crawler_controller';
 import {
   crawlerEntitiesInit,
@@ -109,6 +115,7 @@ import {
   crawlerMyEnt,
   EntityCrawlerClient,
   entityPosManager,
+  INDEX_FLOOR,
   isLocal,
   isOnline,
   isOnlineOnly,
@@ -119,12 +126,14 @@ import { mapViewActive } from './crawler_map_view';
 import {
   crawlerCalc3DViewport,
   crawlerRenderDoSplit,
+  crawlerRenderIgnoreVis,
   crawlerRenderViewportGet,
   crawlerSetFogColor,
   crawlerSetFogParams,
   FOV,
   render,
   renderPrep,
+  RenderPrepParam,
   SPLIT_ALL,
   SPLIT_FAR,
   SPLIT_NEAR,
@@ -138,7 +147,6 @@ import {
   crawlerScriptAPIClientCreate,
 } from './crawler_script_api_client';
 import { dialogReset } from './dialog_system';
-import { entityManager } from './entity_game_client';
 
 const { PI, max, floor, round } = Math;
 
@@ -207,6 +215,10 @@ settingsRegister({
   filter: {
     default_value: 0, // 1 for spire, 0 for demo
     type: cmd_parse.TYPE_INT,
+    // mag/min
+    // 0 = nearest/nearest (nomip)
+    // 1 = linear/mipmaplinear (and aniso)
+    // 2 = nearest/mipmaplinear (doesn't get aniso) - not great, prefer moraff method?
     range: [0, 2],
     on_change: function () {
       if (!past_startup) {
@@ -267,7 +279,7 @@ let last_scaled_frame = -1;
 let last_scaled_time: number;
 let scaled_remainder = 0;
 export function getScaledFrameDt(): number {
-  if (settings.time_scale === 1) {
+  if (settings.time_scale === 1 || engine.frame_timestamp < 2500) {
     return engine.frame_dt;
   }
   if (last_scaled_frame === engine.frame_index) {
@@ -281,15 +293,95 @@ export function getScaledFrameDt(): number {
   return last_scaled_time;
 }
 
+type PackInfo = {
+  fields: string[];
+};
+
 export type SavedGameData = {
-  entities?: DataObject[];
+  entities?: DataObject[]; // deprecated, old format
+  ents_by_floor?: Rec<number, (DataObject | unknown[])[]>;
+  pack_info?: PackInfo;
   floors_inited?: Partial<Record<number, true>>;
   vis_data?: Partial<Record<number, string>>;
   script_data?: DataObject;
   time_played?: number;
   timestamp: number;
 };
+let play_time_since_save = 0;
 let local_game_data: SavedGameData = { timestamp: Date.now() };
+
+function unpackSavedEnt(floor_id: number, pack_info: PackInfo | undefined, ent: DataObject | unknown[]): DataObject {
+  let ret = ent as DataObject;
+  if (Array.isArray(ent)) {
+    assert(pack_info);
+    // unpack
+    let stats: DataObject = {};
+    ret = {
+      stats,
+    };
+    for (let ii = 0; ii < ent.length; ++ii) {
+      let v = ent[ii];
+      if (v !== null) {
+        let key = pack_info.fields[ii];
+        if (key.startsWith('s:')) {
+          stats[key.slice(2)] = v;
+        } else {
+          ret[key] = v;
+        }
+      }
+    }
+  }
+  ret.floor = floor_id;
+  if ((ret.pos as number[]).length < 3) {
+    (ret.pos as number[]).push(0);
+  }
+  return ret;
+}
+
+function packEntForSaving(
+  pack_info: PackInfo | undefined,
+  packed_fields: TSMap<true>,
+  ent_raw: DataObject,
+  ent_fields: string[] | null
+): DataObject | unknown[] {
+  let can_pack = ent_fields !== null;
+  if (ent_fields) {
+    for (let ii = 0; ii < ent_fields.length; ++ii) {
+      if (!packed_fields[ent_fields[ii]]) {
+        can_pack = false;
+        break;
+      }
+    }
+  }
+  let data2 = ent_raw as unknown as EntityCrawlerDataCommon;
+  if (!data2.pos[2]) {
+    ent_raw.pos = [
+      data2.pos[0],
+      data2.pos[1],
+    ] as unknown as JSVec3;
+  }
+  delete ent_raw.floor;
+  if (!can_pack) {
+    return ent_raw;
+  }
+  assert(pack_info);
+  let ret: unknown[] = [];
+  let stats = ent_raw.stats as DataObject;
+  for (let ii = 0; ii < pack_info.fields.length; ++ii) {
+    let field = pack_info.fields[ii];
+    let v = ent_raw[field];
+    if (field.startsWith('s:')) {
+      v = stats[field.slice(2)];
+    }
+    if (v !== undefined) {
+      while (ret.length < ii) {
+        ret.push(null);
+      }
+      ret[ii] = v;
+    }
+  }
+  return ret;
+}
 
 export function myEntFromSavedData(data: SavedGameData): DataObject | null {
   if (data.entities) {
@@ -300,13 +392,23 @@ export function myEntFromSavedData(data: SavedGameData): DataObject | null {
       }
     }
   }
+  if (data.ents_by_floor) {
+    for (let floor_id_str in data.ents_by_floor) {
+      let floor_id = Number(floor_id_str);
+      let arr = data.ents_by_floor[floor_id]!;
+      for (let jj = 0; jj < arr.length; ++jj) {
+        let ent = arr[jj];
+        if (!Array.isArray(ent) && ent.type === 'player') {
+          return unpackSavedEnt(floor_id, data.pack_info, ent);
+        }
+      }
+    }
+  }
   return null;
 }
 
 export function crawlerCurSavePlayTime(): number {
-  let now = Date.now();
-  let dt = now - local_game_data.timestamp;
-  return (local_game_data.time_played || 0) + dt;
+  return (local_game_data.time_played || 0) + play_time_since_save;
 }
 
 export function crawlerSavePlayTime(mode: 'manual' | 'auto'): void {
@@ -365,22 +467,92 @@ urlhash.register({
   push: true,
 });
 
+function entToFields(data: DataObject, field_counts: TSMap<number>): string[] {
+  let ret: string[] = [];
+  function push(key: string): void {
+    if (key === 'floor') {
+      return;
+    }
+    ret.push(key);
+    field_counts[key] = (field_counts[key] || 0) + 1;
+  }
+  for (let key in data) {
+    let v = data[key];
+    if (v !== undefined) {
+      if (key === 'stats') {
+        let stats = v as DataObject;
+        for (let statskey in stats) {
+          let sv = stats[statskey];
+          if (sv !== undefined) {
+            push(`s:${statskey}`);
+          }
+        }
+      } else {
+        push(key);
+      }
+    }
+  }
+  return ret;
+}
+
 export function crawlerSaveGameGetData(): SavedGameData {
   crawlerFlushVisData(true);
   let { entities } = crawlerEntityManager();
-  let ent_list: DataObject[] = [];
+  let ents_by_floor: Rec<number, (DataObject | unknown[])[]> = {};
+  let ent_list: {
+    fields: string[] | null;
+    ent: DataObject;
+  }[] = [];
+  let field_counts: TSMap<number> = {};
   for (let ent_id_str in entities) {
     let ent = entities[ent_id_str]!;
     if (!ent.fading_out) {
-      ent_list.push(ent.data as unknown as DataObject);
+      let data = ent.serialize(); // must make a copy of at least the root fields, we delete/modify this
+      ent_list.push({
+        fields: data.type === 'player' ? null : entToFields(data, field_counts),
+        ent: data,
+      });
     }
   }
-  local_game_data.entities = ent_list;
+
+  let packed_fields: TSMap<true> = {};
+  let pack_info: PackInfo | undefined;
+  if (ent_list.length > 10) {
+    // pack all fields used by 80% of ents
+    let threshold = ent_list.length * 0.8;
+    for (let key in field_counts) {
+      if (field_counts[key]! >= threshold) {
+        packed_fields[key] = true;
+      }
+    }
+    pack_info = {
+      fields: Object.keys(packed_fields),
+    };
+    pack_info.fields.sort(function (a, b) {
+      return field_counts[b]! - field_counts[a]!;
+    });
+  }
+
+  for (let ii = 0; ii < ent_list.length; ++ii) {
+    let rec = ent_list[ii];
+    let data2 = rec.ent as unknown as EntityCrawlerDataCommon;
+    let floor_id = data2.floor;
+    let packed = packEntForSaving(pack_info, packed_fields, rec.ent, rec.fields);
+    let arr = ents_by_floor[floor_id];
+    if (!arr) {
+      arr = ents_by_floor[floor_id] = [];
+    }
+    arr.push(packed);
+  }
+  delete local_game_data.entities; // prune old format
+  local_game_data.ents_by_floor = ents_by_floor;
   local_game_data.script_data = script_api.localDataGet();
+  local_game_data.pack_info = pack_info;
   let now = Date.now();
   if (local_game_data.timestamp) {
-    local_game_data.time_played = (local_game_data.time_played || 0) + (now - local_game_data.timestamp);
+    local_game_data.time_played = crawlerCurSavePlayTime();
   }
+  play_time_since_save = 0;
   local_game_data.timestamp = now;
   return local_game_data;
 }
@@ -389,6 +561,10 @@ export function crawlerSaveGame(mode: 'auto' | 'manual'): void {
   let slot = urlhash.get('slot') || '1';
   let data = crawlerSaveGameGetData();
   localStorageSetJSON<SavedGameData>(`savedgame_${slot}.${mode}`, data);
+}
+
+export function crawlerLevelHasBeenReset(floor_id: number): void {
+  delete last_saved_vis_string[floor_id];
 }
 
 type LocalVisData = {
@@ -409,7 +585,7 @@ export function crawlerInitVisData(floor_id: number): void {
     let data = local_game_data.vis_data?.[floor_id];
     if (data) {
       last_saved_vis_string[floor_id] = data;
-      level.applyVisString(data);
+      level.applyVisString(data, script_api);
     } else {
       last_saved_vis_string[floor_id] = '';
     }
@@ -424,11 +600,11 @@ export function crawlerInitVisData(floor_id: number): void {
     if (!err || data) {
       assert(typeof data === 'string');
       last_saved_vis_string[floor_id] = data;
-      level.applyVisString(data);
+      level.applyVisString(data, script_api);
     }
     let prev = localStorageGetJSON<LocalVisData>('last_vis_data');
     if (prev && prev.floor === floor_id && prev.room === crawlerRoomID()) {
-      level.applyVisString(prev.data);
+      level.applyVisString(prev.data, script_api);
     }
   });
 }
@@ -478,7 +654,7 @@ function beforeUnload(): void {
   }
 }
 
-function populateLevelFromInitialEntities(
+export function populateLevelFromInitialEntities(
   entity_manager: ClientEntityManagerInterface,
   floor_id: number, level: CrawlerLevel
 ): number {
@@ -536,7 +712,8 @@ cmd_parse.register({
     assert(level);
     level.resetState();
     let entity_manager = crawlerEntityManagerOffline();
-    let ents = entity_manager.entitiesFind((ent) => ent.data.floor === floor_id, true);
+    let floor_ents = entity_manager.indexedGet(INDEX_FLOOR, floor_id);
+    let ents = (Object.values(floor_ents) as Entity[]).filter((ent) => !ent.fading_out);
     let count = 0;
     for (let ii = 0; ii < ents.length; ++ii) {
       let ent = ents[ii];
@@ -546,6 +723,11 @@ cmd_parse.register({
       }
     }
     let added = populateLevelFromInitialEntities(entity_manager, floor_id, level);
+    let old_count = Object.keys(entity_manager.indexedGet(INDEX_FLOOR, floor_id)).length;
+    // Probably want this callback at least for app logic that spawns monsters outside of level generation
+    on_init_level_offline?.(entity_manager, floor_id, level);
+    let new_count = Object.keys(entity_manager.indexedGet(INDEX_FLOOR, floor_id)).length;
+    added += new_count - old_count;
     resp_func(null, `${count} entities deleted, ${added} entities spawned`);
   },
 });
@@ -595,6 +777,7 @@ function crawlerLoadGame(data: SavedGameData): boolean {
   const { new_player_data } = offline_data;
   local_game_data = data;
   local_game_data.timestamp = Date.now();
+  play_time_since_save = 0;
   let entity_manager = crawlerEntityManager();
   if (want_new_game) {
     want_new_game = false;
@@ -609,6 +792,19 @@ function crawlerLoadGame(data: SavedGameData): boolean {
       let ent = entity_manager.addEntityFromSerialized(local_game_data.entities[ii]);
       if (ent.is_player) {
         player_ent = ent;
+      }
+    }
+  }
+  if (local_game_data.ents_by_floor) {
+    for (let floor_id_str in data.ents_by_floor) {
+      let floor_id = Number(floor_id_str);
+      let arr = data.ents_by_floor[floor_id]!;
+      for (let jj = 0; jj < arr.length; ++jj) {
+        let ent_data = unpackSavedEnt(floor_id, local_game_data.pack_info, arr[jj]);
+        let ent = entity_manager.addEntityFromSerialized(ent_data);
+        if (ent.is_player) {
+          player_ent = ent;
+        }
       }
     }
   }
@@ -638,7 +834,7 @@ function getLevelForFloorFromServer(floor_id: number, cb: (level: CrawlerLevelSe
 }
 
 function fetchLevel(filename: string, cb: (err?: string, data?: CrawlerLevelSerialized) => void): void {
-  let url = `${getURLBase()}/levels/${filename}.json`;
+  let url = `${getURLBase()}levels/${filename}.json`;
   fetch({
     url,
     response_type: 'json',
@@ -661,17 +857,25 @@ export type LevelProvider = (
 
 let level_fallback_provider: LevelProvider;
 
+let level_is_generated_test: ((floor_id: number) => boolean) | undefined;
+
 function getLevelForFloorFromWebFS(floor_id: number, cb: (level: CrawlerLevelSerialized) => void): void {
-  let url = `${getURLBase()}/levels/level${floor_id}.json`;
+  let label = `level ${floor_id}`;
+  function finish(err: string | undefined | null, data2?: CrawlerLevelSerialized | null): void {
+    if (err) {
+      throw new Error(`Error loading "${label}": ${err}`);
+    }
+    assert(data2);
+    cb(data2);
+  }
+  if (level_is_generated_test?.(floor_id)) {
+    return level_fallback_provider(floor_id, finish);
+  }
+  let url = `${getURLBase()}levels/level${floor_id}.json`;
+  label = url;
   fetchLevel(`level${floor_id}`, (err?: string, data?: CrawlerLevelSerialized) => {
     if (err) {
-      return level_fallback_provider(floor_id, (err, data2) => {
-        if (err) {
-          throw new Error(`Error loading "${url}": ${err}`);
-        }
-        assert(data2);
-        cb(data2);
-      });
+      return level_fallback_provider(floor_id, finish);
     }
     cb(data!);
   });
@@ -726,6 +930,7 @@ export function crawlerBuildModeActivate(build_mode: boolean): void {
   }
 }
 
+let on_pre_move: VoidFunc | undefined;
 
 let turn_based_step: ((reason: TurnBasedStepReason) => void) | undefined;
 let turn_based_step_threshold = 0.4;
@@ -802,14 +1007,21 @@ export function crawlerTurnBasedScheduleStep(delay: number, reason: TurnBasedSte
 }
 
 export function crawlerTurnBasedMovePreStart(/*old_pos, new_pos, move_dir*/): void {
+  on_pre_move?.();
   if (turn_based_allowed?.() !== false) {
     executeStep();
   }
 }
 
 function crawlerTurnBasedMoveStart(pos: Vec2): void {
+  on_pre_move?.();
   if (turn_based_allowed?.() !== false) {
     executeStep();
+  }
+  let target_cell = crawlerGameState().level!.getCell(pos[0], pos[1]);
+  if (target_cell?.props?.noai) {
+    // moving onto a noai cell (e.g. stairs, teleporter), it might need to eject us, don't step!
+    return;
   }
   need_turn_based_step = true;
   turn_based_step_reason = 'move';
@@ -826,7 +1038,7 @@ export function crawlerTurnBasedMoveFinish(pos: Vec2): void {
 
 let engaged_pos: string | null = null;
 function crawlerRepeatHasher(pos: ROVec2): string | null {
-  let ents = entitiesAdjacentTo(game_state, entityManager(), game_state.floor_id, pos, crawlerScriptAPI());
+  let ents = entitiesAdjacentTo(game_state, game_state.floor_id, pos, crawlerScriptAPI());
   ents = ents.filter(function (ent) {
     return ent.isEnemy() && ent.isAlive();
   });
@@ -931,7 +1143,9 @@ function crawlerPlayInitOfflineLate(data: SavedGameData): void {
   let floor_id = crawlerMyEnt().data.floor;
   game_state.getLevelForFloorAsync(floor_id, (level: CrawlerLevel) => {
     if (need_init_pos) {
-      v3copy(crawlerMyEnt().data.pos, level.special_pos.stairs_in);
+      let me = crawlerMyEnt();
+      v3copy(me.data.pos, level.special_pos.stairs_in);
+      me.indexUpdate();
     }
     engine.setState(play_state);
     controller.initFromMyEnt();
@@ -947,6 +1161,13 @@ export function crawlerLoadOfflineGame(data: SavedGameData): void {
   crawlerPlayInitShared();
   play_init_offline?.();
   crawlerPlayInitOfflineLate(data);
+}
+
+// for demos/intros/etc
+export function crawlerEmptyOfflineGame(): void {
+  crawlerPlayInitOfflineEarly();
+  script_api = crawlerScriptAPIClientCreate(OnlineMode.OFFLINE);
+  script_api.setCrawlerState(game_state);
 }
 
 export function crawlerPlayInitOffline(): void {
@@ -1024,17 +1245,53 @@ let ui_clear_color = vec4();
 export function crawlerRenderSetUIClearColor(v: Vec4): void {
   v4copy(ui_clear_color, v);
 }
-function uiClearColor(): void {
-  gl.clearColor(ui_clear_color[0],
-    ui_clear_color[1],
-    ui_clear_color[2],
-    ui_clear_color[3]);
+let ui_clear_cb: VoidFunc | null = null;
+export function crawlerRenderSetUIClearCallback(cb: VoidFunc): void {
+  ui_clear_cb = cb;
+}
+let viewport_save = vec4();
+function uiClear(): void {
+  // Note: this is probably overkill/unneeded for any games which do full-backbuffer viewport rendering
+  v4copy(viewport_save, engine.viewport);
+  engine.setViewport([0, 0, engine.width, engine.height]);
+  let is_scissor = glScissorTest();
+  if (is_scissor) {
+    glScissorTest(false);
+  }
+  gl.clearColor(ui_clear_color[0], ui_clear_color[1], ui_clear_color[2], ui_clear_color[3]);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+  ui_clear_cb?.();
+  engine.setViewport(viewport_save);
+  if (is_scissor) {
+    glScissorTest(true);
+  }
 }
 
+type RenderFramePrepParam = {
+  is_first_viewport: boolean;
+  is_last_viewport: boolean;
+  is_main_viewport: boolean;
+  fov_override?: number;
+  no_map_update?: boolean;
+  override_render_prep_param?: RenderPrepParam;
+  override_ignore_vis?: boolean;
+  no_controller?: boolean;
+  render_aspect?: number;
+};
+
 let entity_split: boolean;
-let default_bg_color = vec3();
-let default_fog_params = vec3(0.003, 0.001, 800.0);
-export function crawlerRenderFramePrep(is_first_viewport: boolean, is_nonprimary_viewport: boolean): void {
+export function crawlerRenderFramePrep(param: RenderFramePrepParam): void {
+  const {
+    is_first_viewport,
+    is_last_viewport,
+    is_main_viewport,
+    fov_override,
+    no_map_update,
+    override_render_prep_param,
+    override_ignore_vis,
+    no_controller,
+    render_aspect,
+  } = param;
   let cv = crawlerRenderViewportGet();
   let do_postprocess = false;
   let ppw = cv.w;
@@ -1052,6 +1309,7 @@ export function crawlerRenderFramePrep(is_first_viewport: boolean, is_nonprimary
   }
   let opts_3d: {
     fov: number;
+    clear: boolean;
     clear_all: boolean;
     clear_color?: Vec4;
     clear_all_color?: Vec4;
@@ -1060,11 +1318,13 @@ export function crawlerRenderFramePrep(is_first_viewport: boolean, is_nonprimary
     viewport?: Vec4;
     need_depth?: string;
     just_viewport?: boolean;
+    render_aspect?: number;
   } = {
-    fov: FOV,
-    clear_all: is_first_viewport,
-    clear_all_color: ui_clear_color,
+    fov: fov_override || FOV,
+    clear: false,
+    clear_all: false,
     just_viewport: !is_first_viewport && !do_postprocess,
+    render_aspect,
   };
   entity_split = setting_pixely === 1 &&
     settings.entity_split && crawlerRenderDoSplit() &&
@@ -1074,10 +1334,6 @@ export function crawlerRenderFramePrep(is_first_viewport: boolean, is_nonprimary
     opts_3d.height = pph;
     effectsPassAdd();
   } else {
-    if (is_first_viewport) {
-      uiClearColor();
-      gl.clear(gl.COLOR_BUFFER_BIT);
-    }
     let viewport = crawlerCalc3DViewport();
     opts_3d.width = viewport[2];
     opts_3d.height = viewport[3];
@@ -1087,25 +1343,21 @@ export function crawlerRenderFramePrep(is_first_viewport: boolean, is_nonprimary
     // need depth buffer attachment
     opts_3d.need_depth = 'texture';
   }
-  let { level } = game_state;
-  let clear = default_bg_color;
-  let fog = default_bg_color;
-  let fog_params = default_fog_params;
-  let vstyle: VstyleDesc | null = null;
-  if (level) {
-    vstyle = level.vstyle;
-  }
-  if (vstyle) {
-    clear = vstyle.background_color;
-    fog = vstyle.fog_color;
-    fog_params = vstyle.fog_params;
-  }
-  opts_3d.clear_color = [clear[0], clear[1], clear[2], 0];
-  gl.clearColor(clear[0], clear[1], clear[2], 0);
+  let vstyle = crawlerVstyle();
+  let clear = vstyle.background_color;
+  let fog = vstyle.fog_color;
+  let fog_params = vstyle.fog_params;
   crawlerSetFogColor(fog);
   crawlerSetFogParams(fog_params);
   engine.start3DRendering(opts_3d);
-  if (vstyle && vstyle.background_img) {
+  if (is_first_viewport && !do_postprocess) {
+    // clear the whole screen with the UI color and/or custom logic
+    uiClear();
+  }
+  // clear the 3D viewport (with depth)
+  gl.clearColor(clear[0], clear[1], clear[2], 0);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  if (vstyle.background_img) {
     let hsize = vstyle.background_size || 1;
     let tex = textureLoad({
       url: `img/${vstyle.background_img}.png`,
@@ -1116,7 +1368,7 @@ export function crawlerRenderFramePrep(is_first_viewport: boolean, is_nonprimary
       // force_mipmaps: false,
     });
     if (tex.loaded) {
-      gl.disable(gl.DEPTH_TEST);
+      glDepthTest(false);
       gl.depthMask(false);
       let voffs = mod(-game_state.angle / PI * 2 / hsize, 1);
       applyCopy({ source: tex, no_framebuffer: true, params: {
@@ -1124,7 +1376,7 @@ export function crawlerRenderFramePrep(is_first_viewport: boolean, is_nonprimary
                         voffs, tex.src_height / tex.height],
       } });
       if (voffs) {
-        let viewport_save = engine.viewport.slice(0);
+        v4copy(viewport_save, engine.viewport);
         if (do_postprocess) {
           engine.setViewport([cv.w * (1 - voffs) * hsize, 0, cv.w * voffs * hsize, cv.h]);
         } else {
@@ -1142,31 +1394,37 @@ export function crawlerRenderFramePrep(is_first_viewport: boolean, is_nonprimary
         } });
         engine.setViewport(viewport_save);
       }
-      gl.enable(gl.DEPTH_TEST);
+      glDepthTest(true);
       gl.depthMask(true);
     }
   }
 
-  uiClearColor();
-
   billboardBiasPrep(game_state);
 
-  let render_prep_param = controller.getRenderPrepParam();
-  let map_update_this_frame = render_prep_param.map_update_this_frame && !is_nonprimary_viewport;
+  let render_prep_param = override_render_prep_param || controller.getRenderPrepParam();
+  if (override_ignore_vis !== undefined) {
+    render_prep_param = {
+      ...render_prep_param,
+      ignore_vis: override_ignore_vis,
+    };
+  }
+  let map_update_this_frame = render_prep_param.map_update_this_frame && !no_map_update;
   renderPrep({
     ...render_prep_param,
     map_update_this_frame,
   });
 
-  sound3DListener({
-    pos: render_prep_param.cam_pos,
-    forward: dynGeomForward(),
-    up: dynGeomUp(),
-  });
+  if (is_main_viewport) {
+    sound3DListener({
+      pos: render_prep_param.cam_pos,
+      forward: dynGeomForward(),
+      up: dynGeomUp(),
+    });
+  }
 
-  crawlerRenderEntitiesPrep();
+  crawlerRenderEntitiesPrep(no_controller);
 
-  if (map_update_this_frame) {
+  if (map_update_this_frame && is_last_viewport) {
     controller.flushMapUpdate();
   }
 }
@@ -1177,7 +1435,8 @@ const flip_h_params = {
   copy_uv_scale: vec4(-1, 1, 1, 0),
 };
 
-export function crawlerRenderFrame(): void {
+export function crawlerRenderFrame(is_first_viewport: boolean, no_controller?: boolean): void {
+  let ignore_vis = crawlerRenderIgnoreVis();
   let cv = crawlerRenderViewportGet();
   if (setting_pixely) {
     effectsPassConsume();
@@ -1185,20 +1444,20 @@ export function crawlerRenderFrame(): void {
       profilerStopStart('renderAll');
       render(game_state, script_api, SPLIT_ALL);
       profilerStopStart('drawEntitiesAll');
-      crawlerRenderEntities(SPLIT_ALL);
+      crawlerRenderEntities(SPLIT_ALL, ignore_vis);
       profilerStopStart('bottom');
       let viewport = crawlerCalc3DViewport();
       applyPixelyExpand({
         final: effectsIsFinal(), clear: true, clear_all: true,
         viewport,
       });
-      gl.disable(gl.SCISSOR_TEST); // who's leaving this on? effect into a viewport
+      glScissorTest(false); // who's leaving this on? effect into a viewport
       engine.setViewport([0, 0, engine.width, engine.height]);
     } else if (entity_split) { // && pixely=1
       profilerStopStart('renderFar');
       render(game_state, script_api, SPLIT_FAR);
       profilerStopStart('drawEntitiesFar');
-      crawlerRenderEntities(SPLIT_FAR);
+      crawlerRenderEntities(SPLIT_FAR, ignore_vis);
       // copy from low res to destination, filling depth buffer
       let viewport = crawlerCalc3DViewport();
       applyCopy({
@@ -1213,15 +1472,15 @@ export function crawlerRenderFrame(): void {
       render(game_state, script_api, SPLIT_NEAR);
       profilerStopStart('drawEntitiesNear');
       // engine.setViewport(viewport);
-      crawlerRenderEntities(SPLIT_NEAR);
+      crawlerRenderEntities(SPLIT_NEAR, ignore_vis);
       profilerStopStart('bottom');
-      gl.disable(gl.SCISSOR_TEST); // who's leaving this on? effect into a viewport
+      glScissorTest(false); // who's leaving this on? effect into a viewport
       engine.setViewport([0, 0, engine.width, engine.height]);
     } else {
       profilerStopStart('renderAll');
       render(game_state, script_api, SPLIT_ALL);
       profilerStopStart('drawEntitiesAll');
-      crawlerRenderEntities(SPLIT_ALL);
+      crawlerRenderEntities(SPLIT_ALL, ignore_vis);
       profilerStopStart('bottom');
       engine.clearHad3DThisFrame();
       let tex = framebufferEnd();
@@ -1236,36 +1495,51 @@ export function crawlerRenderFrame(): void {
     profilerStopStart('renderAll');
     render(game_state, script_api, SPLIT_ALL);
     profilerStopStart('drawEntitiesAll');
-    crawlerRenderEntities(SPLIT_ALL);
+    crawlerRenderEntities(SPLIT_ALL, ignore_vis);
     profilerStopStart('bottom');
     if (cv.flip_h) {
       effectsPassConsume();
       let viewport = crawlerCalc3DViewport();
-      applyCopy({
-        params: flip_h_params,
+      let source = framebufferEnd();
+      framebufferStart({
+        clear: false,
+        clear_all: false,
+        viewport,
         final: effectsIsFinal(),
+        need_depth: true,
+      });
+      glScissorTest(false); // who's leaving this on? effect into a viewport
+
+      if (is_first_viewport) {
+        uiClear();
+      }
+      engine.setViewport(viewport);
+      applyCopy({
+        source,
+        params: flip_h_params,
+        no_framebuffer: true,
         clear: false,
         clear_all: false,
         viewport,
       });
-      gl.disable(gl.SCISSOR_TEST); // who's leaving this on? effect into a viewport
-      engine.setViewport([0, 0, engine.width, engine.height]);
     }
-    gl.disable(gl.SCISSOR_TEST);
+    glScissorTest(false);
     engine.setViewport([0, 0, engine.width, engine.height]);
   }
 
-  if (controller.getFadeAlpha()) {
+  let fade_alpha = no_controller ? 0 : controller.getFadeAlpha();
+  if (fade_alpha) {
     // TODO: maybe grab a different fade color for doors than stairs? Spire needs something like that
     // let fade_v = controller.getFadeColor();
-    let desired_fade_color = game_state.level?.vstyle.background_color || zero_vec;
+    let vstyle = crawlerVstyle();
+    let desired_fade_color = vstyle.background_color || zero_vec;
     if (!last_frame_did_fade) {
       v3copy(fade_color, desired_fade_color);
       last_frame_did_fade = true;
     } else {
       v3lerp(fade_color, getScaledFrameDt() * 0.001, fade_color, desired_fade_color);
     }
-    fade_color[3] = controller.getFadeAlpha();
+    fade_color[3] = fade_alpha;
 
     if (settings.pixely) {
       ui.drawRect(cv.x, cv.y, cv.x + cv.w + 0.07, cv.y + cv.h + 0.07, Z.CONTROLLER_FADE, fade_color);
@@ -1276,17 +1550,21 @@ export function crawlerRenderFrame(): void {
         Z.CONTROLLER_FADE, fade_color);
     }
   } else {
+    // Note: logic for blending fade colors is wrong with multi-viewports on one frame
     last_frame_did_fade = false;
   }
 }
 
 let last_frame_idx = -1;
-export function crawlerPrepAndRenderFrame(is_nonprimary_viewport?: boolean): void {
+export function crawlerPrepAndRenderFrame(param: Omit<RenderFramePrepParam, 'is_first_viewport'>): void {
   let is_first_viewport = last_frame_idx !== getFrameIndex();
   last_frame_idx = getFrameIndex();
-  is_nonprimary_viewport = is_nonprimary_viewport || false;
-  crawlerRenderFramePrep(is_first_viewport, is_nonprimary_viewport);
-  crawlerRenderFrame();
+  let param2: RenderFramePrepParam = {
+    ...param,
+    is_first_viewport,
+  };
+  crawlerRenderFramePrep(param2);
+  crawlerRenderFrame(is_first_viewport, param.no_controller);
 }
 
 export type CrawlerChatUIParam = ChatUIRunParam & { y_bottom: number };
@@ -1295,8 +1573,16 @@ let chat_ui_param_build_mode: CrawlerChatUIParam;
 let allow_offline_console: boolean;
 let chat_as_message_log: boolean;
 let do_chat: boolean;
-export function crawlerPlayTopOfFrame(overlay_menu_up: boolean, but_show_chat: boolean): void {
+export function crawlerPlayTopOfFrame(
+  overlay_menu_up: boolean,
+  but_show_chat: boolean,
+  chat_ui_param_override?: CrawlerChatUIParam
+): void {
   crawlerEntityManager().tick();
+
+  if (!engine.isInBackgroundOrBlurred()) {
+    play_time_since_save += engine.getFrameDt();
+  }
 
   let map_view = mapViewActive();
   if (overlay_menu_up || isMenuUp()) {
@@ -1315,12 +1601,13 @@ export function crawlerPlayTopOfFrame(overlay_menu_up: boolean, but_show_chat: b
     (!isOnline() && !chat_as_message_log);
   do_chat = allow_offline_console || isOnline() !== OnlineMode.OFFLINE;
   if (do_chat) {
+    let eff_param = (chat_ui_param_override || (buildModeActive() ? chat_ui_param_build_mode : chat_ui_param));
     getChatUI().run({
-      ...(buildModeActive() ? chat_ui_param_build_mode : chat_ui_param),
       hide: hide_chat,
       hide_input: chat_as_message_log,
-      y: chat_ui_param.y_bottom - getChatUI().h,
+      y: eff_param.y_bottom - getChatUI().h,
       always_scroll: !hide_chat,
+      ...eff_param,
     });
   }
 }
@@ -1358,8 +1645,10 @@ export function crawlerPlayStartup<AppEntity extends Entity>(param: {
   chat_ui_param_build_mode?: CrawlerChatUIParam;
   turn_based_step?: (reason: TurnBasedStepReason) => void;
   turn_based_allowed?: () => boolean;
+  on_pre_move?: VoidFunc;
   do_repeat_hasher: boolean;
   level_fallback_provider?: LevelProvider;
+  level_is_generated_test?: (floor_id: number) => boolean;
 }): void {
   on_broadcast = param.on_broadcast || undefined;
   play_init_online = param.play_init_online;
@@ -1375,8 +1664,10 @@ export function crawlerPlayStartup<AppEntity extends Entity>(param: {
   chat_ui_param_build_mode = param.chat_ui_param_build_mode || chat_ui_param;
   turn_based_step = param.turn_based_step;
   turn_based_allowed = param.turn_based_allowed;
+  on_pre_move = param.on_pre_move;
   do_repeat_hasher = param.do_repeat_hasher;
   level_fallback_provider = param.level_fallback_provider || levelFallbackProviderDefault;
+  level_is_generated_test = param.level_is_generated_test;
   window.addEventListener('beforeunload', beforeUnload, false);
   viewport_sprite = spriteCreate({ texs: [textureWhite()] });
   supports_frag_depth = engine.webgl2 || gl.getExtension('EXT_frag_depth');
@@ -1386,6 +1677,8 @@ export function crawlerPlayStartup<AppEntity extends Entity>(param: {
   });
 
   setting_pixely = settings.pixely;
+
+  crawlerControllerStartup();
 
   past_startup = true;
 }
