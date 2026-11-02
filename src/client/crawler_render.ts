@@ -182,18 +182,24 @@ let lower_right = vec2();
 let view_size = vec2();
 let temp_viewport = vec4();
 export function crawlerCalc3DViewport(): Vec4 {
-  virtualToCanvas(upper_left, [crawler_viewport.x, crawler_viewport.y]);
-  v2iRound(upper_left);
-  virtualToCanvas(lower_right, [crawler_viewport.x+crawler_viewport.w, crawler_viewport.y+crawler_viewport.h]);
-  v2sub(view_size, lower_right, upper_left);
-  view_size[0] = round(view_size[0]);
-  view_size[1] = round(view_size[1]);
-  upper_left[1] = engine.height - (upper_left[1] + view_size[1]);
-  v4set(temp_viewport,
-    upper_left[0], upper_left[1],
-    view_size[0], view_size[1]);
-  assert(temp_viewport[2] > 0);
-  assert(temp_viewport[3] > 0);
+  if (engine.render_width) {
+    v4set(temp_viewport, crawler_viewport.x,
+      engine.render_height - crawler_viewport.y - crawler_viewport.h,
+      crawler_viewport.w, crawler_viewport.h);
+  } else {
+    virtualToCanvas(upper_left, [crawler_viewport.x, crawler_viewport.y]);
+    v2iRound(upper_left);
+    virtualToCanvas(lower_right, [crawler_viewport.x+crawler_viewport.w, crawler_viewport.y+crawler_viewport.h]);
+    v2sub(view_size, lower_right, upper_left);
+    view_size[0] = round(view_size[0]);
+    view_size[1] = round(view_size[1]);
+    upper_left[1] = engine.height - (upper_left[1] + view_size[1]);
+    v4set(temp_viewport,
+      upper_left[0], upper_left[1],
+      view_size[0], view_size[1]);
+    assert(temp_viewport[2] > 0);
+    assert(temp_viewport[3] > 0);
+  }
   return temp_viewport;
 }
 

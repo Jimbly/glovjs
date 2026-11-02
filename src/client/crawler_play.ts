@@ -1451,8 +1451,12 @@ export function crawlerRenderFrame(is_first_viewport: boolean, no_controller?: b
         final: effectsIsFinal(), clear: true, clear_all: true,
         viewport,
       });
-      glScissorTest(false); // who's leaving this on? effect into a viewport
-      engine.setViewport([0, 0, engine.width, engine.height]);
+      if (engine.render_width) {
+        engine.setViewport([0, 0, engine.render_width, engine.render_height]);
+      } else {
+        glScissorTest(false); // who's leaving this on? effect into a viewport
+        engine.setViewport([0, 0, engine.width, engine.height]);
+      }
     } else if (entity_split) { // && pixely=1
       profilerStopStart('renderFar');
       render(game_state, script_api, SPLIT_FAR);
