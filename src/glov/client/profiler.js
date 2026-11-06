@@ -5,7 +5,7 @@
 // For good memory profiling, Chrome must be launched with --enable-precise-memory-info
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-/* globals performance*/
+/* globals performance, self*/
 
 export const HAS_MEMSIZE = Boolean(window.performance && performance.memory && performance.memory.usedJSHeapSize);
 export const HIST_SIZE = 128;
@@ -325,9 +325,10 @@ function profilerStopStart(name) {
 }
 
 if (window.performance && window.performance.now) {
-  window.profilerStart = profilerStart;
-  window.profilerStop = profilerStop;
-  window.profilerStopStart = profilerStopStart;
+  const glob = typeof globalThis !== 'undefined' ? globalThis : typeof window !== 'undefined' ? window : self;
+  glob.profilerStart = profilerStart;
+  glob.profilerStop = profilerStop;
+  glob.profilerStopStart = profilerStopStart;
 } // else set to `nop` in bootstrap.js
 
 export function profilerPaused() {

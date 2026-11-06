@@ -1,5 +1,6 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
+/* globals self */
 
 // Things that should be done before requiring or running any user-level code or other engine code
 
@@ -140,5 +141,6 @@ window.debugmsg = function (msg, clear) {
 
 // Placeholder profiler functions (in case shared/startup code calls them) until
 //   profiler is initialized/enabled.
+const glob = typeof globalThis !== 'undefined' ? globalThis : typeof window !== 'undefined' ? window : self;
 // eslint-disable-next-line @typescript-eslint/no-empty-function, func-name-matching
-window.profilerStart = window.profilerStop = window.profilerStopStart = function nop() {};
+glob.profilerStart = glob.profilerStop = glob.profilerStopStart = function nop() {};
