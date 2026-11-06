@@ -111,7 +111,7 @@ export function setNumWorkers(max_workers: number, worker_filename?: string): vo
 export let keep_busy = 0;
 
 export function startup(worker_filename: string, debug_names_in: typeof debug_names): void {
-  if (String(document.location).match(/^https?:\/\/localhost/)) {
+  if (String(window.location).match(/^https?:\/\/localhost/)) {
     debug_names = debug_names_in;
   }
   addHandler<{ msg: string; clear?: boolean }>('debugmsg', function (source, data) {

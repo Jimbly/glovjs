@@ -217,5 +217,5 @@ function getPattern(): RegExp {
  */
 export function isbot(): boolean {
   let userAgent = navigator.userAgent;
-  return Boolean(userAgent) && getPattern().test(userAgent) || String(document.location).includes('bot=1');
+  return Boolean(userAgent) && getPattern().test(userAgent) || String(window.location).includes('bot=1');
 }

@@ -134,7 +134,7 @@ WSClient.prototype.onBuildTimestamp = function (build_timestamp) {
           if (window.reloadSafe) {
             window.reloadSafe();
           } else {
-            document.location.reload();
+            window.location.reload();
           }
         });
       } else {

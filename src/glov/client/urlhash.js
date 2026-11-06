@@ -41,7 +41,7 @@ let params = {};
 
 let title_transformer;
 
-let page_base = (document.location.href || '').match(/^[^#?]+/)[0]; // remove search and anchor
+let page_base = (window.location.href || '').match(/^[^#?]+/)[0]; // remove search and anchor
 // This used to be here, but doesn't make sense (why would it be `foo.com/file.html?` but not `foo.com/?`?
 // if (!page_base.endsWith('/')) { // e.g. http://foo.bar/index.html
 //   page_base += '?';
@@ -105,7 +105,7 @@ const route_param_regex = /:(\w+)/g;
 let routes = [];
 
 function queryString() {
-  let href = String(document.location);
+  let href = String(window.location);
   href = href.slice(page_base.length);
   if (href.includes('#')) {
     href = href.slice(0, href.indexOf('#'));

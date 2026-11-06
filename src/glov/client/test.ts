@@ -26,7 +26,6 @@ class MockDocument {
   addEventListener(event: string, callback: () => void): void {
     // ignore
   }
-  location = new MockLocation();
 }
 
 class MockNavigator {
@@ -50,5 +49,5 @@ glob.BUILD_TIMESTAMP = String(Date.now());
 assert(!glob.document);
 let document = new MockDocument();
 glob.document = document;
-glob.location = document.location;
+glob.location = new MockLocation();
 glob.window = glob;

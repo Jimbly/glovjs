@@ -33,7 +33,7 @@ export function init(params) {
   if (params.ver) {
     wsclient.CURRENT_VERSION = params.ver;
   }
-  if (String(document.location).match(/^https?:\/\/localhost/)) {
+  if (String(window.location).match(/^https?:\/\/localhost/)) {
     if (!params.no_packet_debug) {
       console.log('PacketDebug: ON');
       packetEnableDebug(true);

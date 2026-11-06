@@ -306,7 +306,7 @@ export function releaseCanvas() {
 }
 
 function reloadDefault() {
-  document.location.reload();
+  window.location.reload();
 }
 
 let reload_func = reloadDefault;

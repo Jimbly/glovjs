@@ -138,7 +138,7 @@ function preventFocus(evt) {
 export function link(param) {
   let { x, y, w, h, url, internal, allow_modal } = param;
   if (!url.match(good_url)) {
-    url = `${document.location.protocol}//${url}`;
+    url = `${window.location.protocol}//${url}`;
   }
   let key = spotKey(param);
   let state = state_cache[key];

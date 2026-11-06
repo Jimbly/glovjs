@@ -37,10 +37,10 @@ window.onerror = function (e, file, line, col, errorobj) {
         msg = `${errorobj.message}\n${msg}`;
       }
     }
-    let origin = document.location.origin || '';
+    let origin = window.location.origin || '';
     if (origin) {
       if (origin === 'file://') {
-        let full_location = String(document.location);
+        let full_location = String(window.location);
         if (full_location.includes('app.asar')) {
           origin = `${full_location.split('app.asar')[0]}app.asar/`;
         }
@@ -99,7 +99,7 @@ window.onerror = function (e, file, line, col, errorobj) {
           let crash_html = debug.innerHTML;
           debug.innerHTML = `${desc}<br><br>This browser may not fully` +
             ' support WebGL and encountered an error while loading the page.';
-          if (String(document.location).includes('verbose=1')) {
+          if (String(window.location).includes('verbose=1')) {
             // include error
             debug.innerHTML = `${debug.innerHTML}<br><br>${crash_html}`;
           }

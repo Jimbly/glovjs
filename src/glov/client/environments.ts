@@ -94,7 +94,7 @@ export function environmentsInit<T extends EnvironmentConfig>(
     });
   }
 
-  if (document.location.pathname.match(/index\.\d+\.\d+\.\d+\.html$/)) {
+  if (window.location.pathname.match(/index\.\d+\.\d+\.\d+\.html$/)) {
     // this is a hashed, versioned, production index that is likely referencing older assets, do not do reload
     setAbilityReloadUpdates(false);
   }
