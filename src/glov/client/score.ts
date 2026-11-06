@@ -111,12 +111,12 @@ export function scoreLikelyOffline(): boolean {
   return likely_offline;
 }
 
-function fetchJSON2<T>(url: string, cb: (err: string | undefined, o: T) => void): void {
+function fetchJSON2<T>(url: string, cb: (err: string | null, o: T) => void): void {
   time_async_start = Date.now();
-  fetch({
+  fetch<T>({
     url: url,
     response_type: 'json',
-  }, (err: string | undefined, resp: unknown) => {
+  }, (err: string | null, resp) => {
     if (!err) {
       time_async_finish = Date.now();
       likely_offline = false;
@@ -125,13 +125,13 @@ function fetchJSON2<T>(url: string, cb: (err: string | undefined, o: T) => void)
   });
 }
 
-export function fetchJSON2Timeout<T>(url: string, timeout: number, cb: (err: string | undefined, o: T) => void): void {
+export function fetchJSON2Timeout<T>(url: string, timeout: number, cb: (err: string | null, o: T) => void): void {
   time_async_start = Date.now();
   fetch({
     url: url,
     response_type: 'json',
     timeout,
-  }, (err: string | undefined, resp: unknown) => {
+  }, (err: string | null, resp: unknown) => {
     if (!err) {
       time_async_finish = Date.now();
       likely_offline = false;
@@ -274,7 +274,7 @@ type FriendSetResponse = { friendset: string };
 function friendSetFetch(friend_set_key: string, cb: (friend_set_code: string) => void): void {
   let url = `${friends_host}/api/friendsetget?${friend_set_key}`;
   function fetchFriendSet(next: ErrorCallback<string, string>): void {
-    fetchJSON2Timeout<FriendSetResponse>(url, 20000, function (err: string | undefined, res: FriendSetResponse) {
+    fetchJSON2Timeout<FriendSetResponse>(url, 20000, function (err: string | null, res: FriendSetResponse) {
       if (err) {
         return next(err);
       }
@@ -733,7 +733,7 @@ class ScoreSystemImpl<ScoreType> {
         }
         fetchJSON2(
           url,
-          (err: string | undefined, scores: HighScoreListRaw) => {
+          (err: string | null, scores: HighScoreListRaw) => {
             bc.refresh_in_flight = false;
             if (err && scores && typeof scores === 'string' &&
               (scores as string).includes('ERR_INVALID_FRIENDSETID')
@@ -794,7 +794,7 @@ class ScoreSystemImpl<ScoreType> {
         withAuthToken((auth: string) => {
           fetchJSON2(
             url + auth,
-            (err: string | undefined, scores: HighScoreListRaw) => {
+            (err: string | null, scores: HighScoreListRaw) => {
               if (!err) {
                 this.handleScoreResp(level_idx, friend_cat, scores);
               }
@@ -985,7 +985,7 @@ function scoreUpdatePlayerNameInternal(new_player_name: string, cb: (err: string
     withAuthToken((auth: string) => {
       fetch({
         url: url + auth,
-      }, (err: string | undefined, res: string) => {
+      }, (err: string | null, res?: string) => {
         if (err) {
           if (res) {
             try {
@@ -1042,7 +1042,7 @@ export function scoreFriendCodeGet(cb: (err: null | string, code: string) => voi
   withUserID(function (user_id: string) {
     fetch({
       url: `${friends_host}/api/friendcodeget?userid=${user_id}`,
-    }, (err: string | undefined, res: string) => {
+    }, (err: string | null, res?: string) => {
       if (err) {
         if (res) {
           console.error(res);
@@ -1055,7 +1055,7 @@ export function scoreFriendCodeGet(cb: (err: null | string, code: string) => voi
         cb(err, '');
       } else {
         try {
-          cb(null, JSON.parse(res).friendcode);
+          cb(null, JSON.parse(res!).friendcode);
         } catch (e) {
           console.error(res);
           cb('Error parsing response', '');

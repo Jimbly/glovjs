@@ -397,10 +397,10 @@ function autoAtlasReloadEarly(filename: string): void {
     return;
   }
   // It's not in WebFS yet, reload raw from .early/ endpoint
-  fetch({
+  fetch<AutoAtlasBuildDataRoot>({
     url: filename,
     response_type: 'json',
-  }, function (err: string | null, obj: AutoAtlasBuildDataRoot) {
+  }, function (err: string | null, obj) {
     if (!err) {
       doInitOnReload(atlas, basename, obj);
     }

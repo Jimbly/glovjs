@@ -1,7 +1,8 @@
-/* global XMLHttpRequest */
+/* global XMLHttpRequest, RequestInit */
 
-const assert = require('assert');
-const { callbackify, unpromisify } = require('glov/common/util');
+import assert from 'assert';
+import { NetErrorCallback } from 'glov/common/types';
+import { callbackify, unpromisify } from 'glov/common/util';
 
 const { random, round } = Math;
 
@@ -10,14 +11,14 @@ export const ERR_TIMEOUT = 'ERR_TIMEOUT';
 
 let fetch_delay = 0;
 let fetch_delay_rand = 0;
-export function fetchDelaySet(delay, rand) {
+export function fetchDelaySet(delay: number, rand: number): void {
   fetch_delay = delay;
   fetch_delay_rand = rand;
 }
 
 const regex_with_host = /\/\/[^/]+\/([^?#]+)/;
 const regex_no_host = /([^?#]+)/;
-function labelFromURL(url) {
+function labelFromURL(url: string): string {
   let m = url.match(regex_with_host);
   if (m) {
     return m[1];
@@ -28,10 +29,20 @@ function labelFromURL(url) {
 
 let nativeFetch = window.fetch || null;
 
-export function fetch(params, cb) {
+export type FetchParams = {
+  method?: 'GET' | 'POST';
+  url: string;
+  response_type?: 'arraybuffer' | 'json' | 'text'; // default text
+  label?: string;
+  body?: string;
+  headers?: Record<string, string>;
+  timeout?: number; // milliseconds
+};
+
+export function fetch<T>(params: FetchParams, cb: NetErrorCallback<T>): void {
   let is_done = false;
-  let timer;
-  function done(err, response) {
+  let timer: NodeJS.Timeout | undefined;
+  function done(err?: string | null | unknown, response?: unknown): void {
     if (is_done) {
       return;
     }
@@ -39,7 +50,7 @@ export function fetch(params, cb) {
     if (timer) {
       clearTimeout(timer);
     }
-    cb(err, response);
+    cb(err ? String(err) : null, response as T);
   }
   let { method, url, response_type, label, body, headers = {}, timeout } = params;
   method = method || 'GET';
@@ -48,21 +59,23 @@ export function fetch(params, cb) {
 
   if (nativeFetch && false) {
     // This mostly works, however it creates larger (untracked) stalls when loading textures
-    let options = {
-      method,
-      headers: {
-        ...headers,
-      },
-      mode: 'cors',
+    headers = {
+      ...headers,
     };
     if (body !== undefined) {
       if (typeof body === 'object') {
-        options.headers['Content-Type'] = 'application/json';
-        options.body = JSON.stringify(body);
+        headers['Content-Type'] = 'application/json';
+        body = JSON.stringify(body);
       } else {
-        options.body = String(body);
+        body = String(body);
       }
     }
+    let options: RequestInit = {
+      method,
+      headers,
+      mode: 'cors',
+      body,
+    };
     if (timeout) {
       timer = setTimeout(function () {
         timer = setTimeout(function () {
@@ -83,7 +96,7 @@ export function fetch(params, cb) {
           done(String(resp.status), resp_body);
         });
       }
-      let resp_func = response_type === 'arraybuffer' ? 'arrayBuffer' :
+      const resp_func = response_type === 'arraybuffer' ? 'arrayBuffer' :
         response_type === 'json' ? 'json' : 'text';
       profilerStart('nativeFetch:getResponse');
       callbackify(resp[resp_func].bind(resp))(function (err, resp_body) {

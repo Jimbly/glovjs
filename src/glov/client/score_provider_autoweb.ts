@@ -96,7 +96,7 @@ export const score_user_provider_auto_web: ScoreUserProvider = {
     }
 
     let url = `${scoreGetScoreHost()}/api/useralloc`;
-    fetchJSON2Timeout<UserAllocResponse>(url, 20000, function (err: string | undefined, res: UserAllocResponse) {
+    fetchJSON2Timeout<UserAllocResponse>(url, 20000, function (err: string | null, res: UserAllocResponse) {
       if (err) {
         return cb(err);
       }
