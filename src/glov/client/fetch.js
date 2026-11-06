@@ -48,7 +48,6 @@ export function fetch(params, cb) {
 
   if (nativeFetch && false) {
     // This mostly works, however it creates larger (untracked) stalls when loading textures
-    // If we use this path: need to add timeout logic
     let options = {
       method,
       headers: {
@@ -64,6 +63,16 @@ export function fetch(params, cb) {
         options.body = String(body);
       }
     }
+    if (timeout) {
+      timer = setTimeout(function () {
+        timer = setTimeout(function () {
+          profilerStart(`fetch_timeout:${label}`);
+          done(ERR_TIMEOUT);
+          profilerStop();
+        }, timeout);
+      }, timeout);
+    }
+
     profilerStart('nativeFetch');
     nativeFetch(url, options).then(function (resp) {
       if (!resp.ok) {
