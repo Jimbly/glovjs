@@ -94,7 +94,7 @@ import {
   uiTextHeight,
 } from 'glov/client/ui';
 import * as ui_test from 'glov/client/ui_test';
-import * as urlhash from 'glov/client/urlhash';
+import { getURLBase } from 'glov/client/urlhash';
 import { webFSExists } from 'glov/client/webfs';
 import type { TSMap } from 'glov/common/types';
 import {
@@ -773,7 +773,7 @@ function crashTest(): void {
 
 export function main(): void {
   {
-    let url_base = urlhash.getURLBase();
+    let url_base = getURLBase();
     environmentsInit([{
       name: 'dev',
       api_path: `${url_base.startsWith('http') ? url_base : 'http://localhost:3000/'}api/`,
