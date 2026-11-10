@@ -536,10 +536,11 @@ function textureCompressionTest(): void {
   let yy = y;
   let yadv = uiButtonHeight() + 2;
   if (buttonText({
-    text: `Image: ${TEX_COMP_IMAGES[tex_comp_img]}`,
+    text: `**I**mage: ${TEX_COMP_IMAGES[tex_comp_img]}`,
     markdown: true,
     x, y: yy,
     w: button_w,
+    hotkey: KEYS.I,
   })) {
     tex_comp_img = (tex_comp_img + 1) % TEX_COMP_IMAGES.length;
     flagSet('tex_comp_img', tex_comp_img);
@@ -719,6 +720,9 @@ export function main(): void {
   } else {
     font_def = { info: font_info_palanquin32, texture: 'font/palanquin32' };
   }
+
+  // settingsSet('show_fps', 3);
+  // settingsSet('fps_graph', 1);
 
   if (!engine.startup({
     game_width,
