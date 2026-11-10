@@ -1,8 +1,4 @@
 /* eslint n/global-require:off */
-// eslint-disable-next-line import/order
-const local_storage = require('glov/client/local_storage');
-local_storage.setStoragePrefix('glovjs-playground'); // Before requiring anything else that might load from this
-
 import assert from 'assert';
 import { actionDown, actionEdge } from 'glov/client/actions';
 import { autoAtlas } from 'glov/client/autoatlas';
@@ -27,6 +23,10 @@ import {
   mouseOver,
   mousePos,
 } from 'glov/client/input';
+import {
+  localStorageGetJSON,
+  localStorageSetJSON,
+} from 'glov/client/local_storage';
 import { netInit } from 'glov/client/net';
 import {
   particlesCreateSystem,
@@ -149,17 +149,17 @@ let flags: TSMap<boolean | string | number> = {};
 function flagGet<T=boolean>(key: string, dflt?: T): T;
 function flagGet(key: string, dflt?: boolean | string | number): boolean | string | number {
   if (flags[key] === undefined) {
-    flags[key] = local_storage.getJSON(`flag_${key}`, dflt) || false;
+    flags[key] = localStorageGetJSON(`flag_${key}`, dflt) || false;
   }
   return flags[key]!;
 }
 function flagToggle(key: string): void {
   flags[key] = !flagGet(key);
-  local_storage.setJSON(`flag_${key}`, flags[key]);
+  localStorageSetJSON(`flag_${key}`, flags[key]);
 }
 function flagSet(key: string, value: boolean | string | number): void {
   flags[key] = value;
-  local_storage.setJSON(`flag_${key}`, flags[key]);
+  localStorageSetJSON(`flag_${key}`, flags[key]);
 }
 
 const color_white = vec4(1, 1, 1, 1);

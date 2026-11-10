@@ -1,8 +1,4 @@
 /* eslint n/global-require:off */
-// eslint-disable-next-line import/order
-import * as local_storage from 'glov/client/local_storage';
-local_storage.setStoragePrefix('glovjs-multiplayer'); // Before requiring anything else that might load from this
-
 import assert from 'assert';
 import { actionDown, ActionKey, actionTriggerEdge } from 'glov/client/actions';
 import { autoAtlas } from 'glov/client/autoatlas';

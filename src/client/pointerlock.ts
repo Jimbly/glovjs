@@ -1,8 +1,4 @@
 /* eslint n/global-require:off */
-// eslint-disable-next-line import/order
-const local_storage = require('glov/client/local_storage');
-local_storage.setStoragePrefix('glovjs-playground'); // Before requiring anything else that might load from this
-
 import { platformParameterGet } from 'glov/client/client_config';
 import * as engine from 'glov/client/engine';
 import { inputDrag, pointerLocked, pointerLockEnter } from 'glov/client/input';
