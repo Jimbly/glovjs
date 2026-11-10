@@ -6,7 +6,7 @@ const argv = require('minimist')(process.argv.slice(2));
 const sourcemapRemap = require('./sourcemap-remap');
 const uglify = require('./uglify.js');
 
-const uglify_options_ext = { compress: true, keep_fnames: false, mangle: true };
+const uglify_options_ext = { compress: true, keep_fnames: false, mangle: true, output: { semicolons: false } };
 
 const browserify_options_entrypoint = {
   transform: [],
