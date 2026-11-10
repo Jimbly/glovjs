@@ -280,7 +280,6 @@ const platform_web: PlatformAdapter = {
   loadImage,
   getSoundAPI,
   loadScript,
-  pre_startup: [],
 };
 
 assert(!window.platform_adapter);

@@ -566,7 +566,6 @@ const platform_web: PlatformAdapter = {
   getSoundAPI,
   fetch: fetchWeb,
   loadScript,
-  pre_startup: [],
 };
 
 

@@ -1120,8 +1120,6 @@ export function startup(params) {
   fixNatives(true);
 
   platformAdapterGet();
-  // Early initialization (e.g. Steam) before window/context creation
-  callEach(platform_adapter.pre_startup, platform_adapter.pre_startup = null);
 
   assert(window.glov_webfs, 'Failed to load fsdata.js');
   webFSStartup(window.glov_webfs, urlhash.getURLBase(), platform_adapter.loadScript);

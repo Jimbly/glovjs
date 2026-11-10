@@ -86,5 +86,4 @@ export type PlatformAdapter = {
   getSoundAPI(): PlatformSoundAPI;
   fetch(params: FetchInternalParams, cb: ErrorCallback<unknown>): void;
   loadScript(url: string, cb: VoidFunc): void;
-  pre_startup: VoidFunc[]; // called before context creation and platform startup
 };
