@@ -1,4 +1,5 @@
 const assert = require('assert');
+const fs = require('fs');
 const gb = require('glov-build');
 const browserify = require('glov-build-browserify');
 const concat = require('glov-build-concat');
@@ -15,6 +16,8 @@ const browserify_options_entrypoint = {
     __dirname: null, // for SDL build
     Buffer: null,
   },
+  prelude: fs.readFileSync(__dirname + '/preludeapp.js', 'utf8').trim(),
+  preludePath: 'preludeapp.js',
 };
 
 const babelify_opts_deps = {
@@ -41,6 +44,8 @@ const browserify_options_deps = {
   transform: [
     ['babelify', babelify_opts_deps],
   ],
+  prelude: fs.readFileSync(__dirname + '/preludedeps.js', 'utf8').trim(),
+  preludePath: 'preludedeps.js',
 };
 
 
