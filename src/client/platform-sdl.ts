@@ -252,7 +252,10 @@ function loadFile(filename: string, done: ErrorCallback<Buffer>): void {
     if (err) {
       return fs.readFile(filename, done);
     }
-    zlib.gunzip(data, done);
+    // Using extra-large chunkSize here because the Node.js event loop is often starved
+    zlib.gunzip(data, { chunkSize: 1024 * 1024 }, function (err, data2) {
+      done(err, data2);
+    });
   });
 }
 
