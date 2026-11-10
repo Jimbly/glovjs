@@ -235,12 +235,15 @@ function requestFrame(user_time?: number): void {
 
 function imageFromBuffer(buf: Uint8Array, done: ErrorCallback<HTMLImageElement>): void {
   let png;
+  profilerStart('imageFromBuffer');
   try {
     png = PNG.sync.read(Buffer.from(buf));
   } catch (e) {
+    profilerStop();
     return void done(`Error decoding image: ${e}`);
   }
   png.is_sdl_png = true;
+  profilerStop();
   done(null, png);
 }
 
@@ -273,11 +276,14 @@ function loadImageData(
     if (ext === 'png') {
       // Note: ignoring prefer_arraybuffer, client JS can't decode an ArrayBuffer PNG without a browser
       let png;
+      profilerStart('loadImageData:pngread');
       try {
         png = PNG.sync.read(data);
       } catch (e) {
+        profilerStop();
         return void done(`Error decoding image: ${e}`);
       }
+      profilerStop();
       png.is_sdl_png = true;
       done(null, png);
     } else if (prefer_arraybuffer) {
