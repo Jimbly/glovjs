@@ -11,6 +11,10 @@ const uglify_options_ext = { compress: true, keep_fnames: false, mangle: true, o
 const browserify_options_entrypoint = {
   transform: [],
   bundleExternal: false,
+  insertGlobalVars: {
+    __dirname: null, // for SDL build
+    Buffer: null,
+  },
 };
 
 const babelify_opts_deps = {
@@ -30,7 +34,7 @@ const browserify_options_deps = {
   builtins: {
     // super-simple replacements, if needed
     assert: 'glov/client/shims/assert.js',
-    buffer: 'glov/client/shims/buffer.js',
+    // buffer: 'glov/client/shims/buffer.js',
     // timers: 'glov/client/shims/timers.js',
     _process: 'glov/client/shims/empty.js',
   },
