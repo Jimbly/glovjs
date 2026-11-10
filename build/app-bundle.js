@@ -84,6 +84,7 @@ function bundlePair(opts) {
     ban_deps,
     sourcemap_host,
     do_version,
+    browserify_options_deps_override,
   } = opts;
   let subtask_name = `bundle_${entrypoint.replace(/^client\//, '').replace(/\//g, '_')}`;
 
@@ -136,7 +137,12 @@ function bundlePair(opts) {
         entrypoint: deps,
         source: deps_source,
         out: deps_out,
-        browserify: browserify_options_deps,
+        browserify: {
+          ...browserify_options_deps,
+          ...(browserify_options_deps_override || {}),
+        },
+        ignore: (browserify_options_deps_override || {}).ignore,
+        exclude: (browserify_options_deps_override || {}).exclude,
         post_bundle_cb,
       }),
     });

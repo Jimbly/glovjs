@@ -483,7 +483,16 @@ const WORKER_BAN_DEPS = {
 };
 let bundle_tasks = [];
 function registerBundle(param) {
-  const { entrypoint, deps, is_worker, do_version, do_reload, ban_deps } = param;
+  const {
+    entrypoint,
+    deps,
+    is_worker,
+    is_cli,
+    do_version,
+    do_reload,
+    ban_deps,
+    browserify_options_deps_override,
+  } = param;
   let name = `client_bundle_${entrypoint.replace('/', '_')}`;
   let out = `client/${entrypoint}.bundle.js`;
   appBundle({
@@ -500,7 +509,8 @@ function registerBundle(param) {
     do_version,
     bundle_uglify_opts: argv['dev-mangle'] ? prod_uglify_opts : null,
     ban_deps: ban_deps || (is_worker ? WORKER_BAN_DEPS : null),
-    sourcemap_host: `http://localhost:${server_port}/`,
+    sourcemap_host: is_cli ? undefined : `http://localhost:${server_port}/`,
+    browserify_options_deps_override,
   });
   if (do_reload) {
     // Add an early sync task, letting the server know we should reload these files
