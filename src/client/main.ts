@@ -3,7 +3,7 @@ import assert from 'assert';
 import { actionDown, actionEdge } from 'glov/client/actions';
 import { autoAtlas } from 'glov/client/autoatlas';
 import { bindUIStartup } from 'glov/client/bind_ui';
-import { platformParameterGet, platformSetRichPresence } from 'glov/client/client_config';
+import { MODE_DEVELOPMENT, platformParameterGet, platformSetRichPresence } from 'glov/client/client_config';
 import { editBox } from 'glov/client/edit_box';
 import * as engine from 'glov/client/engine';
 import {
@@ -683,7 +683,7 @@ function textureCompressionTest(): void {
 }
 
 export function main(): void {
-  if (platformParameterGet('reload_updates')) {
+  if (platformParameterGet('reload_updates') || MODE_DEVELOPMENT) {
     // Enable auto-reload, etc
     netInit({ engine });
   }
