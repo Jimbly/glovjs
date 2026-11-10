@@ -26,7 +26,7 @@ export function platformParameterGet<T extends keyof PlatformDef>(parameter: T):
 
 const platform_devmode = platformParameter(PLATFORM, 'devmode');
 export const MODE_DEVELOPMENT = platform_devmode === 'on' || platform_devmode === 'auto' &&
-  Boolean(String(window.location).match(/^https?:\/\/localhost/));
+  Boolean(window.glov_platform_devmode || String(window.location).match(/^https?:\/\/localhost/));
 export const MODE_PRODUCTION = !MODE_DEVELOPMENT;
 
 // Abilities

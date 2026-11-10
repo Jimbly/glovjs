@@ -12,6 +12,7 @@ declare module 'glov/client/global' {
       debugmsg: (msg: string, clear?: boolean) => void;
       Z: Record<string, number>;
       platform_adapter: PlatformAdapter;
+      glov_platform_devmode?: boolean;
 
       // GL context
       gl: WebGLRenderingContext | WebGL2RenderingContext;

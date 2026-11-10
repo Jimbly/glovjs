@@ -9,7 +9,7 @@ if (window.conf_env === 'multiplayer') {
 require('glov/client/local_storage').setStoragePrefix(ls_key);
 
 require('glov/common/platform').platformRegister('sdl', {
-  devmode: 'on',
+  devmode: 'auto',
   reload: true,
   reload_updates: true,
   random_creation_name: false,

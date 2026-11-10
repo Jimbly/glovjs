@@ -63,7 +63,9 @@ window.addEventListener = addEventListener.bind(null, 'window') as typeof window
 window.navigator = new DummyNavigator() as unknown as Navigator;
 window.location = new DummyLocation() as (Location & string);
 
-// Expose globals that looked for on `window` in GLOV.js code
-window.performance = globalThis.performance;
+// Note: this is currently `false` in build.pkg/dist-dev/
+window.glov_platform_devmode = !(process as unknown as { pkg: unknown }).pkg;
 
+// Expose globals that are looked for on `window` in GLOV.js code, but also as unscoped globals
+window.performance = globalThis.performance;
 (globalThis as unknown as { Z: Record<string, number> }).Z = window.Z = {};
