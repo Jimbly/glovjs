@@ -28,7 +28,7 @@
     "test_watch": "nodemon -w build -- build test --watch",
     "test": "node build lint test",
     "sdl": "nodemon -w build -- build sdl-dev --watch",
-    "sdl-client": "cd dist/game/build.sdl && nodemon -- --enable-source-maps sdlmain.js",
+    "sdl-client": "cd dist/game/build.sdl && nodemon -- --inspect-port 9230 --inspect --enable-source-maps sdlmain.js",
     "sdlpackage-prod": "node build sdlpackage-prod"
   },
   "author": "Jimb Esser (https://github.com/Jimbly)",
