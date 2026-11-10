@@ -40,6 +40,8 @@ const { max } = Math;
 export type BindType = 'key' | 'controller';
 export type BindAction = 'action' | 'cmd';
 
+let this_frame_modified_binds: Record<BindType, Rec<ValidKey|ValidPad, Bind[]>> = { key: {}, controller: {} };
+let last_frame_modified_binds: Record<BindType, Rec<ValidKey|ValidPad, Bind[]>> = { key: {}, controller: {} };
 
 let layers: TSMap<{
   active: boolean;
@@ -274,6 +276,24 @@ export type ActionOpts = {
   flags?: number; // BIND_FLAG_NOKB, etc
 };
 
+function numBits(i: number): number {
+  i -= (i >> 1) & 0x55555555;
+  i = (i & 0x33333333) + ((i >> 2) & 0x33333333);
+  i = (i + (i >> 4)) & 0x0f0f0f0f;
+  i += i >> 8;
+  i += i >> 16;
+  return i & 0x3f;
+}
+
+function bindSuppresses(bind: Bind, other_bind: Bind): boolean {
+  assert(other_bind.modifiers);
+  if (!bind.modifiers) {
+    return true;
+  }
+  // strict `>` not `>=`, so that A+C does not suppress B+C, otherwise A+B+C will fire _neither_ bind
+  return numBits(other_bind.modifiers) > numBits(bind.modifiers);
+}
+
 let cur_frame = -1;
 export function bindDownEdge(action: string, opts?: ActionOpts | null): number {
   let arr = binds_by_cmd[action];
@@ -303,6 +323,14 @@ export function bindDownEdge(action: string, opts?: ActionOpts | null): number {
     } else {
       eff_opts = opts;
     }
+    if (bind.modifiers) {
+      let arr2 = this_frame_modified_binds[bind.bindtype][bind.key];
+      if (!arr2) {
+        arr2 = this_frame_modified_binds[bind.bindtype][bind.key] = [];
+      }
+      arr2.push(bind);
+    }
+    let modified_binds = last_frame_modified_binds[bind.bindtype][bind.key] || [];
     if (bind.bindtype === 'key') {
       if (opts && opts.flags) {
         if (opts.flags & BIND_FLAG_NOKB) {
@@ -314,9 +342,31 @@ export function bindDownEdge(action: string, opts?: ActionOpts | null): number {
           }
         }
       }
-      ret += keyDownEdge(bind.code, eff_opts);
+      let suppressed = false;
+      for (let jj = 0; jj < modified_binds.length; ++jj) {
+        let other_bind = modified_binds[jj];
+        if (bindSuppresses(bind, other_bind)) {
+          if (keyDownEdge(bind.code, { peek: true, mod: other_bind.modifiers })) {
+            suppressed = true;
+          }
+        }
+      }
+      if (!suppressed) {
+        ret += keyDownEdge(bind.code, eff_opts);
+      }
     } else {
-      ret += padButtonDownEdge(bind.code, ANY, eff_opts);
+      let suppressed = false;
+      for (let jj = 0; jj < modified_binds.length; ++jj) {
+        let other_bind = modified_binds[jj];
+        if (bindSuppresses(bind, other_bind)) {
+          if (padButtonDownEdge(bind.code, ANY, { peek: true, mod: other_bind.modifiers })) {
+            suppressed = true;
+          }
+        }
+      }
+      if (!suppressed) {
+        ret += padButtonDownEdge(bind.code, ANY, eff_opts);
+      }
     }
     if (ret) {
       finalret += ret;
@@ -402,6 +452,14 @@ export function bindDispatch(opt?: {
       for (let ii = 0; ii < bindlist.binds.length; ++ii) {
         let bind = bindlist.binds[ii];
         if (bind.action === 'cmd' && layers[bind.layer]!.priority >= level) {
+          if (bind.modifiers) {
+            let arr2 = this_frame_modified_binds[bind.bindtype][bind.key];
+            if (!arr2) {
+              arr2 = this_frame_modified_binds[bind.bindtype][bind.key] = [];
+            }
+            arr2.push(bind);
+          }
+
           if (set.downEdge(bindlist.code, {
             mod: bind.modifiers,
           })) {
@@ -419,4 +477,6 @@ function bindsTopOfFrame(): void {
   bindDispatch({
     level: BIND_LEVEL_PRETICK,
   });
+  last_frame_modified_binds = this_frame_modified_binds;
+  this_frame_modified_binds = { key: {}, controller: {} };
 }
