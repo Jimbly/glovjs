@@ -8,6 +8,10 @@ require('./bootstrap.js'); // Just in case it's not in app.js
 const client_config = require('./client_config.js');
 export let DEBUG = client_config.MODE_DEVELOPMENT;
 
+export const hrnow = window.performance && window.performance.now ?
+  window.performance.now.bind(window.performance) :
+  Date.now.bind(Date);
+
 let startup_funcs = [];
 
 exports.require = require; // For browser console debugging
@@ -1019,10 +1023,6 @@ export function onExitBackground(fn) {
 export function dirtyRenderSet(value) {
   dirty_render = value;
 }
-
-export const hrnow = window.performance && window.performance.now ?
-  window.performance.now.bind(window.performance) :
-  Date.now.bind(Date);
 
 let out_of_tick = false;
 export function isOutOfTick() {
