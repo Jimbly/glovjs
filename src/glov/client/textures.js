@@ -720,12 +720,13 @@ function uploadTextureCompressed(tex, data, per_mipmap_data, finish) {
   });
 }
 
-function uploadTextureImgOrCanvas(tex, data, per_mipmap_data, finish) {
+function uploadTextureImgOrCanvasOrSDL(tex, data, per_mipmap_data, finish) {
   let { do_sync, leveloffs, base_level, do_prealloc, no_mipmaps } = uploadPrep(false, tex, data, per_mipmap_data);
 
   if (base_level.width > max_texture_size || base_level.height > max_texture_size) {
     assert(!per_mipmap_data); // would have returned a different base_level
     assert(!do_prealloc); // would be wrong size
+    assert(!data.is_sdl_png); // not handled
     profilerStart('texture resize and upload');
     dataError(`Texture ${tex.url} (${base_level.width}x${base_level.height}) larger ` +
       `than GL max texture size (${max_texture_size}) and has been resized`);
@@ -767,7 +768,7 @@ function uploadTextureImgOrCanvas(tex, data, per_mipmap_data, finish) {
         is_firefox ||
         // iOS Safari gets out of mem crash or something
         is_ios_safari ||
-        !supports_cib
+        !supports_cib && !data.is_sdl_png
       ) {
         // this level is small enough, do all at once
         tasks.push(function (done) {
@@ -786,26 +787,44 @@ function uploadTextureImgOrCanvas(tex, data, per_mipmap_data, finish) {
           let yyy = yy;
           tasks.push(function (done) {
             let eff_h = min(chunk_h, img.height - yyy);
-            createImageBitmap(img, 0, yyy, chunk_w, eff_h,
-              { premultiplyAlpha: 'none', colorSpaceConversion: 'none' },
-              function (err, result) {
-                if (err) {
-                  throw err;
+
+            if (data.is_sdl_png) {
+              assert(img.data.length); // Buffer/ArrayBuffer/Uint8
+              profilerStart('texSubImage2D');
+              bindForced(tex);
+              gl.texSubImage2D(tex.target, level, 0, yyy,
+                chunk_w, eff_h,
+                tex.format.internal_type, tex.format.gl_type, img.data.slice(yyy * img.width * tex.format.count));
+              if (yyy + eff_h === img.height) {
+                if (engine.webgl2) {
+                  gl.texParameteri(tex.target, gl.TEXTURE_BASE_LEVEL, level);
+                  tex.eff_handle = tex.handle;
                 }
-                profilerStart('texSubImage2D');
-                bindForced(tex);
-                gl.texSubImage2D(tex.target, level, 0, yyy,
-                  tex.format.internal_type, tex.format.gl_type, result);
-                if (yyy + eff_h === img.height) {
-                  if (engine.webgl2) {
-                    gl.texParameteri(tex.target, gl.TEXTURE_BASE_LEVEL, level);
-                    tex.eff_handle = tex.handle;
-                  }
-                }
-                done();
-                profilerStop();
               }
-            );
+              done();
+              profilerStop();
+            } else {
+              createImageBitmap(img, 0, yyy, chunk_w, eff_h,
+                { premultiplyAlpha: 'none', colorSpaceConversion: 'none' },
+                function (err, result) {
+                  if (err) {
+                    throw err;
+                  }
+                  profilerStart('texSubImage2D');
+                  bindForced(tex);
+                  gl.texSubImage2D(tex.target, level, 0, yyy,
+                    tex.format.internal_type, tex.format.gl_type, result);
+                  if (yyy + eff_h === img.height) {
+                    if (engine.webgl2) {
+                      gl.texParameteri(tex.target, gl.TEXTURE_BASE_LEVEL, level);
+                      tex.eff_handle = tex.handle;
+                    }
+                  }
+                  done();
+                  profilerStop();
+                }
+              );
+            }
             return false;
           });
         }
@@ -866,11 +885,8 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data, 
   clearGLErr();
 
   let is_sdl_png = Boolean(data.is_sdl_png);
-  let sdl_base;
   if (is_sdl_png) {
     this.format = TEXTURE_FORMAT.RGBA8;
-    sdl_base = data;
-    data = data.data;
   }
 
   // Resize NP2 if this is not being used for a texture array, and it is not
@@ -893,19 +909,20 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data, 
     assert(!np2_pad);
     assert(data.data instanceof Uint8Array);
     uploadTextureCompressed(this, data, per_mipmap_data, finish);
-  } else if (data instanceof Uint8Array || data instanceof Uint8ClampedArray) {
+  } else if ((data instanceof Uint8Array || data instanceof Uint8ClampedArray) &&
+    (!is_sdl_png || np2_pad)
+  ) {
     // In-process generated images path and now native-app (SDL) decoded PNGs
+    assert(!per_mipmap_data); // not implemented
     assert(data.length >= w * h * this.format.count);
     assert(!this.is_cube);
     if (this.is_array) {
-      assert(!per_mipmap_data); // not implemented
       let num_images = h / w; // assume square
       profilerStart('texImage');
       gl.texImage3D(this.target, 0, this.format.internal_type, w, w,
         num_images, 0, this.format.internal_type, this.format.gl_type, data);
       profilerStop();
     } else if (np2_pad) {
-      assert(!per_mipmap_data); // not implemented
       // Pad up to power of two
       // Duplicate right and bottom pixel row by sending image 3 times
       if (w !== this.width) {
@@ -922,15 +939,10 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data, 
       gl.texSubImage2D(this.target, 0, 0, 0, w, h, this.format.internal_type, this.format.gl_type, data);
       profilerStop();
     } else {
-      if (per_mipmap_data && is_sdl_png) {
-        uploadTextureImgOrCanvas(tex, sdl_base, per_mipmap_data, finish);
-      } else {
-        assert(!per_mipmap_data); // not implemented
-        profilerStart('texImage2D');
-        gl.texImage2D(this.target, 0, this.format.internal_type, w, h, 0,
-          this.format.internal_type, this.format.gl_type, data);
-        profilerStop();
-      }
+      profilerStart('texImage2D');
+      gl.texImage2D(this.target, 0, this.format.internal_type, w, h, 0,
+        this.format.internal_type, this.format.gl_type, data);
+      profilerStop();
     }
     this.allowMipmaps(true); // can be auto-generated
     finish();
@@ -1019,7 +1031,7 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data, 
       this.allowMipmaps(true); // can be auto-generated
       finish();
     } else {
-      uploadTextureImgOrCanvas(tex, data, per_mipmap_data, finish);
+      uploadTextureImgOrCanvasOrSDL(tex, data, per_mipmap_data, finish);
     }
   }
 
