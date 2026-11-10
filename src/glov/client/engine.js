@@ -1,7 +1,6 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
-/* globals requestAnimationFrame, navigator -- browser globals */
 /* eslint-disable import/order */
 require('./bootstrap.js'); // Just in case it's not in app.js
 
@@ -12,6 +11,11 @@ export const hrnow = window.performance && window.performance.now ?
   window.performance.now.bind(window.performance) :
   Date.now.bind(Date);
 
+export const internal = {
+  needReposSet, // eslint-disable-line @typescript-eslint/no-use-before-define
+  setCanvasDims, // eslint-disable-line @typescript-eslint/no-use-before-define
+  tick, // eslint-disable-line @typescript-eslint/no-use-before-define
+};
 let startup_funcs = [];
 
 exports.require = require; // For browser console debugging
@@ -24,18 +28,8 @@ const {
   },
 } = require('./actions');
 const { internal: { bindsTopOfFrame }, bindDispatch } = require('./binds');
-const {
-  is_android,
-  is_ios,
-  is_ios_chrome,
-  is_ios_safari,
-  is_ipad,
-  safari_version_major,
-  safari_version_minor,
-} = require('./browser.js');
 const { buildUIStartup } = require('./build_ui.js');
 const camera2d = require('./camera2d.js');
-const cmds = require('./cmds.js');
 require('./engine_cmds.js');
 const { dataErrorQueueEnable } = require('glov/common/data_error.js');
 const effects = require('./effects.js');
@@ -117,12 +111,12 @@ const {
   uiBindSounds,
 } = require('./ui.js');
 const urlhash = require('./urlhash.js');
-const { callEach, clamp, nearSame, ridx } = require('glov/common/util.js');
+const { callEach, ridx } = require('glov/common/util.js');
 const verify = require('glov/common/verify.js');
 const {
   mat3, mat4,
   mat4isFinite,
-  vec3, vec4, v3mulMat4, v3iNormalize, v4copy, v4same, v4scale, v4set,
+  vec3, vec4, v3mulMat4, v3iNormalize, v4copy, v4set,
 } = require('glov/common/vmath.js');
 const { webFSStartup } = require('./webfs.js');
 const { profanityStartupLate } = require('./words/profanity.js');
@@ -183,6 +177,15 @@ export function setBorderColor(color) {
 
 export function setBorderClearColor(color) {
   v4copy(border_clear_color, color);
+}
+
+let platform_adapter;
+export function platformAdapterGet() {
+  if (!platform_adapter) {
+    assert(window.platform_adapter, 'No Platform Adapter registered');
+    platform_adapter = window.platform_adapter;
+  }
+  return platform_adapter;
 }
 
 let no_render = false;
@@ -501,6 +504,15 @@ let do_borders = true;
 let do_viewport_postprocess = false;
 let need_repos = 0;
 
+function needReposSet(new_value) {
+  need_repos = max(need_repos, new_value);
+}
+
+function setCanvasDims(w, h) {
+  width = w;
+  height = h;
+}
+
 export function setDoBorders(new_value) {
   do_borders = new_value;
 }
@@ -570,261 +582,14 @@ export function renderHeight() {
   return render_height || height;
 }
 
-const SAFARI_FULLSCREEN_ASPECT = (function () {
-  let screen = window.screen;
-  if (!is_ios_safari || !screen) {
-    return 0;
-  }
-  const SAFARI_DIMS = { // wxh : [fullscreen aspect]
-    // iPhone 12 Pro Max
-    '926,428': 926/428,
-    // iPhone 12
-    '844,390': 844/390,
-    // iPhone XR
-    // iPhone 11 Pro Max
-    // iPhone XS Max
-    // iPhone 11
-    '896,414': 896/414,
-    // iPhone 11 Pro
-    // iPhone X (probably)
-    '812,375': 812/375,
-    // iPhone 8 Plus
-    '736,414': 736/414,
-    // iPhone 6s+
-    // iPhone 6+
-    '716,414': 736/414, // (screen.availWidth reports 20 less)
-    // iPhone 8
-    // iPhone 7 (10.1)
-    // iPhone 7 (11.4)
-    '667,375': 667/375,
-    // iPhone 6s
-    // iPhone 6
-    '647,375': 667/375, // (screen.availWidth reports 20 less)
-    // iPhone 5s
-    '548,320': 568/320, // (screen.availWidth reports 20 less)
-  };
-  let key = `${max(screen.availWidth, screen.availHeight)},${min(screen.availWidth, screen.availHeight)}`;
-  return SAFARI_DIMS[key] || 0;
-}());
-function safariTopSafeArea(view_w, view_h) {
-  if (is_ios_safari && safari_version_major < 16) {
-    // Definitely needed on v14 and lower; seen this needed on v15.1 as well
-    // Detect if the URL bar is hidden, but should be a safe area
-    if (SAFARI_FULLSCREEN_ASPECT && nearSame(view_w/view_h, SAFARI_FULLSCREEN_ASPECT, 0.001)) {
-      // Note: if user has scaling enabled, the padding required might be different
-      //   but the same holds true for the safe area padding detected via CSS!
-      return 28; // seems to be visually around 50pts, but touch area of ~25 pts on all devices
-    }
-  }
-  return 0;
-}
-function isPortrait(view_w, view_h) {
-  return view_h >= view_w * 0.8;
-}
-let kb_up_last_w = 0;
-let kb_up_last_h = 0;
-let kb_up_ret = false;
-let kb_up_frame = 0;
-function isKeyboardUp(view_w, view_h) {
-  if (!view_w) {
-    return kb_up_ret;
-  }
-  if (!nearSame(view_w, kb_up_last_w, 5)) {
-    // init, or just rotated, assume not up
-    kb_up_ret = false;
-  } else if (!nearSame(view_h, kb_up_last_h, 5)) {
-    // same width
-    if (view_h < kb_up_last_h) {
-      // shrunk
-      kb_up_ret = true;
-    } else if (view_h > kb_up_last_h) {
-      // expanded
-      kb_up_ret = false;
-    }
-  }
-  kb_up_last_w = view_w;
-  kb_up_last_h = view_h;
-  ++kb_up_frame;
-  if (kb_up_frame < 3) {
-    // window.innerHeight and related shrink during the first couple frames on iOS 12.1
-    //   if in landscape and there's a URL bar / other tabs open
-    kb_up_ret = false;
-  }
-  return kb_up_ret;
-}
-function safariBottomSafeArea(view_w, view_h) {
-  // iOS === 15.0 doesn't respect safe area; 15.1 is offset
-  if (is_ios_safari && safari_version_major === 15 && safari_version_minor < 2 &&
-    isKeyboardUp() &&
-    isPortrait(view_w, view_h)
-  ) {
-    if (safari_version_minor === 0) {
-      // unknown whether or not this is correct on iPad, assuming needed now to be safe
-      return 52;
-    } else if (safari_version_minor === 1) {
-      if (!is_ipad) {
-        return 8; // v15.1
-      }
-    }
-  }
-  if (is_ios_chrome && is_ipad && safari_version_major >= 13 &&
-    isKeyboardUp()
-  ) {
-    // seen specific issue resolved by this on at least: 13.2/4 14.0/1/5 15.1/5 16.0/1/2/3
-    // v17 doesn't seem to (always?) have a fixed offset, is also buggy with
-    //   scroll pos, so let's add some safe area so it's more likely to be visible
-    // Note: v12 has no visual viewport, so we can't tell if the keyboard is up
-    return 44;
-  }
-  return 0;
-}
-
-// Get safe area by examining safe-area-inset padded element
-function getSafeAreaFromDOM(out, safearea, view_w, view_h) {
-  if (safearea && safearea.offsetWidth && safearea.offsetHeight) {
-    out[0] = safearea.offsetLeft;
-    out[1] = view_w - safearea.offsetWidth - safearea.offsetLeft;
-    // "view_h - window.innerHeight" is for iOS 12
-    out[2] = max(safearea.offsetTop, view_h - window.innerHeight);
-    out[3] = view_h - safearea.offsetHeight - safearea.offsetTop;
-  }
-}
-
-let edit_box_near_bottom_frame = -1;
-let edit_box_near_bottom_pad = 0;
 export function setEditBoxNearBottom(required_padding_dom_coords) {
-  edit_box_near_bottom_frame = frame_index;
-  edit_box_near_bottom_pad = required_padding_dom_coords;
-}
-let last_canvas_width;
-let last_canvas_height;
-let last_body_height;
-let safearea_elem;
-let safearea_ignore_bottom = false;
-let safearea_dom = vec4();
-let safearea_canvas = vec4();
-let last_safearea_canvas = vec4();
-function checkResize() {
-  profilerStart('checkResize');
-  // use VisualViewport on at least iOS Safari - deal with tabs and keyboard
-  //   shrinking the viewport without changing the window height
-  let vv = window.visualViewport;
-  let dom_to_pixels = window.devicePixelRatio || 1;
-  dom_to_canvas_ratio = dom_to_pixels * settings.render_scale_all;
-  let view_w = vv ? vv.width : window.innerWidth;
-  let view_h = vv ? vv.height :
-    is_ios_safari && window.pageYOffset ? document.documentElement.clientHeight : window.innerHeight;
-  if (view_h !== last_body_height) {
-    // set this *before* getting canvas and safearea_elem dims below
-    last_body_height = view_h;
-    if (document.body) {
-      document.body.style.height = `${view_h}px`;
-    }
-  }
-  // safearea_dom - left, right, top, bottom PADDING values
-  v4set(safearea_dom, 0, 0, 0, 0);
-  getSafeAreaFromDOM(safearea_dom, safearea_elem, view_w, view_h);
-  isKeyboardUp(view_w, view_h - safearea_dom[2] - safearea_dom[3]);
-  safearea_dom[2] = max(safearea_dom[2], safariTopSafeArea(view_w, view_h));
-  if (safearea_dom[3] && (
-    // iOS 15.0: Keyboard is up, but safe area is not being removed, remove it.
-    is_ios && isKeyboardUp() ||
-    // General: Possibly ignoring bottom safe area by app request, it seems not
-    //  useful on iPhones (does not adjust when keyboard is up, only obscured in
-    //  the middle, if obeying left/right safe area)
-    safearea_ignore_bottom
-  )) {
-    safearea_dom[3] = 0;
-  }
-  safearea_dom[3] = max(safearea_dom[3], safariBottomSafeArea(view_w, view_h));
-
-  if (edit_box_near_bottom_frame === frame_index - 1 && is_android && isKeyboardUp()) {
-    // on Android, need extra "safe area" to get at the grabbers for selecting text
-    safearea_dom[3] = max(safearea_dom[3], edit_box_near_bottom_pad);
-  }
-
-  let rect = canvas.getBoundingClientRect();
-  let new_width = round(rect.width * dom_to_canvas_ratio) || 1;
-  let new_height = round(rect.height * dom_to_canvas_ratio) || 1;
-
-  if (cmds.safearea[0] === -1) {
-    v4scale(safearea_canvas, safearea_dom, dom_to_canvas_ratio);
-  } else {
-    v4set(safearea_canvas,
-      new_width * clamp(cmds.safearea[0], 0, 25)/100,
-      new_width * clamp(cmds.safearea[1], 0, 25)/100,
-      new_height * clamp(cmds.safearea[2], 0, 25)/100,
-      new_height * clamp(cmds.safearea[3], 0, 25)/100);
-  }
-  if (!v4same(safearea_canvas, last_safearea_canvas)) {
-    v4copy(last_safearea_canvas, safearea_canvas);
-    camera2d.setSafeAreaPadding(safearea_canvas[0], safearea_canvas[1], safearea_canvas[2], safearea_canvas[3]);
-    need_repos = max(need_repos, 1);
-  }
-
-  if (new_width !== last_canvas_width || new_height !== last_canvas_height) {
-    window.pixel_scale = dom_to_canvas_ratio; // for debug
-    last_canvas_width = canvas.width = new_width || 1;
-    last_canvas_height = canvas.height = new_height || 1;
-
-    width = canvas.width;
-    height = canvas.height;
-
-    // For the next 10 frames, make sure font size is correct
-    need_repos = 10;
-    renderNeeded();
-  }
-  if (window.visualViewport && (is_ios_safari || true)) {
-    // Note: used to also have: || need_repos // or screen was just rotated / resized
-
-    // we have accurate view information, force scroll to top, always
-    // should maybe do this any time an edit box is not in focus as well
-    if (window.pageYOffset || window.document.body && window.document.body.scrollTop) {
-      window.scroll(0,0);
-    }
-  }
-  profilerStop('checkResize');
+  platform_adapter.setEditBoxNearBottom(required_padding_dom_coords);
 }
 
 export let viewport = vec4(0,0,1,1);
 export function setViewport(xywh) {
   v4copy(viewport, xywh);
   gl.viewport(xywh[0], xywh[1], xywh[2], xywh[3]);
-}
-
-const MAX_FRAME_TIME = 10000;
-let frames_requested = 0;
-function requestFrame(user_time) {
-  let max_fps = settings.max_fps;
-  let desired_frames = (max_fps >= 250) ? 10 : 1;
-  if (frames_requested >= desired_frames) {
-    return;
-  }
-  if (defines.SLOWLOAD && is_loading) {
-    // Safari on CrossBrowserTesting needs this in order to have some time to load/decode audio data
-    // TODO: Instead, generally, if loading, compare last_tick_cpu vs dt, and if
-    //   we're not idle for at least half of the time and we have *internal*
-    //   loads (textures, sounds, models, NOT user code), delay so that we are.
-    max_fps = 2;
-  }
-  if (desired_frames > 1) {
-    // Ensure we have at least that many frames queued up at any point in time, so they
-    // can fire at less than the normal 4ms browser delay of setTimeout()
-    while (frames_requested < desired_frames) {
-      // eslint-disable-next-line @typescript-eslint/no-use-before-define
-      setTimeout(tick, 1);
-      frames_requested++;
-    }
-  } else if (max_fps && max_fps > settings.use_animation_frame) {
-    let desired_delay = min(MAX_FRAME_TIME, max(0, round(1000 / max_fps - (user_time || 0))));
-    frames_requested++;
-    // eslint-disable-next-line @typescript-eslint/no-use-before-define
-    setTimeout(tick, desired_delay);
-  } else {
-    frames_requested++;
-    // eslint-disable-next-line @typescript-eslint/no-use-before-define
-    requestAnimationFrame(tick);
-  }
 }
 
 let mat_projection_10;
@@ -1028,18 +793,10 @@ let out_of_tick = false;
 export function isOutOfTick() {
   return out_of_tick;
 }
-let last_tick = 0;
 let last_tick_hr = 0;
-let frame_limit_time_left = 0;
-export let last_raw_tick_times = [];
-export let last_raw_tick_skipped = [];
-export let last_raw_tick_index = 0;
-function tick(timestamp) {
-  profilerFrameStart();
-  profilerStart('tick');
+let last_tick = 0;
+function tickInternal() {
   profilerStart('top');
-  out_of_tick = false;
-  frames_requested--;
 
   if (render_frames_needed) {
     --render_frames_needed;
@@ -1054,10 +811,8 @@ function tick(timestamp) {
         ridx(post_tick, ii);
       }
     }
-    requestFrame();
     profilerStop();
-    out_of_tick = true;
-    return profilerStop('tick');
+    return;
   }
 
 
@@ -1070,32 +825,8 @@ function tick(timestamp) {
   hrtime = hrnow();
   // }
 
-  let dt_raw = hrtime - last_tick_hr;
-  frame_dt_hr = min(max(dt_raw, 0.01), 250);
+  frame_dt_hr = min(max(hrtime - last_tick_hr, 0.01), 250);
   last_tick_hr = hrtime;
-  let last_raw_tick_index_use = last_raw_tick_index;
-  last_raw_tick_times[last_raw_tick_index_use] = dt_raw;
-  last_raw_tick_skipped[last_raw_tick_index_use] = false;
-  last_raw_tick_index = (last_raw_tick_index_use + 1) % 24;
-  let max_fps = settings.max_fps;
-  if (max_fps && max_fps <= settings.use_animation_frame) {
-    // using requestAnimationFrame, need to apply max_fps ourselves
-    frame_limit_time_left -= dt_raw;
-    if (frame_limit_time_left > 0) {
-      // too early, skip this frame, do not count any of this time, pretend this frame never happened.
-      requestFrame();
-      profilerStop('top');
-      out_of_tick = true;
-      last_raw_tick_skipped[last_raw_tick_index_use] = true;
-      return profilerStop('tick');
-    }
-    let frame_time = min(MAX_FRAME_TIME, 1000 / max_fps - 0.1);
-    frame_limit_time_left += frame_time;
-    if (frame_limit_time_left < 0) {
-      // more than two frames passed, don't accumulate extra frames
-      frame_limit_time_left = 0;
-    }
-  }
 
   let now = round(hrtime); // Code assumes integer milliseconds
   if (!last_tick) {
@@ -1149,10 +880,8 @@ function tick(timestamp) {
         ridx(post_tick, ii);
       }
     }
-    requestFrame();
     profilerStop();
-    out_of_tick = true;
-    return profilerStop('tick');
+    return;
   }
 
   ++frame_index;
@@ -1162,7 +891,7 @@ function tick(timestamp) {
     callEach(exit_background_cb);
   }
 
-  checkResize();
+  platform_adapter.checkResize();
   had_3d_this_frame = false;
   need_depth_this_frame = false;
   want_render_scale_3d_this_frame = false;
@@ -1314,10 +1043,16 @@ function tick(timestamp) {
 
   last_tick_cpu = hrnow() - now;
   fpsgraph.history[(fpsgraph.index % PERF_HISTORY_SIZE) * 2 + 0] = last_tick_cpu;
-  requestFrame(hrnow() - hrtime);
   profilerStop('bottom');
+}
+
+function tick() {
+  profilerFrameStart();
+  profilerStart('tick');
+  out_of_tick = false;
+  tickInternal();
   out_of_tick = true;
-  return profilerStop('tick');
+  profilerStop('tick');
 }
 
 function onBlur(evt) {
@@ -1329,7 +1064,7 @@ function onFocus(evt) {
 }
 
 function periodiclyRequestFrame() {
-  requestFrame();
+  platform_adapter.requestFrame();
   setTimeout(periodiclyRequestFrame, 1000);
 
   if (!in_background && blurred) {
@@ -1384,11 +1119,14 @@ export function engineStartupFunc(func) {
 export function startup(params) {
   fixNatives(true);
 
+  platformAdapterGet();
+  // Early initialization (e.g. Steam) before window/context creation
+  callEach(platform_adapter.pre_startup, platform_adapter.pre_startup = null);
+
   assert(window.glov_webfs, 'Failed to load fsdata.js');
-  webFSStartup(window.glov_webfs, urlhash.getURLBase());
+  webFSStartup(window.glov_webfs, urlhash.getURLBase(), platform_adapter.loadScript);
 
   canvas = document.getElementById('canvas');
-  safearea_elem = document.getElementById('safearea');
 
   if (params.error_report === false) {
     glovErrorReportDisableSubmit();
@@ -1409,66 +1147,18 @@ export function startup(params) {
     });
   }
 
-  safearea_ignore_bottom = params.safearea_ignore_bottom || false;
-
-  // resize the canvas to fill browser window dynamically
-  window.addEventListener('resize', checkResize, false);
-  checkResize();
 
   let is_pixely = params.pixely && params.pixely !== 'off';
   antialias = params.antialias || !is_pixely && params.antialias !== false;
-  let powerPreference = params.high ? 'high-performance' : 'default';
-  let context_names = ['webgl2', 'webgl', 'experimental-webgl'];
-  let force_webgl1 = defines.NOWEBGL2;
-  let disable_data = local_storage.getJSON('webgl2_disable');
-  // Check if a previous, recent run had an error that hinted we should disable WebGL2
-  if (disable_data && disable_data.ua === navigator.userAgent && disable_data.ts > Date.now() - 7*24*60*60*1000) {
-    console.log('Disabling WebGL2 because a previous run encountered a related error');
-    force_webgl1 = true;
-  }
-  if (DEBUG && !(defines.FORCEWEBGL2 || params.force_webgl2)) {
-    let rc = local_storage.getJSON('run_count', 0) + 1;
-    local_storage.setJSON('run_count', rc);
-    if (rc % 2) {
-      force_webgl1 = true;
-    }
-  }
-  if (force_webgl1) {
-    context_names.splice(0, 1);
-  }
-  let context_opts = [
-    { antialias, powerPreference, alpha: false },
-    { powerPreference, alpha: false },
-    { antialias, alpha: false },
-    { alpha: false },
-    {},
-  ];
-  let good = false;
-  webgl2 = false;
-  for (let i = 0; !good && i < context_names.length; i += 1) {
-    for (let jj = 0; !good && jj < context_opts.length; ++jj) {
-      try {
-        window.gl = canvas.getContext(context_names[i], context_opts[jj]);
-        if (window.gl) {
-          if (context_names[i] === 'webgl2') {
-            webgl2 = true;
-          }
-          if (antialias && !context_opts[jj].antialias) {
-            antialias_unavailable = true;
-            antialias = false;
-          }
-          good = true;
-          break;
-        }
-      } catch (e) {
-        // ignore
-      }
-    }
-  }
-  if (!window.requestAnimationFrame) {
-    // SamsungBrowser/1.1 - apparently has WebGL, but not requestAnimationFrame; also not binary WebSockets
-    good = false;
-  }
+
+  let good;
+  ({ good, antialias, antialias_unavailable, webgl2 } = platform_adapter.startup({
+    safearea_ignore_bottom: params.safearea_ignore_bottom,
+    antialias,
+    high: params.high,
+    force_webgl2: params.force_webgl2,
+  }));
+
   if (good) {
     // ensure at least basic shaders compile
     let shaders_supported = shadersStartup({
@@ -1504,7 +1194,7 @@ export function startup(params) {
   }
 
   glovErrorReportSetCrashCB(function () {
-    setTimeout(requestFrame, 1);
+    setTimeout(platform_adapter.requestFrame, 1);
   });
 
   let nocanvas = document.getElementById('nocanvas');

@@ -14,6 +14,7 @@ function onLoad() {
   window.time_load_onload = Date.now();
   require('glov/client/bootstrap');
   require('./appconfig');
+  require('glov/client/platform-web');
   // require('glov/client/worker_comm.js').startup(); // First, so it gets loading quickly (if workers required)
   if (window.conf_env === 'multiplayer') {
     require('./multiplayer.js').main();

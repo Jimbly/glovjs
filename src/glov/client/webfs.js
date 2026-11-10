@@ -147,25 +147,25 @@ export function webFSApplyReload(fs_in) {
   }
 }
 
+let load_script_func;
 let base_url_for_reload;
 function webFSReload() {
   // Note: only called in main thread, not in workers
   active_reload = true;
   window.glov_webfs = null;
-  let scriptTag = document.createElement('script');
-  scriptTag.src = `${base_url_for_reload}fsdata.js?rl=${Date.now()}`;
-  scriptTag.onload = function () {
+  let url = `${base_url_for_reload}fsdata.js?rl=${Date.now()}`;
+  load_script_func(url, function () {
     if (window.glov_webfs) {
       webFSApplyReload(window.glov_webfs);
     }
-  };
-  document.head.appendChild(scriptTag);
+  });
 }
 
-export function webFSStartup(fs_in, base_url_for_reload_in) {
+export function webFSStartup(fs_in, base_url_for_reload_in, load_script_func_in) {
   fs = fs_in || {};
-  if (base_url_for_reload_in) {
+  if (base_url_for_reload_in && load_script_func) {
     base_url_for_reload = base_url_for_reload_in;
+    load_script_func = load_script_func_in;
     filewatchOn('fsdata.js', webFSReload);
   }
   if (webfs_to_worker_cb) {

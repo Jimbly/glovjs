@@ -1,13 +1,13 @@
-/* global XMLHttpRequest, RequestInit */
-
-import assert from 'assert';
-import { NetErrorCallback } from 'glov/common/types';
-import { callbackify, unpromisify } from 'glov/common/util';
-
-const { random, round } = Math;
-
+/* globals self, RequestInit */
 export const ERR_CONNECTION = 'ERR_CONNECTION';
 export const ERR_TIMEOUT = 'ERR_TIMEOUT';
+
+import assert from 'assert';
+import { ErrorCallback, NetErrorCallback } from 'glov/common/types';
+import { callbackify, unpromisify } from 'glov/common/util';
+import { platformAdapterGet } from './engine';
+
+const { random, round } = Math;
 
 let fetch_delay = 0;
 let fetch_delay_rand = 0;
@@ -27,8 +27,6 @@ function labelFromURL(url: string): string {
   return m ? m[1] : url;
 }
 
-let nativeFetch = window.fetch || null;
-
 export type FetchParams = {
   method?: 'GET' | 'POST';
   url: string;
@@ -36,6 +34,16 @@ export type FetchParams = {
   label?: string;
   body?: string;
   headers?: Record<string, string>;
+  timeout?: number; // milliseconds
+};
+
+export type FetchInternalParams = {
+  method: 'GET' | 'POST';
+  url: string;
+  response_type: 'arraybuffer' | 'json' | 'text';
+  label: string;
+  body?: string;
+  headers: Record<string, string>;
   timeout?: number; // milliseconds
 };
 
@@ -56,71 +64,12 @@ export function fetch<T>(params: FetchParams, cb: NetErrorCallback<T>): void {
   method = method || 'GET';
   assert(url);
   label = label || labelFromURL(url);
+  response_type = response_type || 'text';
 
-  if (nativeFetch && false) {
-    // This mostly works, however it creates larger (untracked) stalls when loading textures
-    headers = {
-      ...headers,
-    };
-    if (body !== undefined) {
-      if (typeof body === 'object') {
-        headers['Content-Type'] = 'application/json';
-        body = JSON.stringify(body);
-      } else {
-        body = String(body);
-      }
-    }
-    let options: RequestInit = {
-      method,
-      headers,
-      mode: 'cors',
-      body,
-    };
-    if (timeout) {
-      timer = setTimeout(function () {
-        timer = setTimeout(function () {
-          profilerStart(`fetch_timeout:${label}`);
-          done(ERR_TIMEOUT);
-          profilerStop();
-        }, timeout);
-      }, timeout);
-    }
-
-    profilerStart('nativeFetch');
-    nativeFetch(url, options).then(function (resp) {
-      if (!resp.ok) {
-        return void callbackify(resp.text.bind(resp))(function (err, resp_body) {
-          if (err) {
-            return void done(err);
-          }
-          done(String(resp.status), resp_body);
-        });
-      }
-      const resp_func = response_type === 'arraybuffer' ? 'arrayBuffer' :
-        response_type === 'json' ? 'json' : 'text';
-      profilerStart('nativeFetch:getResponse');
-      callbackify(resp[resp_func].bind(resp))(function (err, resp_body) {
-        if (err) {
-          return void done(err);
-        }
-        done(null, resp_body);
-      });
-      profilerStop('nativeFetch:getResponse');
-    }, unpromisify(done));
-    profilerStop('nativeFetch');
-    return;
-  }
-
-  let xhr = new XMLHttpRequest();
-  xhr.open(method, url, true);
   if (timeout) {
-    // Expect XHR timeout to work
-    xhr.timeout = timeout;
-    // But, in case it doesn't fire, add a chained timeout at double the
-    //   time to make sure (double to give it a chance to
+    // But, in case the underlying timeout doesn't fire, add a chained timeout
+    //   at double the time to make sure (double to give it a chance to
     //   potentially fire a (late) success, in the case of stalls/hiccups/etc)
-    // Note: evidence `timeout` wasn't working was wrong - we were not attaching
-    //   a `ontimeout` handler.
     timer = setTimeout(function () {
       timer = setTimeout(function () {
         profilerStart(`fetch_timeout:${label}`);
@@ -129,76 +78,75 @@ export function fetch<T>(params: FetchParams, cb: NetErrorCallback<T>): void {
       }, timeout);
     }, timeout);
   }
-  if (response_type && response_type !== 'json') {
-    xhr.responseType = response_type;
+
+  function sendit(): void {
+    platformAdapterGet().fetch({
+      method,
+      url,
+      label,
+      response_type,
+      body,
+      headers,
+      timeout,
+    }, done);
   }
-  for (let header in headers) {
-    xhr.setRequestHeader(header, headers[header]);
+
+  if (fetch_delay || fetch_delay_rand) {
+    setTimeout(sendit, fetch_delay + round(random() * fetch_delay_rand));
+  } else {
+    sendit();
   }
-  xhr.onload = function () {
-    profilerStart(`fetch_onload:${label}`);
-    if ((xhr.status !== 0 && xhr.status < 200) || xhr.status >= 300) {
-      let text;
-      if (response_type !== 'arraybuffer') {
-        try {
-          text = xhr.responseText;
-        } catch (e) {
-          // ignored
-        }
-      }
-      done(String(xhr.status), text || '');
-    } else {
-      if (response_type === 'json') {
-        let text;
-        let obj;
-        try {
-          text = xhr.responseText;
-          obj = JSON.parse(text);
-        } catch (e) {
-          console.error(`Received invalid JSON response from ${url}: ${text || '<empty response>'}`);
-          // Probably internal server error or such as the server is restarting
-          done(e);
-          profilerStop();
-          return;
-        }
-        done(null, obj);
-      } else if (response_type === 'arraybuffer') {
-        profilerStart('access response');
-        // non-trivial amount of time (37% of compressed texture loading!)
-        let resp = xhr.response;
-        profilerStop();
-        if (resp) {
-          done(null, resp);
-        } else {
-          done('empty response');
-        }
-      } else {
-        done(null, xhr.responseText);
-      }
-    }
-    profilerStop();
-  };
-  xhr.onabort = xhr.onerror = () => {
-    profilerStart(`fetch_onerror:${label}`);
-    done(ERR_CONNECTION);
-    profilerStop();
-  };
-  xhr.ontimeout = function () {
-    profilerStart(`fetch_ontimeout:${label}`);
-    done(ERR_TIMEOUT);
-    profilerStop();
+}
+
+
+const glob = typeof globalThis !== 'undefined' ? globalThis : typeof window !== 'undefined' ? window : self;
+let nativeFetch = glob.fetch || null;
+export function fetchNative(params: FetchInternalParams, done: ErrorCallback<unknown>): void {
+  if (!nativeFetch) {
+    return done('Native fetch not supported');
+  }
+  let { method, url, response_type, label, body, headers } = params;
+  // This mostly works, however it creates larger (untracked) stalls when loading textures
+  headers = {
+    ...headers,
   };
   if (body !== undefined) {
     if (typeof body === 'object') {
-      xhr.setRequestHeader('Content-Type', 'application/json');
+      headers['Content-Type'] = 'application/json';
       body = JSON.stringify(body);
     } else {
       body = String(body);
     }
   }
-  if (fetch_delay || fetch_delay_rand) {
-    setTimeout(xhr.send.bind(xhr, body), fetch_delay + round(random() * fetch_delay_rand));
-  } else {
-    xhr.send(body);
-  }
+  let options: RequestInit = {
+    method,
+    headers,
+    mode: 'cors',
+    body,
+  };
+
+  profilerStart(`nativeFetch:${label}`);
+  nativeFetch(url, options).then(function (resp) {
+    if (!resp.ok) {
+      return void callbackify(resp.text.bind(resp))(function (err, resp_body) {
+        if (err) {
+          return void done(err);
+        }
+        done(String(resp.status), resp_body);
+      });
+    }
+    const resp_func = response_type === 'arraybuffer' ? 'arrayBuffer' :
+      response_type === 'json' ? 'json' : 'text';
+    profilerStart(`nativeFetch:${label}:getResponse`);
+    callbackify(resp[resp_func].bind(resp))(function (err, resp_body) {
+      if (err) {
+        return void done(err);
+      }
+      done(null, resp_body);
+    });
+    profilerStop(`nativeFetch:${label}:getResponse`);
+  }, unpromisify(function () {
+    done(ERR_CONNECTION);
+  }));
+  profilerStop(`nativeFetch:${label}`);
 }

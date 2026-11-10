@@ -1,6 +1,7 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
+import { platformAdapterGet } from 'glov/client/engine';
 import { fontSetReplacementChars } from 'glov/client/font';
 import { locateAsset } from 'glov/client/locate_asset';
 import { getURLBase } from 'glov/client/urlhash';
@@ -24,15 +25,13 @@ export function profanityStartup() {
 
 export function profanityStartupLate() {
   // Async load of (potentially large) unicode replacement data, after all other loading is finished
-  let scriptTag = document.createElement('script');
-  scriptTag.src = `${getURLBase()}${locateAsset('replacement_chars.min.js')}`;
-  scriptTag.onload = function () {
+  let url = `${getURLBase()}${locateAsset('replacement_chars.min.js')}`;
+  platformAdapterGet().loadScript(url, function () {
     if (window.unicode_replacement_chars) {
       profanitySetReplacementChars(window.unicode_replacement_chars);
       fontSetReplacementChars(window.unicode_replacement_chars);
     }
-  };
-  document.getElementsByTagName('head')[0].appendChild(scriptTag);
+  });
 }
 
 let rand = randFastCreate();

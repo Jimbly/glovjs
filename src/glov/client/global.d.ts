@@ -1,4 +1,7 @@
+
 declare module 'glov/client/global' {
+  import type { PlatformAdapter } from 'glov/client/platform-adapter';
+
   global {
     interface Window {
       // GLOV injected variables
@@ -8,6 +11,7 @@ declare module 'glov/client/global' {
       // GLOV bootstrap
       debugmsg: (msg: string, clear?: boolean) => void;
       Z: Record<string, number>;
+      platform_adapter: PlatformAdapter;
 
       // GL context
       gl: WebGLRenderingContext | WebGL2RenderingContext;

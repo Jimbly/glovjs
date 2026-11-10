@@ -38,9 +38,9 @@ import { buildUIActiveReload } from './build_ui';
 import * as engine from './engine';
 import {
   isLoading,
+  platformAdapterGet,
   postTick,
 } from './engine';
-import { fetch } from './fetch';
 import { filewatchOn } from './filewatch';
 import {
   localStorageGetJSON,
@@ -57,6 +57,8 @@ const { ceil, floor, min } = Math;
 const TEX_UNLOAD_TIME = 5 * 60 * 1000; // for textures loaded (each frame) with auto_unload: true
 
 const ASYNC_TEXTURE_SIZE = 4*1024*1024; // anything bigger than this many bytes gets cut into chunks uploaded each frame
+
+let platform_adapter;
 
 const textures = {};
 let load_count = 0;
@@ -862,6 +864,11 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data, 
 
   clearGLErr();
 
+  if (data.is_sdl_png) {
+    this.format = TEXTURE_FORMAT.RGBA8;
+    data = data.data;
+  }
+
   // Resize NP2 if this is not being used for a texture array, and it is not
   //   explicitly allowed (non-mipmapped+clamped or webgl2+clamped)
   let np2_source = (!isPowerOfTwo(w) || !isPowerOfTwo(h));
@@ -1154,45 +1161,22 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
       tex.format = TEXTURE_FORMAT.RGBA8;
     }
 
+    let prefer_arraybuffer = false;
     if ((tflags & FORMAT_PACK) || compressed_type) {
-      fetch({
-        url: url_use,
-        response_type: 'arraybuffer',
-      }, done);
-      profilerStop();
-      return;
+      prefer_arraybuffer = true;
     }
 
     if (blobSupported() && supports_cib) {
       if (is_external && has_content_security_policy) {
         // Use `fetch` to get around content security policy
-        fetch({
-          url: url_use,
-          response_type: 'arraybuffer',
-        }, done);
-        profilerStop();
-        return;
+        prefer_arraybuffer = true;
       }
 
       // Also, generally, use fetch + createImageBitmap to avoid main-thread stalls decoding the PNG
-      fetch({
-        url: url_use,
-        response_type: 'arraybuffer',
-      }, done);
-      profilerStop();
-      return;
+      prefer_arraybuffer = true;
     }
 
-    // Old browser (just IE?) fallback path
-    let img = new Image();
-    img.onload = function () {
-      done(null, img);
-    };
-    img.onerror = function () {
-      done('error', null);
-    };
-    img.crossOrigin = 'anonymous';
-    img.src = url_use;
+    platform_adapter.loadImage(url_use, prefer_arraybuffer, done);
     profilerStop();
   }
 
@@ -1729,7 +1713,7 @@ export function textureCompressionSupported() {
 }
 
 export function textureStartup() {
-
+  platform_adapter = platformAdapterGet();
   default_filter_min = gl.LINEAR_MIPMAP_LINEAR;
   default_filter_mag = gl.LINEAR;
 
