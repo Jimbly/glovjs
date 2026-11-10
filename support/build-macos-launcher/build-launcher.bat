@@ -1,0 +1,1 @@
+docker run --rm -v "%cd%:/work" jimbly/ziglang ./build_launcher.sh GLOVjs-macos

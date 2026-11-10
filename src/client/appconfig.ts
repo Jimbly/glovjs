@@ -7,3 +7,11 @@ if (window.conf_env === 'multiplayer') {
   ls_key = 'glovjs-multiplayer';
 }
 require('glov/client/local_storage').setStoragePrefix(ls_key);
+
+require('glov/common/platform').platformRegister('sdl', {
+  devmode: 'on',
+  reload: true,
+  reload_updates: true,
+  random_creation_name: false,
+  exit: true,
+});

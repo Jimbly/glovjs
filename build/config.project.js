@@ -1,5 +1,6 @@
 const gb = require('glov-build');
 const ldtkproc = require('./ldtk');
+const nodeSDL = require('./sdl-build');
 
 module.exports = function (config) {
   config.bundles.push({
@@ -65,4 +66,13 @@ module.exports = function (config) {
   });
   config.client_fsdata.push('ldtkproc:**');
   config.fsdata_embed.push('.ldtkl');
+  
+  // SDL native app support
+  nodeSDL(config, {
+    exe_name: 'sdltest',
+    company_name: 'Company Name',
+    native_mappings: [
+      // ['node_modules/src/folder', 'native/folder'],
+    ],
+  });
 };
