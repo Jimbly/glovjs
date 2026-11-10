@@ -745,6 +745,7 @@ function uploadTextureImgOrCanvas(tex, data, per_mipmap_data, finish) {
         gl.texSubImage2D(tex.target, level, 0, 0,
           tex.format.internal_type, tex.format.gl_type, img);
       } else {
+        assert(!img.is_sdl_png);
         gl.texImage2D(tex.target, level, tex.format.internal_type, tex.format.internal_type, tex.format.gl_type, img);
       }
       if (engine.webgl2) {
@@ -864,8 +865,11 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data, 
 
   clearGLErr();
 
-  if (data.is_sdl_png) {
+  let is_sdl_png = Boolean(data.is_sdl_png);
+  let sdl_base;
+  if (is_sdl_png) {
     this.format = TEXTURE_FORMAT.RGBA8;
+    sdl_base = data;
     data = data.data;
   }
 
@@ -890,26 +894,43 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data, 
     assert(data.data instanceof Uint8Array);
     uploadTextureCompressed(this, data, per_mipmap_data, finish);
   } else if (data instanceof Uint8Array || data instanceof Uint8ClampedArray) {
-    assert(!per_mipmap_data); // not implemented
+    // In-process generated images path and now native-app (SDL) decoded PNGs
     assert(data.length >= w * h * this.format.count);
     assert(!this.is_cube);
     if (this.is_array) {
+      assert(!per_mipmap_data); // not implemented
       let num_images = h / w; // assume square
       profilerStart('texImage');
       gl.texImage3D(this.target, 0, this.format.internal_type, w, w,
         num_images, 0, this.format.internal_type, this.format.gl_type, data);
       profilerStop();
     } else if (np2_pad) {
-      // Could do multiple upload thing like below, but smarter, but we really shouldn't be doing this for
-      // in-process generated images!
+      assert(!per_mipmap_data); // not implemented
+      // Pad up to power of two
+      // Duplicate right and bottom pixel row by sending image 3 times
+      if (w !== this.width) {
+        profilerStart('texSubImage2D');
+        gl.texSubImage2D(this.target, 0, 1, 0, w, h, this.format.internal_type, this.format.gl_type, data);
+        profilerStop();
+      }
+      if (h !== this.height) {
+        profilerStart('texSubImage2D');
+        gl.texSubImage2D(this.target, 0, 0, 1, w, h, this.format.internal_type, this.format.gl_type, data);
+        profilerStop();
+      }
       profilerStart('texSubImage2D');
       gl.texSubImage2D(this.target, 0, 0, 0, w, h, this.format.internal_type, this.format.gl_type, data);
       profilerStop();
     } else {
-      profilerStart('texImage2D');
-      gl.texImage2D(this.target, 0, this.format.internal_type, w, h, 0,
-        this.format.internal_type, this.format.gl_type, data);
-      profilerStop();
+      if (per_mipmap_data && is_sdl_png) {
+        uploadTextureImgOrCanvas(tex, sdl_base, per_mipmap_data, finish);
+      } else {
+        assert(!per_mipmap_data); // not implemented
+        profilerStart('texImage2D');
+        gl.texImage2D(this.target, 0, this.format.internal_type, w, h, 0,
+          this.format.internal_type, this.format.gl_type, data);
+        profilerStop();
+      }
     }
     this.allowMipmaps(true); // can be auto-generated
     finish();
@@ -1020,7 +1041,7 @@ document.addEventListener('securitypolicyviolation', function () {
 });
 
 let blob_supported;
-function blobSupported() {
+export function blobSupported() {
   if (blob_supported !== undefined) {
     return blob_supported;
   }
@@ -1176,7 +1197,7 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
       prefer_arraybuffer = true;
     }
 
-    platform_adapter.loadImage(url_use, prefer_arraybuffer, done);
+    platform_adapter.loadImageData(url_use, prefer_arraybuffer, done);
     profilerStop();
   }
 
@@ -1222,37 +1243,15 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
     let mipmaps = [];
     let tasks = [];
     function decodeLevelPNG(level, offset, length, next) {
-      let img_out = new Image();
-      if (blobSupported()) {
-        let view = new Uint8Array(arraybuffer, offset, length);
-        let url_object = URL.createObjectURL(new Blob([view], { type: 'image/png' }));
-        img_out.onload = function () {
-          URL.revokeObjectURL(url_object);
-          mipmaps[level] = img_out;
+      let view = new Uint8Array(arraybuffer, offset, length);
+      platform_adapter.imageFromBuffer(view, function (err, img) {
+        if (err) {
+          next(err);
+        } else {
+          mipmaps[level] = img;
           next();
-        };
-        img_out.onerror = function () {
-          URL.revokeObjectURL(url_object);
-          next('img load error');
-        };
-        img_out.src = url_object;
-      } else {
-        img_out.onload = function () {
-          mipmaps[level] = img_out;
-          next();
-        };
-        img_out.onerror = function () {
-          next('img load error');
-        };
-        let src_str = ['data:image/png;base64,'];
-        for (let ii = 0; ii < length;) {
-          let sublen = Math.min(length - ii, 768);
-          let view = new Uint8Array(arraybuffer, offset + ii, sublen);
-          src_str.push(btoa(String.fromCharCode.apply(null, view)));
-          ii += sublen;
         }
-        img_out.src = src_str.join('');
-      }
+      });
     }
     function decodeLevelCompressed(level, offset, length, next) {
       decodeCompressedImage(arraybuffer, offset, length, function (err, data) {

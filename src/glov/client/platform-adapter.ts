@@ -82,7 +82,8 @@ export type PlatformAdapter = {
   checkResize(): void;
   requestFrame(user_time?: number): void;
   setEditBoxNearBottom(frame_index: number, required_padding_dom_coords: number): void;
-  loadImage(url: string, prefer_arraybuffer: boolean, done: ErrorCallback<HTMLImageElement | ArrayBuffer>): void;
+  loadImageData(url: string, prefer_arraybuffer: boolean, done: ErrorCallback<HTMLImageElement | ArrayBuffer>): void;
+  imageFromBuffer(buf: Uint8Array, done: ErrorCallback<HTMLImageElement>): void;
   getSoundAPI(): PlatformSoundAPI;
   fetch(params: FetchInternalParams, cb: ErrorCallback<unknown>): void;
   loadScript(url: string, cb: VoidFunc): void;

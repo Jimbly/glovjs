@@ -54,6 +54,7 @@ import type {
 } from './platform-adapter';
 import { webSoundGetAPI } from './platform-web-sound';
 import { settingsGet } from './settings';
+import { blobSupported } from './textures';
 
 const { max, min, round } = Math;
 
@@ -521,7 +522,7 @@ function fetchWeb(params: FetchInternalParams, done: ErrorCallback<unknown>): vo
   xhr.send(body);
 }
 
-function loadImage(
+function loadImageData(
   url: string,
   prefer_arraybuffer: boolean,
   done: ErrorCallback<HTMLImageElement | ArrayBuffer>
@@ -546,6 +547,37 @@ function loadImage(
   img.src = url;
 }
 
+function imageFromBuffer(buf: Uint8Array, next: ErrorCallback<HTMLImageElement>): void {
+  let img_out = new Image();
+  if (blobSupported()) {
+    let url_object = URL.createObjectURL(new Blob([buf], { type: 'image/png' }));
+    img_out.onload = function () {
+      URL.revokeObjectURL(url_object);
+      next(null, img_out);
+    };
+    img_out.onerror = function () {
+      URL.revokeObjectURL(url_object);
+      next('img load error');
+    };
+    img_out.src = url_object;
+  } else {
+    img_out.onload = function () {
+      next(null, img_out);
+    };
+    img_out.onerror = function () {
+      next('img load error');
+    };
+    let src_str = ['data:image/png;base64,'];
+    for (let ii = 0; ii < buf.length;) {
+      let sublen = Math.min(buf.length - ii, 768);
+      let view = new Uint8Array(buf.buffer, buf.byteOffset + ii, sublen);
+      src_str.push(btoa(String.fromCharCode.apply(null, view as unknown as number[])));
+      ii += sublen;
+    }
+    img_out.src = src_str.join('');
+  }
+}
+
 function getSoundAPI(): PlatformSoundAPI {
   return webSoundGetAPI();
 }
@@ -562,7 +594,8 @@ const platform_web: PlatformAdapter = {
   checkResize,
   requestFrame,
   setEditBoxNearBottom,
-  loadImage,
+  loadImageData,
+  imageFromBuffer,
   getSoundAPI,
   fetch: fetchWeb,
   loadScript,

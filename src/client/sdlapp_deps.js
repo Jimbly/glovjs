@@ -3,11 +3,12 @@ require('./require_deps');
 require('../glov/client/require');
 
 let deps = window.deps;
-// Node built-in replacements
+// Node built-in pass-throughs
 deps.assert = require('assert');
 deps['fs'] = require('fs');
 deps['os'] = require('os');
 deps['path'] = require('path');
+deps['zlib'] = require('zlib');
 deps['glov-async'] = require('glov-async');
 deps['gl-mat3/create'] = require('gl-mat3/create');
 deps['gl-mat3/fromMat4'] = require('gl-mat3/fromMat4');

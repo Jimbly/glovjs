@@ -9,7 +9,19 @@ assert.equal(window.conf_platform, 'sdl');
 
 let listeners = new EventEmitter();
 
-const KNOWN_EVENTS = arrayToSet(['keyup', 'keydown', 'blur', 'focus']);
+const KNOWN_EVENTS = arrayToSet([
+  'keyup',
+  'keydown',
+  'blur',
+  'focus',
+  'mousemove',
+  'mousedown',
+  'mouseup',
+  'mousewheel',
+  'click', // ignored, but not a problem
+  'contextmenu', // ignored, but not a problem
+  'DOMMouseScroll', // ignored, but not a problem
+]);
 function addEventListener(who: string, id: string, cb: (ev: Event) => unknown): void {
   if (id.startsWith('moz') || id.startsWith('webkit') || id === 'test') {
     // silently ignored

@@ -1,6 +1,7 @@
 /* globals HTMLImageElement */
 import assert from 'assert';
 import fs from 'fs';
+import zlib from 'zlib';
 import { setAbilityReloadUpdates } from 'glov/client/client_config';
 import {
   internal as engine_internal,
@@ -139,7 +140,7 @@ function startup(param: PlatformStartupParam): PlatformStartupRet {
   sdlWindowStateTrack(sdlwindow);
   sdlEventsStartup(sdlwindow);
   // eslint-disable-next-line @typescript-eslint/no-use-before-define
-  loadImage('favicon.png', false, function (err, img) {
+  loadImageData('favicon.png', false, function (err, img) {
     if (err || !img) {
       return void console.error(`Error loading window icon: ${err}`);
     }
@@ -214,7 +215,27 @@ function requestFrame(user_time?: number): void {
   }
 }
 
-function loadImage(
+function imageFromBuffer(buf: Uint8Array, done: ErrorCallback<HTMLImageElement>): void {
+  let png;
+  try {
+    png = PNG.sync.read(Buffer.from(buf));
+  } catch (e) {
+    return void done(`Error decoding image: ${e}`);
+  }
+  png.is_sdl_png = true;
+  done(null, png);
+}
+
+function loadFile(filename: string, done: ErrorCallback<Buffer>): void {
+  fs.readFile(filename + '.gz', function (err, data) {
+    if (err) {
+      return fs.readFile(filename, done);
+    }
+    zlib.gunzip(data, done);
+  });
+}
+
+function loadImageData(
   url: string,
   prefer_arraybuffer: boolean,
   done: ErrorCallback<HTMLImageElement | ArrayBuffer>
@@ -222,14 +243,17 @@ function loadImage(
   assert(!url.startsWith('http'));
   let filename = `${application_root}${url}`;
   let ext = url.match(/\.([^.]+)$/)?.[1];
-  if (ext !== 'png') {
+  if (ext !== 'png' && !prefer_arraybuffer) {
     return done(`Format not supported: ${url}`);
   }
-  fs.readFile(filename, function (err, data) {
+
+  loadFile(filename, function (err, data) {
     if (err) {
       return done(err);
     }
+    assert(data);
     if (ext === 'png') {
+      // Note: ignoring prefer_arraybuffer, client JS can't decode an ArrayBuffer PNG without a browser
       let png;
       try {
         png = PNG.sync.read(data);
@@ -238,6 +262,14 @@ function loadImage(
       }
       png.is_sdl_png = true;
       done(null, png);
+    } else if (prefer_arraybuffer) {
+      if (data.byteOffset === 0 && data.byteLength === data.buffer.byteLength) {
+        done(null, data.buffer);
+      } else {
+        done(null, data.buffer.slice(
+          data.byteOffset,
+          data.byteOffset + data.byteLength));
+      }
     } else {
       assert(false);
     }
@@ -277,7 +309,8 @@ const platform_web: PlatformAdapter = {
   checkResize,
   requestFrame,
   setEditBoxNearBottom,
-  loadImage,
+  loadImageData,
+  imageFromBuffer,
   getSoundAPI,
   loadScript,
 };
