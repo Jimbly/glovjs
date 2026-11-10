@@ -3,13 +3,15 @@ import assert from 'assert';
 import { actionDown, actionEdge } from 'glov/client/actions';
 import { autoAtlas } from 'glov/client/autoatlas';
 import { bindUIStartup } from 'glov/client/bind_ui';
-import { MODE_DEVELOPMENT, platformParameterGet, platformSetRichPresence } from 'glov/client/client_config';
+import { MODE_DEVELOPMENT, platformSetRichPresence } from 'glov/client/client_config';
+import { cmd_parse } from 'glov/client/cmds';
 import { editBox } from 'glov/client/edit_box';
 import * as engine from 'glov/client/engine';
 import {
   getFrameTimestamp,
   setState,
 } from 'glov/client/engine';
+import { environmentsInit } from 'glov/client/environments';
 import {
   ALIGN,
   fontStyle,
@@ -90,6 +92,7 @@ import {
   uiTextHeight,
 } from 'glov/client/ui';
 import * as ui_test from 'glov/client/ui_test';
+import * as urlhash from 'glov/client/urlhash';
 import { webFSExists } from 'glov/client/webfs';
 import type { TSMap } from 'glov/common/types';
 import {
@@ -683,8 +686,19 @@ function textureCompressionTest(): void {
 }
 
 export function main(): void {
-  if (platformParameterGet('reload_updates') || MODE_DEVELOPMENT) {
-    // Enable auto-reload, etc
+  {
+    let url_base = urlhash.getURLBase();
+    environmentsInit([{
+      name: 'dev',
+      api_path: `${url_base.startsWith('http') ? url_base : 'http://localhost:3000/'}api/`,
+    }, {
+      name: 'prod',
+      api_path: 'notavalidurl', // if not MODE_DEVELOPMENT, nothing should hit this by default
+    }], cmd_parse, MODE_DEVELOPMENT ? 'dev' : 'prod');
+  }
+
+  if (MODE_DEVELOPMENT) {
+    // Enable auto-reload, show build errors, etc
     netInit({ engine });
   }
 
