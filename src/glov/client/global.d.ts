@@ -8,6 +8,9 @@ declare module 'glov/client/global' {
       // GLOV bootstrap
       debugmsg: (msg: string, clear?: boolean) => void;
       Z: Record<string, number>;
+
+      // GL context
+      gl: WebGLRenderingContext | WebGL2RenderingContext;
     }
 
     const BUILD_TIMESTAMP: string;
