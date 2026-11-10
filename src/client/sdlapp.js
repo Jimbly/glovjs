@@ -13,5 +13,4 @@ require('./appconfig');
 require('./platform-sdl');
 // require('./platform-steamworks');
 require('./main').main();
-// require('./sdltest');
 window.time_load_init = Date.now();
