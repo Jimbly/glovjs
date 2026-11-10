@@ -4,12 +4,15 @@ const gb = require('glov-build');
 const SOURCEMAP_STRING = '//# sourceMappingURL=';
 const SOURCEMAP_BUFFER = Buffer.from(SOURCEMAP_STRING);
 
-module.exports = function sourcemapRemap(cb) {
+module.exports = function sourcemapRemap(remap_sourcemap_cb, remap_filename_cb) {
   return {
     type: gb.SINGLE,
     func: function (job, done) {
       let file = job.getFile();
       let { relative, contents } = file;
+      if (remap_filename_cb) {
+        relative = remap_filename_cb(relative);
+      }
 
       function proc(next) {
         if (!relative.endsWith('.js')) {
@@ -27,7 +30,7 @@ module.exports = function sourcemapRemap(cb) {
         assert(m);
         let filename = m[1];
         rest = rest.slice(filename.length);
-        cb(job, filename, function (err, new_filename) {
+        remap_sourcemap_cb(job, filename, function (err, new_filename) {
           if (err) {
             return void next(err);
           }
@@ -48,6 +51,6 @@ module.exports = function sourcemapRemap(cb) {
         done(err);
       });
     },
-    version: [cb],
+    version: [remap_sourcemap_cb, remap_filename_cb],
   };
 };
