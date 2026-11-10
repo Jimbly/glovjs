@@ -569,7 +569,7 @@ export default [
       'prefer-reflect': 'off', // JE
       'prefer-rest-params': 'error',
       'prefer-spread': 'off',
-      'prefer-template': ignore_style ? 'off' : 'error',
+      'prefer-template': 'off',
       'radix': 'error',
       'require-atomic-updates': 'error',
       'require-await': 'error',
