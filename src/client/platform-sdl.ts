@@ -96,6 +96,8 @@ function checkResize(): void {
 
 let gl: SDLWebGLContext | null = null;
 
+let last_swap_time = 0;
+
 function renderFrame(): void {
   if (!gl) {
     return;
@@ -103,7 +105,11 @@ function renderFrame(): void {
   tick(); // note: may never return (if it crashes)
   // TODO: do we want to call gl.swap() if a crash happens?
   // TODO: don't call swap if tick chose not to render anything
+  profilerStart('gl.swap');
+  let start = Date.now();
   gl.swap();
+  last_swap_time = Date.now() - start;
+  profilerStop();
 }
 
 function checkResizeInternal(): void {
@@ -199,6 +205,7 @@ function tickWrap(): void {
 }
 
 const MAX_FRAME_TIME = 10000;
+let last_delay_time = 0;
 function requestFrame(user_time?: number): void {
   if (sdlwindow.destroyed) {
     return;
@@ -209,10 +216,20 @@ function requestFrame(user_time?: number): void {
   }
   frames_requested++;
   if (max_fps) {
+    last_delay_time = 0;
     let desired_delay = min(MAX_FRAME_TIME, max(0, round(1000 / max_fps - (user_time || 0))));
     setTimeout(tickWrap, desired_delay);
   } else {
-    setTimeout(tickWrap, 0);
+    if (last_swap_time + last_delay_time > 3) {
+      // Do a manual delay by how long we'd expect to be stuck in gl.swap(), so that:
+      //  A) the timestamp of the start of the frame is more accurate
+      //  B) the Node.js event loop is not starved
+      last_delay_time = last_swap_time + last_delay_time - 3;
+      setTimeout(tickWrap, last_delay_time);
+    } else {
+      last_delay_time = 0;
+      setTimeout(tickWrap, 0);
+    }
   }
 }
 
