@@ -1,13 +1,14 @@
 /* globals HTMLImageElement */
 import assert from 'assert';
 import fs from 'fs';
+import repl from 'repl';
 import zlib from 'zlib';
 import { setAbilityReloadUpdates } from 'glov/client/client_config';
 import {
   internal as engine_internal,
   hrnow,
 } from 'glov/client/engine';
-const { needReposSet, setCanvasDims, tick } = engine_internal;
+const { needReposSet, setCanvasDims, tick, disableNumberExtend } = engine_internal;
 import { FetchInternalParams, fetchNative } from 'glov/client/fetch';
 import type {
   PlatformAdapter,
@@ -303,7 +304,7 @@ function loadScript(url: string, done: VoidFunc): void {
   // TODO
 }
 
-const platform_web: PlatformAdapter = {
+const platform_sdl: PlatformAdapter = {
   fetch: fetchSDL,
   startup,
   checkResize,
@@ -316,6 +317,21 @@ const platform_web: PlatformAdapter = {
 };
 
 assert(!window.platform_adapter);
-window.platform_adapter = platform_web;
+window.platform_adapter = platform_sdl;
 
 setAbilityReloadUpdates(false);
+
+function startConsole(): void {
+  disableNumberExtend(); // breaks REPL
+
+  const repl_inst = repl.start({
+    prompt: 'app > ',
+    useGlobal: false,
+  });
+
+  repl_inst.context.platform_adapter = platform_sdl;
+}
+
+if (window.glov_platform_devmode) { // TODO: or --console
+  startConsole();
+}

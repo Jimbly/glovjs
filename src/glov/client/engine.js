@@ -15,6 +15,7 @@ export const internal = {
   needReposSet, // eslint-disable-line @typescript-eslint/no-use-before-define
   setCanvasDims, // eslint-disable-line @typescript-eslint/no-use-before-define
   tick, // eslint-disable-line @typescript-eslint/no-use-before-define
+  disableNumberExtend, // eslint-disable-line @typescript-eslint/no-use-before-define
 };
 let startup_funcs = [];
 
@@ -1116,6 +1117,11 @@ export function engineStartupFunc(func) {
   }
 }
 
+let no_number_extend = false;
+function disableNumberExtend() {
+  no_number_extend = true;
+}
+
 export function startup(params) {
   fixNatives(true);
 
@@ -1134,7 +1140,7 @@ export function startup(params) {
     dataErrorQueueEnable(true);
   }
 
-  if (DEBUG && !window.spector) {
+  if (DEBUG && !window.spector && !no_number_extend) {
     // Add check to catch common error of `const FOO=10; for (let i=0; i < FOO.length; i++) {}`
     // eslint-disable-next-line no-extend-native
     Object.defineProperty(Number.prototype, 'length', {

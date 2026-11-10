@@ -9,6 +9,7 @@ deps['fs'] = require('fs');
 deps['os'] = require('os');
 deps['path'] = require('path');
 deps['zlib'] = require('zlib');
+deps['repl'] = require('repl');
 deps['glov-async'] = require('glov-async');
 deps['gl-mat3/create'] = require('gl-mat3/create');
 deps['gl-mat3/fromMat4'] = require('gl-mat3/fromMat4');
