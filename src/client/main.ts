@@ -8,6 +8,7 @@ import { cmd_parse } from 'glov/client/cmds';
 import { editBox } from 'glov/client/edit_box';
 import * as engine from 'glov/client/engine';
 import {
+  getFrameIndex,
   getFrameTimestamp,
   setState,
 } from 'glov/client/engine';
@@ -54,7 +55,7 @@ import {
   soundPlayMusic,
 } from 'glov/client/sound';
 import { spineCreate } from 'glov/client/spine';
-import { spotSuppressPad } from 'glov/client/spot';
+import { SPOT_NAVTYPE_SIMPLE, spotSetNavtype, spotSuppressPad } from 'glov/client/spot';
 import {
   SpriteAnimation,
   spriteAnimationCreate,
@@ -686,6 +687,88 @@ function textureCompressionTest(): void {
 
 }
 
+let did_startup_crash = false;
+function crashTest(): void {
+  spotSetNavtype(SPOT_NAVTYPE_SIMPLE);
+  let y = 2;
+  let w = game_width / 2;
+  let x = 8;
+  let button_w = w / 3;
+  let yy = y;
+  let yadv = uiButtonHeight() + 2;
+  function nullDerefence(): void {
+    let a = null;
+    (a as unknown as { foo: number }).foo++;
+  }
+  if (buttonText({
+    text: `Startup crash: ${flagGet('startupcrash') ? 'ON' : 'Off'}`,
+    markdown: true,
+    x, y: yy,
+    w: button_w * 2 + 2,
+    hotkey: KEYS.C,
+  })) {
+    flagSet('startupcrash', !flagGet('startupcrash'));
+  }
+  if (flagGet('startupcrash') && getFrameIndex() > 30 && !did_startup_crash) {
+    did_startup_crash = true;
+    nullDerefence();
+  }
+  yy += yadv;
+  if (buttonText({
+    text: '**A**ssert now',
+    markdown: true,
+    x, y: yy,
+    w: button_w,
+    hotkey: KEYS.A,
+  })) {
+    assert(false);
+  }
+  if (buttonText({
+    text: 'A**s**sert Later',
+    markdown: true,
+    x: x + button_w + 2, y: yy,
+    w: button_w,
+    hotkey: KEYS.S,
+  })) {
+    setTimeout(function () {
+      assert(false);
+    }, 1);
+  }
+  yy += yadv;
+  if (buttonText({
+    text: '**C**rash now',
+    markdown: true,
+    x, y: yy,
+    w: button_w,
+    hotkey: KEYS.C,
+  })) {
+    nullDerefence();
+  }
+  if (buttonText({
+    text: 'C**r**ash Later',
+    markdown: true,
+    x: x + button_w + 2, y: yy,
+    w: button_w,
+    hotkey: KEYS.R,
+  })) {
+    setTimeout(nullDerefence, 1);
+  }
+  yy += yadv;
+  if (buttonText({
+    text: 'R**e**ject now',
+    markdown: true,
+    x, y: yy,
+    w: button_w,
+    hotkey: KEYS.E,
+  })) {
+    // eslint-disable-next-line no-new
+    new Promise((resolve, reject) => {
+      reject(new Error('client_reject_now'));
+    });
+  }
+  yy += yadv;
+}
+
 export function main(): void {
   {
     let url_base = urlhash.getURLBase();
@@ -1091,6 +1174,10 @@ export function main(): void {
       flagToggle('texcomp');
     }
 
+    if (miniButton('Crashes', 'Toggles crash testing', flagGet('crashes'))) {
+      flagToggle('crashes');
+    }
+
     if (flagGet('particles')) {
       if (getFrameTimestamp() - last_particles > 1000) {
         last_particles = getFrameTimestamp();
@@ -1107,6 +1194,10 @@ export function main(): void {
 
     if (flagGet('texcomp')) {
       textureCompressionTest();
+    }
+
+    if (flagGet('crashes')) {
+      crashTest();
     }
 
     if (do_3d) {
