@@ -1,4 +1,15 @@
 /* globals HTMLImageElement */
+
+// eslint-disable-next-line import/order
+import { platformRegister } from 'glov/common/platform';
+platformRegister('sdl', {
+  devmode: 'auto',
+  reload: false,
+  reload_updates: false,
+  random_creation_name: false,
+  exit: true,
+});
+
 import assert from 'assert';
 import fs from 'fs';
 import repl from 'repl';
