@@ -57,7 +57,7 @@ class DummyLocation {
   }
 }
 class DummyNavigator {
-  userAgent = 'Node.js/sdl';
+  userAgent = `GLOVjs-sdl/${process.versions.node} (${process.platform}-${process.arch})`;
   language = 'en-US';
   languages = ['en-US'];
   platform = process.platform;
