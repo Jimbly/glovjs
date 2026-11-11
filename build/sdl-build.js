@@ -13,6 +13,14 @@ module.exports = function (config, opts) {
   gb.addTarget('sdl', path.join(__dirname, '../dist/game/build.sdl'));
   gb.addTarget('pkg', path.join(__dirname, '../dist/game/build.pkg'));
 
+  assert(!config.bundles[0].ban_deps);
+  config.bundles[0].ban_deps = {
+    'Cannot include native modules from web build': [
+      'platform-sdl',
+      'platform-steamworks',
+    ]
+  };
+
   config.bundles.push({
     entrypoint: 'sdlapp',
     deps: 'sdlapp_deps',
