@@ -12,6 +12,9 @@ let crash_message = 'We apologize, a fatal error has occurred.\n\n' +
 export function setCrashMessage(msg) {
   crash_message = msg;
 }
+export function getCrashMessage() {
+  return crash_message;
+}
 
 let debug = document.getElementById('debug');
 window.onerror = function (e, file, line, col, errorobj) {

@@ -36,6 +36,9 @@ const { dataErrorQueueEnable } = require('glov/common/data_error.js');
 const effects = require('./effects.js');
 const { effectsReset, effectsTopOfFrame, effectsIsFinal, effectsPassAdd, effectsPassConsume } = effects;
 const {
+  errorFancyStartup,
+} = require('./error_fancy');
+const {
   errorReportDisable,
   errorReportSetTimeAccum,
   errorReportSetDetails,
@@ -108,6 +111,8 @@ const {
     uiSetFonts,
     uiStartup,
     uiTick,
+    uiPushOverrideState,
+    uiPopOverrideState,
   },
   uiBindSounds,
 } = require('./ui.js');
@@ -1047,12 +1052,20 @@ function tickInternal() {
   profilerStop('bottom');
 }
 
+let last_frame_completed_successfully = true;
+export function lastFrameCompletedSuccessfully() {
+  return last_frame_completed_successfully;
+}
+let frame_completed_successfully = true;
 function tick() {
   profilerFrameStart();
   profilerStart('tick');
+  last_frame_completed_successfully = frame_completed_successfully;
+  frame_completed_successfully = false;
   out_of_tick = false;
   tickInternal();
   out_of_tick = true;
+  frame_completed_successfully = true;
   profilerStop('tick');
 }
 
@@ -1075,6 +1088,61 @@ function periodiclyRequestFrame() {
       callEach(enter_background_cb);
     }
   }
+}
+
+let override_stack;
+export function pushOverrideState(state, w, h) {
+  override_stack = {
+    app_state,
+    render_width,
+    render_height,
+    render_pixel_perfect,
+    game_width,
+    game_height,
+    do_borders,
+    app_tick_functions,
+    app_post_tick_functions,
+    pre_tick,
+    post_tick,
+    do_viewport_postprocess,
+  };
+  app_state = state;
+  render_width = undefined;
+  render_height = undefined;
+  render_pixel_perfect = 0;
+  game_width = w;
+  game_height = h;
+  do_borders = false;
+  app_tick_functions = [];
+  app_post_tick_functions = [];
+  pre_tick = [];
+  post_tick = [];
+  do_viewport_postprocess = false;
+
+  disableRender(false);
+  loadingForceClear(); // eslint-disable-line @typescript-eslint/no-use-before-define
+  render_frames_needed = 3;
+  pre_sprite_render = null; // not saved, just cleared, they're per-frame anyways
+  post_render = null; // not saved, just cleared, they're per-frame anyways
+  uiPushOverrideState();
+}
+export function popOverrideState() {
+  ({
+    app_state,
+    render_width,
+    render_height,
+    render_pixel_perfect,
+    game_width,
+    game_height,
+    do_borders,
+    app_tick_functions,
+    app_post_tick_functions,
+    pre_tick,
+    post_tick,
+    do_viewport_postprocess,
+  } = override_stack);
+  override_stack = null;
+  uiPopOverrideState();
 }
 
 // Must be called out-of-frame (use setTimeout) if not at startup
@@ -1269,6 +1337,7 @@ export function startup(params) {
   buildUIStartup();
   shaderDebugUIStartup();
   profilerUIStartup();
+  errorFancyStartup();
 
   callEach(startup_funcs, startup_funcs = null);
 
@@ -1326,6 +1395,13 @@ function loadingFinished() {
     time_total,
   });
   profanityStartupLate();
+}
+
+function loadingForceClear() {
+  let loading_elem = document.getElementById('loading');
+  if (loading_elem) {
+    loading_elem.style.visibility = 'hidden';
+  }
 }
 
 function loading() {

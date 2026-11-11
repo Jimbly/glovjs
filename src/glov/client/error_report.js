@@ -17,6 +17,11 @@ export function errorReportDisable() {
   error_report_disabled = true;
 }
 
+let fancy_handler = null;
+export function errorReportSetFancyHandler(handler) {
+  fancy_handler = handler;
+}
+
 let ignore_promises = false;
 export function errorReportIgnoreUncaughtPromises() {
   ignore_promises = true;
@@ -250,6 +255,10 @@ export function glovErrorReport(is_fatal, msg, file, line, col) {
   }
   if (ignore_promises && msg.match(/Uncaught \(in promise\)/)) {
     return false;
+  }
+
+  if (fancy_handler && is_fatal) {
+    fancy_handler(msg);
   }
   return true;
 }

@@ -33,6 +33,8 @@ export const internal = {
   uiStartup, // eslint-disable-line @typescript-eslint/no-use-before-define
   uiTick, // eslint-disable-line @typescript-eslint/no-use-before-define
   uiApplyStyle, // eslint-disable-line @typescript-eslint/no-use-before-define
+  uiPushOverrideState, // eslint-disable-line @typescript-eslint/no-use-before-define
+  uiPopOverrideState, // eslint-disable-line @typescript-eslint/no-use-before-define
 };
 
 export const sprites = {};
@@ -95,6 +97,7 @@ const { TEXTURE_FORMAT } = require('./textures.js');
 const {
   uiStyleDefault,
   uiStyleModify,
+  uiStyleSetCurrent,
   uiStyleTopOfFrame,
 } = require('./uistyle.js');
 const { clamp, defaults, deprecate, lerp, merge, sign } = require('glov/common/util.js');
@@ -2589,4 +2592,21 @@ export function setTooltipWidth(_tooltip_width, _tooltip_panel_pixel_scale) {
 // DEPRECATED: use a 9-patch panel with padding instead
 export function setTooltipTextOffset(_tooltip_text_offs) {
   tooltip_text_offs = _tooltip_text_offs;
+}
+
+let override_stack;
+function uiPushOverrideState() {
+  override_stack = {
+    modal_dialog,
+  };
+  modal_dialog = null;
+
+  menu_up = false;
+  uiStyleSetCurrent(uiStyleDefault());
+}
+function uiPopOverrideState() {
+  ({
+    modal_dialog,
+  } = override_stack);
+  override_stack = null;
 }

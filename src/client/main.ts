@@ -13,6 +13,7 @@ import {
   setState,
 } from 'glov/client/engine';
 import { environmentsInit } from 'glov/client/environments';
+import { errorFancyAllowDismiss } from 'glov/client/error_fancy';
 import {
   ALIGN,
   fontStyle,
@@ -693,7 +694,7 @@ function crashTest(): void {
   let y = 2;
   let w = game_width / 2;
   let x = 8;
-  let button_w = w / 3;
+  let button_w = w / 2;
   let yy = y;
   let yadv = uiButtonHeight() + 2;
   function nullDerefence(): void {
@@ -711,6 +712,7 @@ function crashTest(): void {
   }
   if (flagGet('startupcrash') && getFrameIndex() > 30 && !did_startup_crash) {
     did_startup_crash = true;
+    errorFancyAllowDismiss(true);
     nullDerefence();
   }
   yy += yadv;

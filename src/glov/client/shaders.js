@@ -22,6 +22,10 @@ export const SEMANTIC = {
 const assert = require('assert');
 const engine = require('./engine.js');
 const {
+  errorFancyAllowDismiss,
+  errorFancyClear,
+} = require('./error_fancy');
+const {
   errorReportClear,
   errorReportSetDetails,
   errorReportSetDynamicDetails,
@@ -134,6 +138,7 @@ function reportShaderError(non_fatal, err) {
       if (!shader_errors_any_fatal) {
         glovErrorReport(false, msg, 'shaders.js');
       } else {
+        errorFancyAllowDismiss(true);
         assert(false, msg);
       }
     }
@@ -508,6 +513,7 @@ function shaderReload() {
   if (shaders.length) {
     if (reported_shader_errors) {
       errorReportClear();
+      errorFancyClear();
       reported_shader_errors = false;
     }
     gl.useProgram(null);
