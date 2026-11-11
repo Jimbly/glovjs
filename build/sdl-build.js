@@ -465,10 +465,8 @@ module.exports = function (config, opts) {
       //   npx nodemon -- --enable-source-maps sdlmain.js
       // TODO: do this automatically as part of the build script? Maybe easier to see errors if not?
 
-      // plus regular dev stuff, but no browsersync
-      'build_deps',
-      'client_earlyreload',
-      'run_server',
+      // plus regular dev stuff, need browser_sync to get client dynamic reloads to happen
+      'default',
     ],
   });
 };
