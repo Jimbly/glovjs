@@ -14,6 +14,7 @@ import assert from 'assert';
 import fs from 'fs';
 import repl from 'repl';
 import zlib from 'zlib';
+import { setCrashMessage } from 'glov/client/bootstrap';
 import { setAbilityReloadUpdates } from 'glov/client/client_config';
 import {
   internal as engine_internal,
@@ -41,6 +42,9 @@ const { round, min, max } = Math;
 function setEditBoxNearBottom(frame_index: number, required_padding_dom_coords: number): void {
   // TODO?
 }
+
+setCrashMessage('We apologize, a fatal error has occurred.\n\n' +
+  'Please report this error to the developer, and then restart the app.');
 
 export type SDLWindow = {
   x: number;

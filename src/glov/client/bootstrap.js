@@ -7,7 +7,8 @@
 require('./polyfill.js');
 const { isbot } = require('./isbot');
 
-let crash_message = 'Please report this error to the developer, and then reload this page or restart the app.';
+let crash_message = 'We apologize, a fatal error has occurred.\n\n' +
+  'Please report this error to the developer, and then reload this page or restart the app.';
 export function setCrashMessage(msg) {
   crash_message = msg;
 }
@@ -92,7 +93,7 @@ window.onerror = function (e, file, line, col, errorobj) {
     window.glov_error_early = { msg, file, line, col };
   }
   if (show) {
-    debug.innerText = `${msg}\n\n${crash_message}`;
+    debug.innerText = `${crash_message}\n\n${msg}`;
     if (isbot()) {
       try {
         let desc = document.getElementsByTagName('meta').Description.content;
