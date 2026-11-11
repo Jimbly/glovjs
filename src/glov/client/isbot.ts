@@ -1,7 +1,6 @@
 // Minimal subset of `isbot@5.1.22` NPM module, plus ?bot=1 support, and old browser fixes
 
 /* eslint @stylistic/quotes:off */
-/* globals navigator */
 
 const fullPattern = [
   " daum[ /]",
@@ -216,6 +215,6 @@ function getPattern(): RegExp {
  * Check if the given user agent includes a bot pattern.
  */
 export function isbot(): boolean {
-  let userAgent = navigator.userAgent;
+  let userAgent = window.navigator.userAgent;
   return Boolean(userAgent) && getPattern().test(userAgent) || String(window.location).includes('bot=1');
 }
