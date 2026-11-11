@@ -163,7 +163,7 @@ function webFSReload() {
 
 export function webFSStartup(fs_in, base_url_for_reload_in, load_script_func_in) {
   fs = fs_in || {};
-  if (base_url_for_reload_in && load_script_func) {
+  if (base_url_for_reload_in && load_script_func_in) {
     base_url_for_reload = base_url_for_reload_in;
     load_script_func = load_script_func_in;
     filewatchOn('fsdata.js', webFSReload);
