@@ -20,6 +20,10 @@ export function identity<T>(a: T): T {
   return a;
 }
 
+export function forwardSlashes(s: string): string {
+  return s.replace(/\\/g, '/');
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function once<T extends any[]>(fn: (...args: T) => void): (...args: T) => void {
   let called = false;

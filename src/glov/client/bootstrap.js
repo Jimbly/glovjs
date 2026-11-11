@@ -5,7 +5,6 @@
 // Things that should be done before requiring or running any user-level code or other engine code
 
 require('./polyfill.js');
-const { isbot } = require('./isbot');
 
 let crash_message = 'We apologize, a fatal error has occurred.\n\n' +
   'Please report this error to the developer, and then reload this page or restart the app.';
@@ -16,8 +15,18 @@ export function getCrashMessage() {
   return crash_message;
 }
 
-let debug = document.getElementById('debug');
-window.onerror = function (e, file, line, col, errorobj) {
+function forwardSlashes(s) {
+  return s.replace(/\\/g, '/');
+}
+
+let crash_display = (msg, do_clear) => {
+  console.error(msg);
+};
+export function bootstrapSetCrashDisplayFunc(cb) {
+  crash_display = cb;
+}
+
+export function bootstrapHandleError(e, file, line, col, errorobj) {
   let msg = String(e);
   if (msg.startsWith('[object ')) {
     try {
@@ -44,16 +53,25 @@ window.onerror = function (e, file, line, col, errorobj) {
     }
     let origin = window.location.origin || '';
     if (origin) {
+      let origin2;
       if (origin === 'file://') {
         let full_location = String(window.location);
         if (full_location.includes('app.asar')) {
           origin = `${full_location.split('app.asar')[0]}app.asar/`;
+        }
+        if (full_location.includes('/data/')) {
+          origin = `${full_location.split('/data/')[0]}/data/`;
+          origin2 = `${full_location.split('/data/')[0]}/`; // handles ../glov/ getting resolved weird
+          msg = forwardSlashes(msg);
         }
       }
       if (origin.slice(-1) !== '/') {
         origin += '/';
       }
       msg = msg.split(origin).join(''); // replace
+      if (origin2) {
+        msg = msg.split(origin2).join(''); // replace
+      }
     }
     // fixup weird Firefox weirdness
     msg = msg.replace(/\[\d+\]<\/?/g, '') // remove funny [123]/ at start of stack lines
@@ -96,26 +114,11 @@ window.onerror = function (e, file, line, col, errorobj) {
     window.glov_error_early = { msg, file, line, col };
   }
   if (show) {
-    debug.innerText = `${crash_message}\n\n${msg}`;
-    if (isbot()) {
-      try {
-        let desc = document.getElementsByTagName('meta').Description.content;
-        if (desc) {
-          let crash_html = debug.innerHTML;
-          debug.innerHTML = `${desc}<br><br>This browser may not fully` +
-            ' support WebGL and encountered an error while loading the page.';
-          if (String(window.location).includes('verbose=1')) {
-            // include error
-            debug.innerHTML = `${debug.innerHTML}<br><br>${crash_html}`;
-          }
-        }
-      } catch (err) {
-        // ignored
-      }
-    }
+    crash_display(`${crash_message}\n\n${msg}`, true);
   }
-};
-window.addEventListener('unhandledrejection', function (event) {
+}
+
+export function bootstrapHandleRejection(event) {
   let errorobj = event.reason;
   if (!errorobj) {
     // Can't possibly get anything useful from this? `reject()` causes this, though, still useful to know?
@@ -133,15 +136,14 @@ window.addEventListener('unhandledrejection', function (event) {
   } catch (ignored) {
     // ignore, happens on Firefox
   }
-  window.onerror(event.reason, file, 0, 0, errorobj);
-});
-window.debugmsg = function (msg, clear) {
-  if (clear) {
-    debug.innerText = msg;
-  } else {
-    debug.innerText += `${msg}\n`;
-  }
-};
+  bootstrapHandleError(event.reason, file, 0, 0, errorobj);
+}
+
+export function bootstrapDebugMsg(msg, do_clear) {
+  crash_display(msg, do_clear);
+}
+
+window.debugmsg = bootstrapDebugMsg;
 
 // Placeholder profiler functions (in case shared/startup code calls them) until
 //   profiler is initialized/enabled.

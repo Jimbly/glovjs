@@ -9,6 +9,7 @@
 
 /* eslint-disable import/order */
 const assert = require('assert');
+const { bootstrapHandleError } = require('./bootstrap');
 const geom = require('./geom.js');
 const glb_parser = require('./glb/parser.js');
 const { ATTRIBUTE_TYPE_TO_COMPONENTS } = require('./glb/gltf-type-utils.js');
@@ -59,12 +60,12 @@ Model.prototype.load = function () {
   }, (err, array_buffer) => {
     --load_count;
     if (err) {
-      window.onerror('Model loading error', 'models.js', 0, 0, err);
+      bootstrapHandleError('Model loading error', 'models.js', 0, 0, err);
     } else {
       try {
         this.parse(array_buffer);
       } catch (e) {
-        window.onerror('Model loading error', 'models.js', 0, 0, e);
+        bootstrapHandleError('Model loading error', 'models.js', 0, 0, e);
       }
     }
   });

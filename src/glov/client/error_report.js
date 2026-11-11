@@ -1,9 +1,8 @@
-/* global location */
-
 export let session_uid = `${String(Date.now()).slice(-8)}${String(Math.random()).slice(2,8)}`;
 let error_report_details = {};
 let error_report_dynamic_details = {};
 
+import { bootstrapDebugMsg } from './bootstrap';
 import { MODE_DEVELOPMENT, platformGetID } from './client_config';
 import { getAPIPath } from './environments';
 import { fetch } from './fetch';
@@ -49,7 +48,7 @@ errorReportSetDynamicDetails('platform', platformGetID);
 const time_start = Date.now();
 errorReportSetDetails('time_start', time_start);
 errorReportSetDynamicDetails('url', function () {
-  return location.href;
+  return window.location.href;
 });
 errorReportSetDynamicDetails('time_up', function () {
   return Date.now() - time_start;
@@ -84,7 +83,7 @@ export function hasCrashed() {
 
 export function errorReportClear() {
   last_error_time = 0;
-  window.debugmsg('', true);
+  bootstrapDebugMsg('', true);
 }
 
 let submit_errors = !isbot();
@@ -240,7 +239,7 @@ export function glovErrorReport(is_fatal, msg, file, line, col) {
   }
   // Post to an error reporting endpoint that (probably) doesn't exist - it'll get in the logs anyway!
   let url = reportingAPIPath(); // base like http://foo.com/bar/ (without index.html)
-  url += `${is_fatal ? 'errorReport' : 'errorLog'}?cidx=${crash_idx}&file=${escape2(unlocatePaths(file))}` +
+  url += `${is_fatal ? 'errorReport' : 'errorLog'}?cidx=${crash_idx}&file=${file ? escape2(unlocatePaths(file)) : ''}` +
     `&line=${line||0}&col=${col||0}` +
     `&msg=${escape2(msg)}${errorReportDetailsString()}`;
   if (submit_errors) {

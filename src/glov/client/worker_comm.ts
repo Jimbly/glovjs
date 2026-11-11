@@ -7,6 +7,10 @@
 // Maybe need to add a separate bootstrap if we need to require much.
 import assert from 'assert';
 import type { TSMap } from 'glov/common/types';
+import {
+  bootstrapDebugMsg,
+  bootstrapHandleError,
+} from './bootstrap';
 import { locateAsset } from './locate_asset';
 import { webFSGetData, webFSSetToWorkerCB } from './webfs';
 
@@ -78,12 +82,12 @@ function workerOnError(
   errorobj?: Error
 ): void {
   if (!file && e.message && e.filename) {
-    window.onerror!(e.message, e.filename, e.lineno, e.colno, errorobj || e as unknown as Error);
+    bootstrapHandleError(e.message, e.filename, e.lineno, e.colno, errorobj || e as unknown as Error);
   } else {
     if (String(e) === '[object Event]') {
-      window.onerror!(`Unknown worker error (${e.message || e.type || e})`, file, line, col, errorobj);
+      bootstrapHandleError(`Unknown worker error (${e.message || e.type || e})`, file, line, col, errorobj);
     } else {
-      window.onerror!(e, file, line, col, errorobj);
+      bootstrapHandleError(e, file, line, col, errorobj);
     }
   }
 }
@@ -115,14 +119,14 @@ export function startup(worker_filename: string, debug_names_in: typeof debug_na
     debug_names = debug_names_in;
   }
   addHandler<{ msg: string; clear?: boolean }>('debugmsg', function (source, data) {
-    window.debugmsg(data.msg, data.clear);
+    bootstrapDebugMsg(data.msg, data.clear);
   });
   addHandler<string>('log', function (source, data) {
     console.log(`[Worker#${source}] ${data}`);
   });
   addHandler<Error>('error', function (source, msg) {
     console.error(msg);
-    window.onerror!(null!, null!, null!, null!, msg);
+    bootstrapHandleError(null, null, null, null, msg);
   });
   addHandler('busy_done', function (source) {
     if (source < keep_busy) {

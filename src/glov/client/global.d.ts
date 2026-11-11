@@ -9,7 +9,6 @@ declare module 'glov/client/global' {
       conf_env?: string;
 
       // GLOV bootstrap
-      debugmsg: (msg: string, clear?: boolean) => void;
       Z: Record<string, number>;
       platform_adapter: PlatformAdapter;
       glov_platform_devmode?: boolean;

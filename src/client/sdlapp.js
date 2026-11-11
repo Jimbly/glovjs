@@ -8,6 +8,7 @@ window.glov_build_version=BUILD_TIMESTAMP;
 window.time_load_onload = Date.now();
 require('./sdlwindow');
 require('glov/client/bootstrap');
+require('./platform-sdl-bootstrap');
 require('./appconfig');
 require('./platform-sdl');
 // require('./platform-steamworks');
