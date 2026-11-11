@@ -1,7 +1,7 @@
 /* globals Document, Event, Navigator, Location */
 import assert from 'assert';
 import { EventEmitter } from 'glov/common/tiny-events';
-import { arrayToSet } from 'glov/common/util';
+import { arrayToSet, forwardSlashes } from 'glov/common/util';
 
 // an empty window object should have been initialized by sdlmain.js
 assert(typeof window !== 'undefined');
@@ -51,8 +51,9 @@ class DummyLocation {
   href = 'mockhref';
   host = 'localhostmock';
   pathname = 'mockpathname';
+  origin = 'file://';
   toString(): string {
-    return 'mock';
+    return forwardSlashes(__dirname + '/mocklocation');
   }
 }
 class DummyNavigator {
