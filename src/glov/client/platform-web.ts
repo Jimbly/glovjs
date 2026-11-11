@@ -40,7 +40,7 @@ import {
   isLoading,
   renderNeeded,
 } from './engine';
-const { needReposSet, setCanvasDims, tick } = engine_internal;
+const { disableNumberExtend, needReposSet, setCanvasDims, tick } = engine_internal;
 import { ERR_CONNECTION, ERR_TIMEOUT, fetch, FetchInternalParams, fetchNative } from './fetch';
 import {
   localStorageGetJSON,
@@ -604,3 +604,7 @@ const platform_web: PlatformAdapter = {
 
 assert(!window.platform_adapter);
 window.platform_adapter = platform_web;
+
+if ((window as unknown as { spector?: unknown }).spector) {
+  disableNumberExtend();
+}

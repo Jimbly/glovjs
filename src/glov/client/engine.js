@@ -1140,7 +1140,7 @@ export function startup(params) {
     dataErrorQueueEnable(true);
   }
 
-  if (DEBUG && !window.spector && !no_number_extend) {
+  if (DEBUG && !no_number_extend) {
     // Add check to catch common error of `const FOO=10; for (let i=0; i < FOO.length; i++) {}`
     // eslint-disable-next-line no-extend-native
     Object.defineProperty(Number.prototype, 'length', {
