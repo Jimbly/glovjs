@@ -75,6 +75,7 @@ globalThis.document = window.document = new DummyDocument() as unknown as Docume
 window.addEventListener = addEventListener.bind(null, 'window') as typeof window.addEventListener;
 window.navigator = new DummyNavigator() as unknown as Navigator;
 window.location = new DummyLocation() as (Location & string);
+window.close = process.exit.bind(process, 0);
 
 // Note: this is currently `false` in build.pkg/dist-dev/
 window.glov_platform_devmode = !(process as unknown as { pkg: unknown }).pkg;
