@@ -112,22 +112,40 @@ function checkResize(): void {
 let gl: SDLWebGLContext | null = null;
 
 let last_swap_time = 0;
+// Many node-sdl APIs (window getters, clipboard, audio, etc) synchronously poll
+//   and dispatch SDL events, so event handlers can run in the middle of a frame.
+let in_render_frame = false;
+let resize_pending = false;
 
 function renderFrame(): void {
   if (!gl) {
     return;
   }
-  tick(); // note: may never return (if it crashes)
-  // TODO: do we want to call gl.swap() if a crash happens?
+  in_render_frame = true;
+  try {
+    tick(); // note: may never return (if it crashes)
+  } finally {
+    in_render_frame = false;
+  }
   // TODO: don't call swap if tick chose not to render anything
   profilerStart('gl.swap');
   let start = Date.now();
   gl.swap();
   last_swap_time = Date.now() - start;
   profilerStop();
+  if (resize_pending) {
+    resize_pending = false;
+    // eslint-disable-next-line @typescript-eslint/no-use-before-define
+    checkResizeInternal();
+  }
 }
 
 function checkResizeInternal(): void {
+  if (in_render_frame) {
+    // Don't change canvas dims or render recursively mid-frame, handle after this frame
+    resize_pending = true;
+    return;
+  }
   view.w = sdlwindow.width;
   view.h = sdlwindow.height;
   view.pw = sdlwindow.pixelWidth;
@@ -346,13 +364,22 @@ function loadScript(url: string, done: VoidFunc): void {
 }
 
 function clipboardWrite(text: string): boolean {
-  // TODO
-  return false;
+  try {
+    sdl.clipboard.setText(text);
+    return true;
+  } catch (e) {
+    console.error('Error writing to clipboard:', e);
+    return false;
+  }
 }
 
 function clipboardRead(): string | null {
-  // TODO
-  return null;
+  try {
+    return sdl.clipboard.text;
+  } catch (e) {
+    console.error('Error reading from clipboard:', e);
+    return null;
+  }
 }
 
 const platform_sdl: PlatformAdapter = {
