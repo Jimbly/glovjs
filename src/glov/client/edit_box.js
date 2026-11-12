@@ -16,11 +16,14 @@ import * as engine from './engine';
 import {
   eatAllKeyboardInput,
   inputClick,
+  inputDrag,
+  inputTextInputQueue,
   inputTouchMode,
   keyDownEdge,
   KEYS,
   keyUpEdge,
   mouseConsumeClicks,
+  mouseDownEdge,
   pointerLocked,
   pointerLockEnter,
   pointerLockExit,
@@ -33,6 +36,19 @@ import {
   spotSuppressKBNav,
   spotUnfocus,
 } from './spot';
+import {
+  stb_textedit_char,
+  stb_textedit_click,
+  stb_textedit_drag,
+  // stb_textedit_cut,
+  STB_TEXTEDIT_GETWIDTH_NEWLINE,
+  stb_textedit_key,
+  stb_textedit_key_from_input,
+  // stb_textedit_paste,
+  stb_textedit_prep_selection_at_cursor,
+  texteditHasSelection,
+  texteditNewState,
+} from './stb_textedit';
 import {
   drawBox,
   drawLine,
@@ -47,7 +63,7 @@ import {
   uiTextHeight,
 } from './ui';
 
-const { floor, round } = Math;
+const { max, min, floor, round } = Math;
 
 let form_hook_registered = false;
 let active_edit_box;
@@ -166,6 +182,8 @@ class GlovUIEditBox {
     this.type = 'text';
     // this.h = uiButtonHeight();
     this.font_height = uiTextHeight();
+    this.line_height = this.font_height;
+    this.font_style = uiFontStyleNormal();
     this.last_set_text = '';
     this.text = '';
     this.placeholder = '';
@@ -208,6 +226,14 @@ class GlovUIEditBox {
     };
     this.resetCSSCaching();
     this.had_overflow = false;
+
+    this.textedit_string = {
+      text: this.text, // needs to be kept in sync
+      layoutRow: this.texteditLayoutRow.bind(this),
+      getWidth: this.texteditGetWidth.bind(this),
+      canInsert: this.texteditCanInsert.bind(this),
+    };
+    this.textedit_state = texteditNewState(this.multiline <= 1);
   }
   resetCSSCaching() {
     this.last_tab_index = -1;
@@ -228,12 +254,93 @@ class GlovUIEditBox {
     }
     this.h = (this.multiline || 1) * this.font_height + padding.top + padding.bottom;
   }
+
+  lineWidth(line, len) {
+    if (len === 0 || !line) {
+      return 0;
+    }
+    if (len !== undefined && len !== line.length) {
+      line = line.slice(0, len);
+    }
+    let { font_style, font_height } = this;
+    let font = uiGetFont();
+    return font.getStringWidth(font_style, font_height, line);
+  }
+
+  // STB_TEXTEDIT_LAYOUTROW: fill in `r` for the row starting at character #n
+  texteditLayoutRow(r/*: StbTexteditRow*/, n/*: number*/)/*: void*/ {
+    let { line_height, center } = this;
+    let text = this.textedit_string.text;
+    let line = n ? text.slice(n) : text;
+    let end = line.indexOf('\n');
+    end = end === -1 ? line.length : end + 1;
+    let xoffs = center ? round((this.w - padding.left - padding.right - this.lineWidth(line))/2) : 0;
+    r.x0 = xoffs;
+    r.x1 = xoffs + this.lineWidth(line, end);
+    r.baseline_y_delta = line_height;
+    r.ymin = 0;
+    r.ymax = line_height;
+    r.num_chars = end - n;
+  }
+  // STB_TEXTEDIT_GETWIDTH: pixel delta from the xpos of the i'th character to
+  // the xpos of the i+1'th char for the row starting at character #n
+  texteditGetWidth(n/*: number*/, i/*: number*/)/*: number*/ {
+    let text = this.textedit_string.text;
+    return text[n + i] === '\n' ? STB_TEXTEDIT_GETWIDTH_NEWLINE :
+      uiGetFont().getCharacterWidth(this.font_style, this.font_height, text.charCodeAt(n));
+  }
+  texteditCanInsert(where/*: number*/, chars/*: string*/)/*: boolean*/ {
+    if (!this.max_len) {
+      return true;
+    }
+    let text = this.textedit_string.text;
+    return text.length + chars.length <= this.max_len;
+  }
+  texteditHandleInput(focused, clipped_rect) {
+    this.textedit_string.text = this.text;
+    if (focused) {
+      let text_input = inputTextInputQueue();
+      for (let ii = 0; ii < text_input.length; ++ii) {
+        let event = text_input[ii];
+        if (event.type === 'key') {
+          stb_textedit_key(this.textedit_string, this.textedit_state,
+            stb_textedit_key_from_input(event.code, event.mod));
+        } else {
+          stb_textedit_char(this.textedit_string, this.textedit_state, String.fromCharCode(event.code));
+        }
+      }
+    }
+    let { x, y } = this;
+    let mouse_down = mouseDownEdge(clipped_rect);
+    if (mouse_down) {
+      stb_textedit_click(this.textedit_string, this.textedit_state, mouse_down.pos[0] - x, mouse_down.pos[1] - y);
+      this.focus();
+    }
+    let drag = inputDrag({
+      ...clipped_rect,
+      eat_clicks: true,
+    });
+    if (drag) {
+      stb_textedit_drag(this.textedit_string, this.textedit_state, drag.cur_pos[0] - x, drag.cur_pos[1] - y);
+      this.focus();
+    }
+  }
+
   getSelection() {
     if (this.dom_backed) {
       return [charIdxToXY(this.text, this.input.selectionStart), charIdxToXY(this.text, this.input.selectionEnd)];
     } else {
-      // donotcheckin: TODO
-      return [0,0];
+      if (texteditHasSelection(this.textedit_state)) {
+        return [
+          charIdxToXY(this.text, min(this.textedit_state.select_start, this.textedit_state.select_end)),
+          charIdxToXY(this.text, max(this.textedit_state.select_start, this.textedit_state.select_end))
+        ];
+      } else {
+        return [
+          charIdxToXY(this.text, this.textedit_state.cursor),
+          charIdxToXY(this.text, this.textedit_state.cursor)
+        ];
+      }
     }
   }
   setSelectionRange(sel_start, sel_end) {
@@ -246,7 +353,9 @@ class GlovUIEditBox {
       //   this.input.type = 'number';
       // }
     } else {
-      // donotcheckin: TODO
+      this.textedit_state.select_start = sel_start;
+      this.textedit_state.select_end = sel_end;
+      stb_textedit_prep_selection_at_cursor(this.textedit_state);
     }
   }
   setTextInternal(new_text) {
@@ -255,7 +364,7 @@ class GlovUIEditBox {
         this.input.value = new_text;
       }
     } else {
-      // donotcheckin: TODO
+      // nothing, handled automatically
     }
   }
 
@@ -272,8 +381,10 @@ class GlovUIEditBox {
       sel_start = input.selectionStart;
       sel_end = input.selectionEnd;
     } else {
-      // donotcheckin: TODO
-      return;
+      new_text = this.textedit_string.text;
+      // do we need selection state at this level in this path?
+      sel_start = 0;
+      sel_end = 0;
     }
     if (new_text === this.text) {
       this.last_valid_state.sel_start = sel_start;
@@ -574,6 +685,8 @@ class GlovUIEditBox {
       multiline,
       enforce_multiline,
       max_len,
+      font_style,
+      line_height,
     } = this;
     if (this.focus_steal) {
       this.focus_steal = false;
@@ -782,7 +895,8 @@ class GlovUIEditBox {
         this.resetCSSCaching();
       }
     } else { // non-dom-backed
-      // donotcheckin: TODO
+      this.texteditHandleInput(focused, clipped_rect);
+      this.updateText();
     }
 
     if (focused) {
@@ -807,19 +921,13 @@ class GlovUIEditBox {
       const { center } = this;
       // TODO: move this global and overridable
       let edit_box_default_style = {
-        char_width: uiTextHeight() * 0.5, // TODO: get from font data
-        char_height: uiTextHeight(),
         color_selection: [0.5, 0.5, 0.5, 1],
-        color_caret: [0, 0, 0, 1], // donotcheckin: null to use `edit_caret`
-        style_text: uiFontStyleNormal(),
+        color_caret: [0, 0, 0, 0.8],
         draw_bg: true,
       };
       const {
-        char_width,
-        char_height,
         color_selection,
         color_caret,
-        style_text,
         draw_bg,
       } = canvas_render || edit_box_default_style;
       let font = uiGetFont();
@@ -832,18 +940,19 @@ class GlovUIEditBox {
           x, y, w, h,
         }, ui_sprites[focused ? 'edit_border_focused' : 'edit_border']);
       }
-      let { left, top } = padding;
+      let { left, top, right } = padding;
+      let eff_w = w - left - right;
       // draw text
       // TODO: maybe apply clipper here?  caller necessarily needs to set max_len and multiline appropriately, though.
       let line_width = [];
       for (let ii = 0; ii < lines.length; ++ii) {
         let line = lines[ii];
         let line_w = font.draw({
-          style: style_text,
+          style: font_style,
           height: font_height,
           x: x + left,
-          y: y + top + ii * char_height, z: z + 0.8,
-          w,
+          y: y + top + ii * line_height, z: z + 0.8,
+          w: eff_w,
           text: line,
           align: center ? font.ALIGN.HCENTER : undefined,
         });
@@ -857,23 +966,25 @@ class GlovUIEditBox {
           let last_row = selection[1][1];
           for (let jj = first_row; jj <= last_row; ++jj) {
             let line = lines[jj];
-            let selx0 = jj === first_row ? selection[0][0] : 0;
-            let selx1 = jj === last_row ? selection[1][0] : line && line.length || 1;
-            let xoffs = center ? round((w - line_width[jj])/2) : 0;
-            drawRect(x + left + char_width*selx0-1 + xoffs,
-              y + top + jj * char_height,
-              x + left + char_width*selx1 + xoffs,
-              y + top + (jj + 1) * char_height, z + 0.75, color_selection);
+            let selx0 = jj === first_row ? this.lineWidth(line, selection[0][0]) : 0;
+            let selx1 = line && line.length ?
+              (jj === last_row ? this.lineWidth(line, selection[1][0]) : this.lineWidth(line)) : 1;
+            let xoffs = center ? round((eff_w - line_width[jj])/2) : 0;
+            drawRect(x + left + selx0-1 + xoffs,
+              y + top + jj * line_height,
+              x + left + selx1 + xoffs,
+              y + top + (jj + 1) * line_height, z + 0.75, color_selection);
           }
         } else {
           // draw caret
           let jj = selection[1][1];
-          let caret_x = x + left + char_width*selection[1][0] - 1;
+          let line = lines[jj];
+          let caret_x = x + left + this.lineWidth(line, selection[1][0]) - 0.5;
           if (center) {
-            caret_x += round((w - line_width[jj])/2);
+            caret_x += round((eff_w - line_width[jj])/2);
           }
-          drawLine(caret_x, y + top + char_height*jj,
-            caret_x, y + top + char_height*(jj + 1) - 1, z + 0.5, 1, 1, color_caret);
+          drawLine(caret_x, y + top + line_height*jj + 0.5,
+            caret_x, y + top + line_height*(jj + 1) - 0.5, z + 0.5, 1, 1, color_caret);
         }
       }
     }

@@ -14,6 +14,8 @@ export interface EditBoxOptsAll {
   w: number;
   type: 'text' | 'number' | 'password' | 'email';
   font_height: number;
+  line_height: number;
+  font_style: FontStyle;
   text: string | number;
   placeholder: string;
   max_len: number;
@@ -39,12 +41,10 @@ export interface EditBoxOptsAll {
   // custom_nav: Partial<Record<number, null>>;
   canvas_render: null | {
     // if set, will do custom canvas rendering instead of DOM rendering
-    // requires a fixed-width font and near-perfectly aligned font rendering (tweak setDOMFontPixelScale)
-    char_width: number;
-    char_height: number;
+    // requires near-perfectly aligned font rendering (tweak setDOMFontPixelScale) (probably needs fixed with)
+    // char_height: number; use line_height now
     color_selection: ROVec4;
     color_caret: ROVec4;
-    style_text: FontStyle;
   };
   pointer_lock: boolean;
   spatial_focus: boolean; // used by spot logic
