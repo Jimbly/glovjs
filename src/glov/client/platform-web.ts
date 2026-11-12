@@ -52,6 +52,7 @@ import type {
   PlatformStartupParam,
   PlatformStartupRet,
 } from './platform-adapter';
+import { webInputStartup } from './platform-web-input';
 import { webSoundGetAPI } from './platform-web-sound';
 import { settingsGet } from './settings';
 import { blobSupported } from './textures';
@@ -430,6 +431,8 @@ function startup(param: PlatformStartupParam): PlatformStartupRet {
     // SamsungBrowser/1.1 - apparently has WebGL, but not requestAnimationFrame; also not binary WebSockets
     good = false;
   }
+
+  webInputStartup();
 
   return {
     good,

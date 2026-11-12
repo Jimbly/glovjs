@@ -881,7 +881,7 @@ function handleEditBind(): void {
       bind_ui_state.editing_bind = null;
       let key = inputLookupKeyName(keyup.code);
       if (!key) {
-        let diag = `key: ${key}, code: ${keyup.code}, eventCode: ${keyup.eventCode}, eventKey:${keyup.eventKey}`;
+        let diag = `key: ${key}, code: ${keyup.code}, raw: [${keyup.debug}]`;
         modalDialog({
           title: 'Unrecognized key',
           text: 'Sorry, that key was not recognized, please try a different key and report this to the developer.\n\n' +

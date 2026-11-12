@@ -1,4 +1,10 @@
 import { hrnow } from 'glov/client/engine';
+import { inputOnKeyDownInternal, inputOnKeyUpInternal, inputOnTextInputInternal } from 'glov/client/input';
+import {
+  MOD_ALT,
+  MOD_CTRL,
+  MOD_SHIFT,
+} from 'glov/client/input_constants';
 import { SDLWindow } from './platform-sdl';
 import { sdlScancodeToKeyCode } from './platform-sdl-keys';
 import { sdlWindowEmit } from './sdlwindow';
@@ -50,18 +56,11 @@ type SDLKeyEvent = {
   numlock: boolean;
 };
 
-function keyEvent(evt: SDLKeyEvent): unknown {
-  return {
-    ...EVENT_BASIC,
-    ctrlKey: evt.ctrl,
-    altKey: evt.alt,
-    metaKey: evt.super,
-    shiftKey: evt.shift,
-    key: null, // rely on layout map instead
-    code: null, // e.g. KeyA, but keyCode below should be sufficient
-    keyCode: sdlScancodeToKeyCode(evt.scancode),
-    timeStamp: hrnow(),
-  };
+function modFromEvent(evt: SDLKeyEvent): number {
+  return (evt.ctrl ? MOD_CTRL : 0) |
+    (evt.alt ? MOD_ALT : 0) |
+    // (evt.super ? MOD_META : 0) |
+    (evt.shift ? MOD_SHIFT : 0);
 }
 
 function onKeyDown(evt: SDLKeyEvent & {
@@ -70,17 +69,29 @@ function onKeyDown(evt: SDLKeyEvent & {
   if (evt.repeat) {
     return;
   }
-  sdlWindowEmit('keydown', keyEvent(evt));
+  inputOnKeyDownInternal({
+    code: sdlScancodeToKeyCode(evt.scancode),
+    mod: modFromEvent(evt),
+    timestamp: hrnow(),
+  });
 }
 
 function onKeyUp(evt: SDLKeyEvent): void {
-  sdlWindowEmit('keyup', keyEvent(evt));
+  inputOnKeyUpInternal({
+    code: sdlScancodeToKeyCode(evt.scancode),
+    mod: modFromEvent(evt),
+    timestamp: hrnow(),
+    debug: [evt.scancode],
+  });
 }
 
 function onTextInput(evt: {
   text: string;
 }): void {
-  // TODO
+  inputOnTextInputInternal({
+    mod: 0,
+    text: evt.text,
+  });
 }
 
 type SDLMouseEvent = {

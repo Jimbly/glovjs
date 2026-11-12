@@ -10,8 +10,6 @@ assert.equal(window.conf_platform, 'sdl');
 let listeners = new EventEmitter();
 
 const KNOWN_EVENTS = arrayToSet([
-  'keyup',
-  'keydown',
   'blur',
   'focus',
   'mousemove',

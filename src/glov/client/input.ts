@@ -3,7 +3,7 @@
 // Some code from Turbulenz: Copyright (c) 2012-2013 Turbulenz Limited
 // Released under MIT License: https://opensource.org/licenses/MIT
 /* global navigator, BeforeUnloadEvent, Element, Event, EventListener,
-  FocusEvent, HTMLCanvasElement, KeyboardEvent, MouseEvent, Touch, TouchEvent,
+  FocusEvent, HTMLCanvasElement, MouseEvent, Touch, TouchEvent,
   UIEvent */
 
 import assert from 'assert';
@@ -271,7 +271,6 @@ import {
   inEventOn,
   inEventTopOfFrame,
 } from './in_event';
-import { qwertyKeyCodeFromEvent } from './keycode';
 import {
   localStorageGetJSON,
   localStorageSetJSON,
@@ -323,6 +322,16 @@ export function inputPadMode(): boolean {
 
 export function inputEatenMouse(): boolean {
   return input_eaten_mouse;
+}
+
+export type TextInputEvent = {
+  type: 'key' | 'char';
+  code: number; // character code if 'char', QWERTY keyCode if 'key'
+  mod: number; // probably only relevant if 'key', shift/alt/ctrl mods
+};
+let text_input_queue: TextInputEvent[] = [];
+export function inputTextInputQueue(): TextInputEvent[] {
+  return text_input_queue;
 }
 
 // From all-caps, no-underscores to actual key name
@@ -409,10 +418,6 @@ type OurInputEvent = UIEvent & {
   target: Element | null;
   glov_do_not_cancel?: boolean;
 };
-type OurKeyboardEvent = KeyboardEvent & {
-  target: Element | null;
-  glov_do_not_cancel?: boolean;
-};
 type OurMouseEvent = MouseEvent & {
   target: Element | null;
   glov_do_not_cancel?: boolean;
@@ -422,14 +427,24 @@ type OurMouseEvent = MouseEvent & {
   webkitMovementY?: number;
 };
 
-function eventTimestamp(event: Event | null): number {
-  if (event && event.timeStamp) {
-    // assert((event.timeStamp < 1e12) === (engine.hrtime < 1e12));
-    // Must both be high res times, or both not!
-    if ((event.timeStamp < 1e12) !== (engine.hrtime < 1e12)) {
-      return engine.hrtime;
+type EventInternal = { timestamp: number };
+type EventWithTimestamp = Event | EventInternal;
+
+function eventTimestamp(event: EventWithTimestamp | null): number {
+  if (event) {
+    if ((event as Event).timeStamp) {
+      // browser event timestamp
+      // assert((event.timeStamp < 1e12) === (engine.hrtime < 1e12));
+      // Must both be high res times, or both not!
+      if (((event as Event).timeStamp < 1e12) !== (engine.hrtime < 1e12)) {
+        return engine.hrtime;
+      }
+      return (event as Event).timeStamp;
     }
-    return event.timeStamp;
+    if ((event as EventInternal).timestamp) {
+      // internal timestamp
+      return (event as EventInternal).timestamp;
+    }
   }
   return engine.hrtime;
 }
@@ -473,7 +488,7 @@ class TouchData {
 }
 
 const MIN_EVENT_TIME_DELTA = 0.01; // fractions of a millisecond
-function timeDelta(event: Event, origin_time: number): number {
+function timeDelta(event: EventWithTimestamp, origin_time: number): number {
   let et = eventTimestamp(event);
   // timestamps on events are often back in time relative to the last tick time
   return max(et - origin_time, MIN_EVENT_TIME_DELTA);
@@ -489,7 +504,7 @@ class KeyData {
   state = UP;
   down_mod = 0;
 
-  keyUp(event: Event): void {
+  keyUp(event: EventWithTimestamp): void {
     ++this.up_edge;
     this.down_time += timeDelta(event, this.origin_time);
     this.state = UP;
@@ -562,6 +577,9 @@ let allow_all_events = false;
 export function inputAllowAllEvents(allow: boolean): void {
   allow_all_events = allow;
 }
+export function inputAllEventsAllowed(): boolean {
+  return allow_all_events;
+}
 
 function isInputElement(target: Element | null): boolean | null {
   return target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' ||
@@ -588,7 +606,7 @@ const EVENT_TO_ENGINE = 1; // Note: only mouse-up/down events get filtered, all 
 const EVENT_TO_DOM = 2;
 const EVENT_TO_BOTH = 3;
 function letEventThrough(event: OurInputEvent, no_dom_if_leaving?: boolean): 1 | 2 | 3 {
-  if (!event.target || allow_all_events || event.glov_do_not_cancel) {
+  if (!event.target || inputAllEventsAllowed() || event.glov_do_not_cancel) {
     return EVENT_TO_DOM;
   }
   // Going to an input or related element
@@ -664,7 +682,7 @@ function beforeUnload(e: BeforeUnloadEvent): void {
     releaseCanvas();
   }
 }
-function protectUnload(enable: boolean): void {
+export function protectUnload(enable: boolean): void { // TODO: this should live in platform-web-input
   unload_protected = enable;
 }
 
@@ -678,7 +696,7 @@ function onUserInput(): void {
   renderNeeded();
 }
 
-function releaseAllKeysDown(evt: Event): void {
+function releaseAllKeysDown(evt: EventWithTimestamp): void {
   for (let code in key_state_new) {
     let ks = key_state_new[code]!;
     if (ks.state === DOWN) {
@@ -687,27 +705,16 @@ function releaseAllKeysDown(evt: Event): void {
   }
 }
 
-function modFromEvent(event: OurKeyboardEvent): number {
-  return (event.shiftKey ? MOD_SHIFT : 0) |
-    (event.ctrlKey ? MOD_CTRL : 0) |
-    (event.altKey ? MOD_ALT : 0);
-}
-
-export type FrameKeyUp = {
-  code: number;
-  eventCode: string;
-  eventKey: string;
+export type KeyUpEvent = {
+  timestamp: number;
   mod: number;
+  code: number;
+  debug: (string|number)[];
 };
-let frame_keyup: null | FrameKeyUp;
-function onKeyUp(event: OurKeyboardEvent): void {
+let frame_keyup: null | KeyUpEvent;
+export function inputOnKeyUpInternal(event: KeyUpEvent): void {
+  const { code } = event;
   renderNeeded();
-  protectUnload(event.ctrlKey);
-  let code = qwertyKeyCodeFromEvent(event);
-  if (!(letEventThrough(event) & EVENT_TO_DOM)) {
-    event.stopPropagation();
-    event.preventDefault();
-  }
 
   if (code === KEYS.ESC && pointerLocked()) {
     pointerLockExit();
@@ -716,7 +723,7 @@ function onKeyUp(event: OurKeyboardEvent): void {
 
   let ks = key_state_new[code];
   if (ks && ks.state === DOWN) {
-    if (is_mac_osx && event.key === 'Meta') {
+    if (is_mac_osx && (code === KEYS.META_LEFT || code === KEYS.META_RIGHT)) { // was: event.key === 'Meta'
       // We don't get keyUp events for any keys released while CMD is held, so we must assume all are released
       releaseAllKeysDown(event);
     } else {
@@ -724,22 +731,17 @@ function onKeyUp(event: OurKeyboardEvent): void {
     }
   }
 
-  frame_keyup = {
-    code,
-    eventCode: event.code,
-    eventKey: event.key,
-    mod: modFromEvent(event),
-  };
+  frame_keyup = event;
 
   inEventHandle('keyup', event);
 }
 
-export function inputFrameKeyUp(): null | FrameKeyUp {
+export function inputFrameKeyUp(): null | KeyUpEvent {
   return frame_keyup;
 }
 
 let keyboard_layout_map: Rec<number, string> = localStorageGetJSON('layout_map', {});
-function updateLayoutMap(code: number, name: string): void {
+export function inputUpdateLayoutMap(code: number, name: string): void {
   name = name.toLowerCase();
   if (keyboard_layout_map[code] !== name) {
     keyboard_layout_map[code] = name;
@@ -765,27 +767,15 @@ export function inputKeyInverseMapped(letter: string): number | undefined {
   }
 }
 
-function onKeyDown(event: OurKeyboardEvent): void {
-  protectUnload(event.ctrlKey);
-  let code = qwertyKeyCodeFromEvent(event);
-  let no_stop = (letEventThrough(event) & EVENT_TO_DOM) ||
-    code >= KEYS.F5 && code <= KEYS.F12 || // Chrome debug hotkeys
-    code === KEYS.F4 && (event.altKey || event.metaKey || event.ctrlKey) || // Windows/Electron close window hotkey
-    code === KEYS.I && (event.altKey && event.metaKey || event.ctrlKey && event.shiftKey) || // Safari, alternate Chrome
-    code === KEYS.R && event.ctrlKey || // Chrome reload hotkey
-    (code === KEYS.LEFT || code === KEYS.RIGHT) && event.altKey || // forward/back navigation
-    event.ctrlKey && code >= KEYS['0'] && code <= KEYS['9']; // Chrome tab switch hotkeys
-  if (!no_stop) {
-    event.stopPropagation();
-    event.preventDefault();
-  }
-  // console.log(`${event.code} ${event.keyCode} ${event.key}`);
-  if (typeof event.key === 'string') {
-    updateLayoutMap(code, event.key);
-  }
-  onUserInput();
 
-  // Letting through to our code regardless of no_stop, because we handle things like ESC in INPUT elements
+export function inputOnKeyDownInternal(event: {
+  timestamp: number;
+  mod: number;
+  code: number;
+}): void {
+  onUserInput();
+  const { code, mod, timestamp } = event;
+
   let ks = key_state_new[code];
   if (!ks) {
     ks = key_state_new[code] = new KeyData();
@@ -793,12 +783,31 @@ function onKeyDown(event: OurKeyboardEvent): void {
   if (ks.state !== DOWN) { // not a repeat event
     ++ks.down_edge;
     ks.state = DOWN;
-    ks.down_mod = modFromEvent(event);
-    ks.origin_time = eventTimestamp(event);
+    ks.down_mod = mod;
+    ks.origin_time = timestamp;
     ks.down_edge_time = ks.origin_time;
     ks.repeating = false;
 
     inEventHandle('keydown', event);
+    text_input_queue.push({
+      type: 'key',
+      code,
+      mod,
+    });
+  }
+}
+
+export function inputOnTextInputInternal(event: {
+  mod: number;
+  text: string;
+}): void {
+  let { mod, text } = event;
+  for (let ii = 0; ii < text.length; ++ii) {
+    text_input_queue.push({
+      type: 'char',
+      code: text.charCodeAt(ii),
+      mod,
+    });
   }
 }
 
@@ -1199,9 +1208,6 @@ function inputStartup(_canvas: HTMLCanvasElement, params: InputStartupParams): v
     passive_param = false;
   }
 
-  window.addEventListener('keydown', onKeyDown as EventListener, false);
-  window.addEventListener('keyup', onKeyUp as EventListener, false);
-
   window.addEventListener('click', ignored as EventListener, false);
   //window.addEventListener('click', eventlog as EventListener, false);
   window.addEventListener('contextmenu', ignored as EventListener, false);
@@ -1557,6 +1563,7 @@ function inputEndFrame(skip_mouse?: boolean): void {
   input_eaten_kb = false;
   frame_keyup = null;
   frame_padup = null;
+  text_input_queue = [];
 }
 
 function inputTickInactive(): void {
