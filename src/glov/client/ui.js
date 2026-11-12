@@ -44,7 +44,11 @@ const assert = require('assert');
 const { actionEdge } = require('./actions');
 const { autoAtlas } = require('./autoatlas');
 const camera2d = require('./camera2d.js');
-const { editBoxCreate, editBoxTick } = require('./edit_box.js');
+const {
+  editBoxCreate,
+  editBoxSetPadding,
+  editBoxTick,
+} = require('./edit_box.js');
 const effects = require('./effects.js');
 const { effectsQueue } = effects;
 const glov_engine = require('./engine.js');
@@ -507,6 +511,9 @@ const base_ui_sprites = {
   collapsagories_shadow_up: null,
 
   focusglow: { atlas: 'default' },
+
+  edit_border: { atlas: 'pixely' }, // TODO: add to default atlas
+  edit_border_focused: { atlas: 'pixely' },
 };
 
 function engineDefaultLocalStorageError(e) {
@@ -2568,6 +2575,9 @@ export function scaleSizes(scale) {
   let button_height = round(32 * scale);
   setButtonHeight(button_height);
   tooltip_panel_pixel_scale = panel_pixel_scale; // panel_pixel_scale set in setButtonHeight()
+  // TODO: get this from padding data in 9-patch
+  let pad = 32/13*scale;
+  editBoxSetPadding(2 * pad, 2 * pad, pad, pad);
 }
 
 export function setPanelPixelScale(scale) {

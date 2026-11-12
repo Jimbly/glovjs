@@ -40,6 +40,9 @@ const sprite_sets = {
     collapsagories_shadow_down: { atlas: 'pixely' },
 
     focusglow: { atlas: 'pixely' },
+
+    edit_border: { atlas: 'pixely' },
+    edit_border_focused: { atlas: 'pixely' },
   },
 };
 

@@ -10,6 +10,7 @@ import {
 } from 'glov/common/util';
 import * as verify from 'glov/common/verify';
 import { v2same } from 'glov/common/vmath';
+import { is_mobile } from './browser';
 import * as camera2d from './camera2d';
 import * as engine from './engine';
 import {
@@ -33,10 +34,13 @@ import {
   spotUnfocus,
 } from './spot';
 import {
+  drawBox,
   drawLine,
   drawRect,
   getUIElemData,
+  sprites as ui_sprites,
   uiButtonWidth,
+  uiFontStyleNormal,
   uiGetDOMElem,
   uiGetDOMTabIndex,
   uiGetFont,
@@ -119,6 +123,19 @@ function formHook(ev) {
   }
 }
 
+let padding = {
+  left: 3,
+  right: 3,
+  above: 2,
+  below: 2,
+};
+export function editBoxSetPadding(left, right, top, bottom) {
+  padding.left = left;
+  padding.right = right;
+  padding.top = top;
+  padding.bottom = bottom;
+}
+
 function charIdxToXY(text, offset) {
   offset = clamp(offset, 0, text.length); // IE returns selectionStart/end out of bounds
   let lines = text.split('\n');
@@ -158,7 +175,7 @@ class GlovUIEditBox {
     this.uppercase = false;
     this.resize = true; // only applies to multi-line
     this.initial_focus = false;
-    this.onetime_focus = false;
+    this.onetime_focus = false; // only for dom_backed
     this.auto_unfocus = true;
     this.focus_steal = false;
     this.initial_select = false;
@@ -175,6 +192,7 @@ class GlovUIEditBox {
     this.applyParams(params);
     assert.equal(typeof this.text, 'string');
 
+    this.dom_backed = is_mobile;
     this.last_autocomplete = null;
     this.last_placeholder = null;
     this.is_focused = false;
@@ -208,35 +226,61 @@ class GlovUIEditBox {
     if (params.text && params.text !== this.last_set_text) {
       this.setText(params.text);
     }
-    this.h = (this.multiline || 1) * this.font_height;
+    this.h = (this.multiline || 1) * this.font_height + padding.top + padding.bottom;
   }
   getSelection() {
-    return [charIdxToXY(this.text, this.input.selectionStart), charIdxToXY(this.text, this.input.selectionEnd)];
+    if (this.dom_backed) {
+      return [charIdxToXY(this.text, this.input.selectionStart), charIdxToXY(this.text, this.input.selectionEnd)];
+    } else {
+      // donotcheckin: TODO
+      return [0,0];
+    }
   }
   setSelectionRange(sel_start, sel_end) {
-    // if (this.type === 'number') {
-    //   this.input.type = 'text';
-    // }
-    this.input.setSelectionRange(sel_start, sel_end);
-    // if (this.type === 'number') {
-    //   this.input.type = 'number';
-    // }
+    if (this.dom_backed) {
+      // if (this.type === 'number') {
+      //   this.input.type = 'text';
+      // }
+      this.input.setSelectionRange(sel_start, sel_end);
+      // if (this.type === 'number') {
+      //   this.input.type = 'number';
+      // }
+    } else {
+      // donotcheckin: TODO
+    }
+  }
+  setTextInternal(new_text) {
+    if (this.dom_backed) {
+      if (this.input && this.input.value !== new_text) {
+        this.input.value = new_text;
+      }
+    } else {
+      // donotcheckin: TODO
+    }
   }
 
   updateText() {
     const { input } = this;
-    if (!input) {
+    let new_text;
+    let sel_start;
+    let sel_end;
+    if (this.dom_backed) {
+      if (!input) {
+        return;
+      }
+      new_text = input.value;
+      sel_start = input.selectionStart;
+      sel_end = input.selectionEnd;
+    } else {
+      // donotcheckin: TODO
       return;
     }
-    let new_text = input.value;
-    let saved_new_text = new_text;
-    let sel_start = input.selectionStart;
-    let sel_end = input.selectionEnd;
     if (new_text === this.text) {
       this.last_valid_state.sel_start = sel_start;
       this.last_valid_state.sel_end = sel_end;
       return;
     }
+    let saved_new_text = new_text;
     const { multiline, enforce_multiline, max_len, max_visual_size, max_visual_size_font } = this;
     // text has changed, validate
     let valid = true;
@@ -246,7 +290,7 @@ class GlovUIEditBox {
       if (engine.defines.EDITBOX) {
         console.log(`Editbox (multiline=${multiline}, max_len=${max_len}: ${engine.frame_index}: ${msg}`);
         console.log(`  Old sel range = [${sel_start},${sel_end}]`);
-        console.log(`  New sel range = [${input.selectionStart},${input.selectionEnd}]`);
+        console.log(`  New sel range = [${input?.selectionStart},${input?.selectionEnd}]`);
         console.log(`  Old text         = ${JSON.stringify(old_text)}`);
         console.log(`  Desired new text = ${JSON.stringify(saved_new_text)}`);
         console.log(`  New text         = ${JSON.stringify(new_text)}`);
@@ -269,7 +313,7 @@ class GlovUIEditBox {
           //   a blank line at the end (and a *different* one got trimmed), so
           //   let that through
           if (sel_end <= new_text.length) {
-            input.value = new_text;
+            this.setTextInternal(new_text);
             this.setSelectionRange(sel_start, sel_end);
             debug('trimming helped to keep selection');
           } else {
@@ -277,7 +321,7 @@ class GlovUIEditBox {
             debug('trimmed equal orig');
           }
         } else {
-          input.value = new_text;
+          this.setTextInternal(new_text);
           this.setSelectionRange(sel_start, sel_end);
           debug('trimming helped');
         }
@@ -334,7 +378,7 @@ class GlovUIEditBox {
             } else if (sel_end > new_line_end_pos) {
               sel_end = new_line_end_pos;
             }
-            input.value = new_text;
+            this.setTextInternal(new_text);
             this.setSelectionRange(sel_start, sel_end);
             debug('over but not trim_over; updating text and sel');
           } else {
@@ -370,7 +414,7 @@ class GlovUIEditBox {
     if (!valid) {
       // revert!
       this.had_overflow = true;
-      input.value = this.text;
+      this.setTextInternal(this.text);
       this.setSelectionRange(this.last_valid_state.sel_start, this.last_valid_state.sel_end);
       debug(`invalid: reset sel range to [${this.last_valid_state.sel_start}, ${this.last_valid_state.sel_end}]`);
     } else {
@@ -416,28 +460,32 @@ class GlovUIEditBox {
     }
 
     let input = this.input;
-    if (input && input.value !== new_text) {
+    if (this.dom_backed && input && input.value !== new_text) {
       if (engine.defines.EDITBOX) {
         console.log(`Editbox (multiline=${multiline}, max_len=${max_len}: ${engine.frame_index}: setText()`);
         console.log(`  Sel range = [${input.selectionStart},${input.selectionEnd}]`);
         console.log(`  Old text         = ${JSON.stringify(input.value)}`);
         console.log(`  New text         = ${JSON.stringify(new_text)}`);
       }
-      input.value = new_text;
     }
+    this.setTextInternal(new_text);
     this.text = new_text;
     this.last_set_text = new_text;
   }
   focus() {
-    if (this.input) {
-      this.input.focus();
-      showOnscreenKeyboardCleanup();
-      if (this.select_on_focus) {
-        this.input.select();
+    if (this.dom_backed) {
+      if (this.input) {
+        this.input.focus();
+        showOnscreenKeyboardCleanup();
+        if (this.select_on_focus) {
+          this.input.select();
+        }
+        setActive(this);
+      } else {
+        this.onetime_focus = true;
       }
-      setActive(this);
     } else {
-      this.onetime_focus = true;
+      setActive(this);
     }
     spotFocusSteal(this);
     this.is_focused = true;
@@ -456,43 +504,45 @@ class GlovUIEditBox {
     let was_glov_focused = this.is_focused;
     let spot_ret = spotFocusCheck(this);
     let { focused } = spot_ret;
-    let dom_focused = this.input && document.activeElement === this.input;
-    if (was_glov_focused !== focused) {
-      // something external (from clicks/keys in GLOV) changed, apply it if it doesn't match
-      if (focused && !dom_focused) {
-        spotlog('GLOV focused, DOM not, focusing', this);
-        if (this.input) {
-          this.input.focus();
-          showOnscreenKeyboardCleanup();
-          if (this.select_on_focus) {
-            this.input.select();
+    if (this.dom_backed) {
+      let dom_focused = this.input && document.activeElement === this.input;
+      if (was_glov_focused !== focused) {
+        // something external (from clicks/keys in GLOV) changed, apply it if it doesn't match
+        if (focused && !dom_focused) {
+          spotlog('GLOV focused, DOM not, focusing', this);
+          if (this.input) {
+            this.input.focus();
+            showOnscreenKeyboardCleanup();
+            if (this.select_on_focus) {
+              this.input.select();
+            }
+          } else {
+            this.onetime_focus = true;
           }
-        } else {
-          this.onetime_focus = true;
         }
-      }
-      if (!focused && dom_focused) {
-        spotlog('DOM focused, GLOV not, and changed, blurring', this);
-        this.input.blur();
-      }
-    } else if (dom_focused && !focused) {
-      spotlog('DOM focused, GLOV not, stealing', this);
-      spotFocusSteal(this);
-      if (this.input && this.select_on_focus) {
-        this.input.select();
-      }
-      focused = true;
-    } else if (!dom_focused && focused) {
-      if (is_reset) {
-        // Just appeared this frame, steal DOM focus
-        this.onetime_focus = true;
-        spotlog('GLOV focused, DOM not, new edit box, focusing', this);
-      } else if (document.activeElement === engine.canvas || document.activeElement === this.postspan) {
-        // focus explicitly on canvas or left our input element, lose focus
-        spotlog('GLOV focused, DOM canvas focused, unfocusing', this);
-        spotUnfocus();
-      } else {
-        // Leave it alone, it may be a browser pop-up such as for passwords
+        if (!focused && dom_focused) {
+          spotlog('DOM focused, GLOV not, and changed, blurring', this);
+          this.input.blur();
+        }
+      } else if (dom_focused && !focused) {
+        spotlog('DOM focused, GLOV not, stealing', this);
+        spotFocusSteal(this);
+        if (this.input && this.select_on_focus) {
+          this.input.select();
+        }
+        focused = true;
+      } else if (!dom_focused && focused) {
+        if (is_reset) {
+          // Just appeared this frame, steal DOM focus
+          this.onetime_focus = true;
+          spotlog('GLOV focused, DOM not, new edit box, focusing', this);
+        } else if (document.activeElement === engine.canvas || document.activeElement === this.postspan) {
+          // focus explicitly on canvas or left our input element, lose focus
+          spotlog('GLOV focused, DOM canvas focused, unfocusing', this);
+          spotUnfocus();
+        } else {
+          // Leave it alone, it may be a browser pop-up such as for passwords
+        }
       }
     }
 
@@ -504,7 +554,7 @@ class GlovUIEditBox {
           this.setText('');
         } else {
           spotUnfocus();
-          if (this.input) {
+          if (this.dom_backed && this.input) {
             this.input.blur();
           }
           focused = false;
@@ -560,175 +610,179 @@ class GlovUIEditBox {
     }
 
     this_frame_edit_boxes.push(this);
-    let elem = allow_focus && uiGetDOMElem(this.elem, true);
-    if (elem !== this.elem) {
-      this.resetCSSCaching();
-      if (elem) {
-        // new DOM element, initialize
-        if (!form_hook_registered) {
-          form_hook_registered = true;
-          let form = document.getElementById('dynform');
-          if (form) {
-            form.addEventListener('submit', formHook, true);
+    if (this.dom_backed) {
+      let elem = allow_focus && uiGetDOMElem(this.elem, true);
+      if (elem !== this.elem) {
+        this.resetCSSCaching();
+        if (elem) {
+          // new DOM element, initialize
+          if (!form_hook_registered) {
+            form_hook_registered = true;
+            let form = document.getElementById('dynform');
+            if (form) {
+              form.addEventListener('submit', formHook, true);
+            }
           }
+          elem.textContent = '';
+          let input = document.createElement(multiline ? 'textarea' : 'input');
+          let classes = [];
+          if (canvas_render) {
+            classes.push('canvas_render');
+          }
+          if (multiline && max_len) {
+            classes.push('fixed');
+          }
+          if (this.center) {
+            classes.push('center');
+          }
+          input.className = classes.join(' ');
+          // Use 'tel' instead of 'number', as it supports changing the selection
+          let eff_type = this.type === 'number' ? 'tel' :
+            // Using 'search' gets around Android Chrome bug showing the password box all the time on regular inputs
+            this.type === 'text' && !this.autocomplete ? 'search' :
+            this.type;
+          input.setAttribute('type', eff_type);
+          if (eff_type === 'search' && this.type !== 'search') {
+            input.style['-webkit-appearance'] = 'none';
+          }
+          let placeholder = getStringIfLocalizable(this.placeholder);
+          input.setAttribute('placeholder', placeholder);
+          this.last_placeholder = placeholder;
+          if (max_len) {
+            if (multiline) {
+              input.setAttribute('cols', max_len);
+            } else {
+              input.setAttribute('maxLength', max_len);
+            }
+          }
+          if (multiline) {
+            if (enforce_multiline) {
+              input.setAttribute('rows', multiline);
+            } else {
+              input.style.height = '100%';
+            }
+          }
+          elem.appendChild(input);
+          let span = document.createElement('span');
+          this.postspan = span;
+          elem.appendChild(span);
+          input.value = this.text;
+          if (this.uppercase) {
+            input.style['text-transform'] = 'uppercase';
+          }
+          if (!this.resize) {
+            input.style.resize = 'none';
+          }
+          this.input = input;
+          if (this.initial_focus || this.onetime_focus) {
+            input.focus();
+            showOnscreenKeyboardCleanup();
+            setActive(this);
+            this.onetime_focus = false;
+          }
+          if (this.initial_select) {
+            input.select();
+          }
+
+          if (multiline && enforce_multiline || max_len) {
+            // Do update _immediately_ so the DOM doesn't draw the invalid text, if possible
+            const onChange = (e) => {
+              this.updateText();
+              return true;
+            };
+            input.addEventListener('keyup', onChange);
+            input.addEventListener('keydown', onChange);
+            input.addEventListener('change', onChange);
+          }
+
+        } else {
+          this.input = null;
         }
-        elem.textContent = '';
-        let input = document.createElement(multiline ? 'textarea' : 'input');
-        let classes = [];
-        if (canvas_render) {
-          classes.push('canvas_render');
+        this.last_autocomplete = null;
+        this.last_placeholder = null;
+        this.submitted = false;
+        this.elem = elem;
+      } else {
+        if (this.input) {
+          this.updateText();
+          this.last_set_text = this.text;
         }
-        if (multiline && max_len) {
-          classes.push('fixed');
+      }
+      if (elem) {
+        if (!this.spellcheck) {
+          elem.spellcheck = false; // JE: this seems wrong, should be this.input.spellcheck?
         }
-        if (this.center) {
-          classes.push('center');
+
+        let clip_path = '';
+        if (clipped_rect.x !== x ||
+          clipped_rect.y !== y ||
+          clipped_rect.w !== w ||
+          clipped_rect.h !== h
+        ) {
+          // partially clipped
+          let x0 = `${(clipped_rect.x - x)/w*100}%`;
+          let x1 = `${(clipped_rect.x + clipped_rect.w - x)/w*100}%`;
+          let y0 = `${(clipped_rect.y - y)/h*100}%`;
+          let y1 = `${(clipped_rect.y + clipped_rect.w - y)/h*100}%`;
+          clip_path = `polygon(${x0} ${y0}, ${x1} ${y0}, ${x1} ${y1}, ${x0} ${y1})`;
+        } else {
+          clip_path = '';
         }
-        input.className = classes.join(' ');
-        // Use 'tel' instead of 'number', as it supports changing the selection
-        let eff_type = this.type === 'number' ? 'tel' :
-          // Using 'search' gets around Android Chrome bug showing the password box all the time on regular inputs
-          this.type === 'text' && !this.autocomplete ? 'search' :
-          this.type;
-        input.setAttribute('type', eff_type);
-        if (eff_type === 'search' && this.type !== 'search') {
-          input.style['-webkit-appearance'] = 'none';
+        if (clip_path !== this.last_clip_path) {
+          elem.style.clipPath = this.last_clip_path = clip_path;
+        }
+
+        let new_fontsize = `${camera2d.virtualToFontSize(font_height).toFixed(8)}px`;
+        // Try slightly better smooth scaling from https://medium.com/autodesk-tlv/smooth-text-scaling-in-javascript-css-a817ae8cc4c9
+        const preciseFontSize = camera2d.virtualToFontSize(font_height);  // Desired font size
+        const roundedSize = floor(preciseFontSize);
+        const extra_scale = preciseFontSize / roundedSize; // Remaining scale
+        if (new_fontsize !== this.last_font_size) {
+          this.last_font_size = new_fontsize;
+          // elem.style.fontSize = new_fontsize;
+          elem.style.fontSize = `${roundedSize}px`;
+          //const translate = `translate(${pos.x}px, ${pos.y}px)`;
+          const scale = `translate(-50%, -50%)
+                         scale(${extra_scale})
+                         translate(50%, 50%)`;
+          // this.input.style.width = `${(1/extra_scale*100).toFixed(8)}%`; - handled below, now
+          elem.style.transform = scale;
+        }
+
+        let pos = camera2d.htmlPos(x, y);
+        elem.style.left = `${pos[0]}%`;
+        elem.style.top = `${pos[1]}%`;
+        let size = camera2d.htmlSize(w, h);
+        elem.style.width = `${size[0]/extra_scale}%`;
+        elem.style.height = `${size[1]/extra_scale}%`;
+
+
+        if (this.zindex) {
+          elem.style['z-index'] = this.zindex;
+        }
+        if (this.last_autocomplete !== this.autocomplete) {
+          this.last_autocomplete = this.autocomplete;
+          this.input.setAttribute('autocomplete', this.autocomplete || `auto_off_${Math.random()}`);
         }
         let placeholder = getStringIfLocalizable(this.placeholder);
-        input.setAttribute('placeholder', placeholder);
-        this.last_placeholder = placeholder;
-        if (max_len) {
-          if (multiline) {
-            input.setAttribute('cols', max_len);
-          } else {
-            input.setAttribute('maxLength', max_len);
-          }
-        }
-        if (multiline) {
-          if (enforce_multiline) {
-            input.setAttribute('rows', multiline);
-          } else {
-            input.style.height = '100%';
-          }
-        }
-        elem.appendChild(input);
-        let span = document.createElement('span');
-        this.postspan = span;
-        elem.appendChild(span);
-        input.value = this.text;
-        if (this.uppercase) {
-          input.style['text-transform'] = 'uppercase';
-        }
-        if (!this.resize) {
-          input.style.resize = 'none';
-        }
-        this.input = input;
-        if (this.initial_focus || this.onetime_focus) {
-          input.focus();
-          showOnscreenKeyboardCleanup();
-          setActive(this);
-          this.onetime_focus = false;
-        }
-        if (this.initial_select) {
-          input.select();
+        if (this.last_placeholder !== placeholder) {
+          this.input.setAttribute('placeholder', placeholder);
+          this.last_placeholder = placeholder;
         }
 
-        if (multiline && enforce_multiline || max_len) {
-          // Do update _immediately_ so the DOM doesn't draw the invalid text, if possible
-          const onChange = (e) => {
-            this.updateText();
-            return true;
-          };
-          input.addEventListener('keyup', onChange);
-          input.addEventListener('keydown', onChange);
-          input.addEventListener('change', onChange);
-        }
 
+        let tab_index1 = uiGetDOMTabIndex();
+        let tab_index2 = uiGetDOMTabIndex();
+        if (tab_index1 !== this.last_tab_index) {
+          this.last_tab_index = tab_index1;
+          this.input.setAttribute('tabindex', tab_index1);
+          this.postspan.setAttribute('tabindex', tab_index2);
+        }
       } else {
-        this.input = null;
+        this.resetCSSCaching();
       }
-      this.last_autocomplete = null;
-      this.last_placeholder = null;
-      this.submitted = false;
-      this.elem = elem;
-    } else {
-      if (this.input) {
-        this.updateText();
-        this.last_set_text = this.text;
-      }
-    }
-    if (elem) {
-      if (!this.spellcheck) {
-        elem.spellcheck = false;
-      }
-
-      let clip_path = '';
-      if (clipped_rect.x !== x ||
-        clipped_rect.y !== y ||
-        clipped_rect.w !== w ||
-        clipped_rect.h !== h
-      ) {
-        // partially clipped
-        let x0 = `${(clipped_rect.x - x)/w*100}%`;
-        let x1 = `${(clipped_rect.x + clipped_rect.w - x)/w*100}%`;
-        let y0 = `${(clipped_rect.y - y)/h*100}%`;
-        let y1 = `${(clipped_rect.y + clipped_rect.w - y)/h*100}%`;
-        clip_path = `polygon(${x0} ${y0}, ${x1} ${y0}, ${x1} ${y1}, ${x0} ${y1})`;
-      } else {
-        clip_path = '';
-      }
-      if (clip_path !== this.last_clip_path) {
-        elem.style.clipPath = this.last_clip_path = clip_path;
-      }
-
-      let new_fontsize = `${camera2d.virtualToFontSize(font_height).toFixed(8)}px`;
-      // Try slightly better smooth scaling from https://medium.com/autodesk-tlv/smooth-text-scaling-in-javascript-css-a817ae8cc4c9
-      const preciseFontSize = camera2d.virtualToFontSize(font_height);  // Desired font size
-      const roundedSize = floor(preciseFontSize);
-      const extra_scale = preciseFontSize / roundedSize; // Remaining scale
-      if (new_fontsize !== this.last_font_size) {
-        this.last_font_size = new_fontsize;
-        // elem.style.fontSize = new_fontsize;
-        elem.style.fontSize = `${roundedSize}px`;
-        //const translate = `translate(${pos.x}px, ${pos.y}px)`;
-        const scale = `translate(-50%, -50%)
-                       scale(${extra_scale})
-                       translate(50%, 50%)`;
-        // this.input.style.width = `${(1/extra_scale*100).toFixed(8)}%`; - handled below, now
-        elem.style.transform = scale;
-      }
-
-      let pos = camera2d.htmlPos(x, y);
-      elem.style.left = `${pos[0]}%`;
-      elem.style.top = `${pos[1]}%`;
-      let size = camera2d.htmlSize(w, h);
-      elem.style.width = `${size[0]/extra_scale}%`;
-      elem.style.height = `${size[1]/extra_scale}%`;
-
-
-      if (this.zindex) {
-        elem.style['z-index'] = this.zindex;
-      }
-      if (this.last_autocomplete !== this.autocomplete) {
-        this.last_autocomplete = this.autocomplete;
-        this.input.setAttribute('autocomplete', this.autocomplete || `auto_off_${Math.random()}`);
-      }
-      let placeholder = getStringIfLocalizable(this.placeholder);
-      if (this.last_placeholder !== placeholder) {
-        this.input.setAttribute('placeholder', placeholder);
-        this.last_placeholder = placeholder;
-      }
-
-
-      let tab_index1 = uiGetDOMTabIndex();
-      let tab_index2 = uiGetDOMTabIndex();
-      if (tab_index1 !== this.last_tab_index) {
-        this.last_tab_index = tab_index1;
-        this.input.setAttribute('tabindex', tab_index1);
-        this.postspan.setAttribute('tabindex', tab_index2);
-      }
-    } else {
-      this.resetCSSCaching();
+    } else { // non-dom-backed
+      // donotcheckin: TODO
     }
 
     if (focused) {
@@ -749,14 +803,36 @@ class GlovUIEditBox {
       mouseConsumeClicks(clipped_rect);
     }
 
-    if (canvas_render) {
+    if (canvas_render || !this.dom_backed) {
       const { center } = this;
-      const { char_width, char_height, color_selection, color_caret, style_text } = canvas_render;
+      // TODO: move this global and overridable
+      let edit_box_default_style = {
+        char_width: uiTextHeight() * 0.5, // TODO: get from font data
+        char_height: uiTextHeight(),
+        color_selection: [0.5, 0.5, 0.5, 1],
+        color_caret: [0, 0, 0, 1], // donotcheckin: null to use `edit_caret`
+        style_text: uiFontStyleNormal(),
+        draw_bg: true,
+      };
+      const {
+        char_width,
+        char_height,
+        color_selection,
+        color_caret,
+        style_text,
+        draw_bg,
+      } = canvas_render || edit_box_default_style;
       let font = uiGetFont();
       let lines = text.split('\n');
       if (this.input && this.input.scrollTop !== 0) {
         this.input.scrollTop = 0;
       }
+      if (draw_bg) {
+        drawBox({
+          x, y, w, h,
+        }, ui_sprites[focused ? 'edit_border_focused' : 'edit_border']);
+      }
+      let { left, top } = padding;
       // draw text
       // TODO: maybe apply clipper here?  caller necessarily needs to set max_len and multiline appropriately, though.
       let line_width = [];
@@ -765,7 +841,8 @@ class GlovUIEditBox {
         let line_w = font.draw({
           style: style_text,
           height: font_height,
-          x, y: y + ii * char_height, z: z + 0.8,
+          x: x + left,
+          y: y + top + ii * char_height, z: z + 0.8,
           w,
           text: line,
           align: center ? font.ALIGN.HCENTER : undefined,
@@ -783,18 +860,20 @@ class GlovUIEditBox {
             let selx0 = jj === first_row ? selection[0][0] : 0;
             let selx1 = jj === last_row ? selection[1][0] : line && line.length || 1;
             let xoffs = center ? round((w - line_width[jj])/2) : 0;
-            drawRect(x + char_width*selx0-1 + xoffs, y + jj * char_height,
-              x + char_width*selx1 + xoffs, y + (jj + 1) * char_height, z + 0.75, color_selection);
+            drawRect(x + left + char_width*selx0-1 + xoffs,
+              y + top + jj * char_height,
+              x + left + char_width*selx1 + xoffs,
+              y + top + (jj + 1) * char_height, z + 0.75, color_selection);
           }
         } else {
           // draw caret
           let jj = selection[1][1];
-          let caret_x = x + char_width*selection[1][0] - 1;
+          let caret_x = x + left + char_width*selection[1][0] - 1;
           if (center) {
             caret_x += round((w - line_width[jj])/2);
           }
-          drawLine(caret_x, y + char_height*jj,
-            caret_x, y + char_height*(jj + 1) - 1, z + 0.5, 1, 1, color_caret);
+          drawLine(caret_x, y + top + char_height*jj,
+            caret_x, y + top + char_height*(jj + 1) - 1, z + 0.5, 1, 1, color_caret);
         }
       }
     }

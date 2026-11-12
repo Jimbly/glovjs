@@ -273,7 +273,7 @@ export function run(x: number, y: number, z: number): void {
   let scroll_area_w = 100;
   test_scroll_area.begin({
     x: x + column_width + 4 + line_height,
-    y: y - 2,
+    y: y,
     z,
     w: scroll_area_w,
     h: scroll_area_h,

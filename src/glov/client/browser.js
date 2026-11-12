@@ -14,6 +14,7 @@ export let is_windows_phone = ua.match(/windows phone/i);
 export let is_android = !is_windows_phone && ua.match(/android/i);
 export let is_firefox = ua.match(/Firefox/i);
 export let is_itch_app = String(window.location.protocol).indexOf('itch') !== -1; // Note: itch.io APP, not web site
+export let is_mobile = is_ios || is_android || is_windows_phone;
 
 export let is_discrete_gpu = false;
 
