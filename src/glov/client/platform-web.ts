@@ -52,7 +52,11 @@ import type {
   PlatformStartupParam,
   PlatformStartupRet,
 } from './platform-adapter';
-import { webInputStartup } from './platform-web-input';
+import {
+  webInputPasteText,
+  webInputPasteTextClear,
+  webInputStartup,
+} from './platform-web-input';
 import { webSoundGetAPI } from './platform-web-sound';
 import { settingsGet } from './settings';
 import { blobSupported } from './textures';
@@ -283,6 +287,9 @@ function checkResize(): void {
   profilerStop('checkResize');
 }
 
+function platformWebEndOfFrame(): void {
+  webInputPasteTextClear();
+}
 
 const MAX_FRAME_TIME = 10000;
 let frames_requested = 0;
@@ -325,6 +332,7 @@ function tickWrap(): void {
   }
 
   tick(); // note: may never return (if it crashes)
+  platformWebEndOfFrame();
   // eslint-disable-next-line @typescript-eslint/no-use-before-define
   requestFrame(hrnow() - hrtime2);
 }
@@ -592,6 +600,38 @@ function loadScript(url: string, cb: VoidFunc): void {
   document.getElementsByTagName('head')[0].appendChild(scriptTag);
 }
 
+function clipboardWrite(text: string): boolean {
+  let textArea = document.createElement('textarea');
+  textArea.style.position = 'fixed';
+  textArea.style.top = '0';
+  textArea.style.left = '0';
+  textArea.style.width = '2em';
+  textArea.style.height = '2em';
+  textArea.style.border = 'none';
+  textArea.style.outline = 'none';
+  textArea.style.boxShadow = 'none';
+  textArea.style.background = 'transparent';
+  textArea.value = text;
+
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+
+  let ret = false;
+  try {
+    ret = document.execCommand('copy');
+  } catch (err) {
+    // do nothing
+  }
+
+  document.body.removeChild(textArea);
+  return ret;
+}
+
+function clipboardRead(): string | null {
+  return webInputPasteText();
+}
+
 const platform_web: PlatformAdapter = {
   startup,
   checkResize,
@@ -602,6 +642,8 @@ const platform_web: PlatformAdapter = {
   getSoundAPI,
   fetch: fetchWeb,
   loadScript,
+  clipboardWrite,
+  clipboardRead,
 };
 
 

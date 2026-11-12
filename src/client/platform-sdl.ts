@@ -345,6 +345,16 @@ function loadScript(url: string, done: VoidFunc): void {
   // TODO
 }
 
+function clipboardWrite(text: string): boolean {
+  // TODO
+  return false;
+}
+
+function clipboardRead(): string | null {
+  // TODO
+  return null;
+}
+
 const platform_sdl: PlatformAdapter = {
   fetch: fetchSDL,
   startup,
@@ -355,6 +365,8 @@ const platform_sdl: PlatformAdapter = {
   imageFromBuffer,
   getSoundAPI,
   loadScript,
+  clipboardWrite,
+  clipboardRead,
 };
 
 assert(!window.platform_adapter);

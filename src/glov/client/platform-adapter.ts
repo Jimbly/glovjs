@@ -87,4 +87,6 @@ export type PlatformAdapter = {
   getSoundAPI(): PlatformSoundAPI;
   fetch(params: FetchInternalParams, cb: ErrorCallback<unknown>): void;
   loadScript(url: string, cb: VoidFunc): void;
+  clipboardWrite(text: string): boolean;
+  clipboardRead(): string | null;
 };

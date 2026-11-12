@@ -1,4 +1,4 @@
-/* global EventListener, KeyboardEvent, Element, UIEvent */
+/* global ClipboardEvent, EventListener, KeyboardEvent, Element, UIEvent */
 import { Rec, TSMap } from 'glov/common/types';
 import * as engine from './engine';
 import {
@@ -184,6 +184,32 @@ function getTypedChar(e: OurKeyboardEvent): string | null {
 }
 
 
+function isPasteKey(code: number, event: OurKeyboardEvent): boolean {
+  return code === KEYS.V && event.ctrlKey && !event.altKey && !event.shiftKey ||
+    code === KEYS.INS && event.shiftKey && !event.ctrlKey && !event.altKey;
+}
+
+// Browsers have no synchronous clipboard read, so capture the text from the
+//   `paste` event the browser fires after a paste keystroke's keydown; it is
+//   cleared after the next frame (which processes that keystroke).
+let paste_text: string | null = null;
+function onPaste(event: ClipboardEvent): void {
+  if (letEventThrough(event as unknown as OurInputEvent) & EVENT_TO_DOM) {
+    // going to a DOM input element, not us
+    return;
+  }
+  event.preventDefault();
+  paste_text = event.clipboardData ? event.clipboardData.getData('text/plain') : null;
+}
+
+export function webInputPasteText(): string | null {
+  return paste_text;
+}
+
+export function webInputPasteTextClear(): void {
+  paste_text = null;
+}
+
 function onKeyDown(event: OurKeyboardEvent): void {
   // console.log(`${event.code} ${event.keyCode} ${event.key}`);
   protectUnload(event.ctrlKey);
@@ -195,7 +221,8 @@ function onKeyDown(event: OurKeyboardEvent): void {
     code === KEYS.I && (event.altKey && event.metaKey || event.ctrlKey && event.shiftKey) || // Safari, alternate Chrome
     code === KEYS.R && event.ctrlKey || // Chrome reload hotkey
     (code === KEYS.LEFT || code === KEYS.RIGHT) && event.altKey || // forward/back navigation
-    event.ctrlKey && code >= KEYS['0'] && code <= KEYS['9']; // Chrome tab switch hotkeys
+    event.ctrlKey && code >= KEYS['0'] && code <= KEYS['9'] || // Chrome tab switch hotkeys
+    isPasteKey(code, event); // let the browser generate a `paste` event
   if (!no_stop) {
     event.stopPropagation();
     event.preventDefault();
@@ -219,4 +246,5 @@ function onKeyDown(event: OurKeyboardEvent): void {
 export function webInputStartup(): void {
   window.addEventListener('keydown', onKeyDown as EventListener, false);
   window.addEventListener('keyup', onKeyUp as EventListener, false);
+  window.addEventListener('paste', onPaste as EventListener, false);
 }

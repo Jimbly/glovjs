@@ -13,6 +13,7 @@ import { v2same } from 'glov/common/vmath';
 import { is_mobile } from './browser';
 import * as camera2d from './camera2d';
 import * as engine from './engine';
+import { platformAdapterGet } from './engine';
 import {
   eatAllKeyboardInput,
   inputClick,
@@ -22,6 +23,8 @@ import {
   keyDownEdge,
   KEYS,
   keyUpEdge,
+  MOD_CTRL,
+  MOD_SHIFT,
   mouseConsumeClicks,
   mouseDownEdge,
   pointerLocked,
@@ -39,12 +42,12 @@ import {
 import {
   stb_textedit_char,
   stb_textedit_click,
+  stb_textedit_cut,
   stb_textedit_drag,
-  // stb_textedit_cut,
   STB_TEXTEDIT_GETWIDTH_NEWLINE,
   stb_textedit_key,
   stb_textedit_key_from_input,
-  // stb_textedit_paste,
+  stb_textedit_paste,
   stb_textedit_prep_selection_at_cursor,
   texteditHasSelection,
   texteditNewState,
@@ -303,8 +306,32 @@ class GlovUIEditBox {
       for (let ii = 0; ii < text_input.length; ++ii) {
         let event = text_input[ii];
         if (event.type === 'key') {
-          stb_textedit_key(this.textedit_string, this.textedit_state,
-            stb_textedit_key_from_input(event.code, event.mod));
+          let { code, mod } = event;
+          let is_copy = mod === MOD_CTRL && (code === KEYS.C || code === KEYS.INS);
+          let is_cut = mod === MOD_CTRL && code === KEYS.X || mod === MOD_SHIFT && code === KEYS.DEL;
+          let is_paste = mod === MOD_CTRL && code === KEYS.V || mod === MOD_SHIFT && code === KEYS.INS;
+          if (is_copy || is_cut) {
+            if (texteditHasSelection(this.textedit_state)) {
+              let { select_start, select_end } = this.textedit_state;
+              platformAdapterGet().clipboardWrite(
+                this.textedit_string.text.slice(min(select_start, select_end), max(select_start, select_end)));
+              if (is_cut) {
+                stb_textedit_cut(this.textedit_string, this.textedit_state);
+              }
+            }
+          } else if (is_paste) {
+            let paste_text = platformAdapterGet().clipboardRead();
+            if (paste_text) {
+              paste_text = paste_text.replace(/\r\n?/g, '\n');
+              if (this.multiline <= 1) {
+                paste_text = paste_text.replace(/\n/g, ' ');
+              }
+              stb_textedit_paste(this.textedit_string, this.textedit_state, paste_text);
+            }
+          } else {
+            stb_textedit_key(this.textedit_string, this.textedit_state,
+              stb_textedit_key_from_input(code, mod));
+          }
         } else {
           stb_textedit_char(this.textedit_string, this.textedit_state, String.fromCharCode(event.code));
         }
