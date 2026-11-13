@@ -774,7 +774,8 @@ class GlovUIEditBox {
       spotSuppressKBNav(true, Boolean(multiline || this.suppress_up_down));
     }
 
-    const { text, x, y, z, w, h } = this;
+    const { x, y, z, w, h } = this;
+    let { text } = this;
     const { left, top, right, bottom } = padding;
     const eff_w = w - left - right;
     const eff_x = x + left;
@@ -963,6 +964,7 @@ class GlovUIEditBox {
     } else { // non-dom-backed
       this.texteditHandleInput(focused, clipped_rect);
       this.updateText();
+      text = this.text;
     }
 
     if (focused) {
