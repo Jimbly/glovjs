@@ -225,6 +225,7 @@ class GlovUIEditBox {
     this.sticky_focus = true;
     this.canvas_render = null;
     this.applyParams(params);
+    this.focus_steal = this.focus_steal || this.initial_focus;
     assert.equal(typeof this.text, 'string');
 
     this.dom_backed = is_mobile;

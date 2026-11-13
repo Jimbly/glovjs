@@ -313,6 +313,7 @@ export type ModalDialogTickCallbackParams = {
   readonly avail_width: number;
   readonly font_height: number;
   readonly fullscreen_mode: boolean;
+  no_focus: boolean; // set to prevent default button from stealing focus
 };
 // Returns a hotaction, e.g. 'ok', to activate one of the buttons
 export type ModalDialogTickCallback = (param: ModalDialogTickCallbackParams) => ActionKey | void;

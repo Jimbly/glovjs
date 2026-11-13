@@ -1816,6 +1816,7 @@ function modalDialogRun() {
   let panel_color = modal_dialog.color || null; // tick might clear modalDialog
 
   let tick_action;
+  let tick_no_focus = false;
   if (modal_dialog.tick) {
     let avail_width = eff_modal_width - pad * 2;
     if (fullscreen_mode) {
@@ -1827,9 +1828,11 @@ function modalDialogRun() {
       avail_width,
       font_height: eff_font_height,
       fullscreen_mode,
+      no_focus: false,
     };
     tick_action = modal_dialog.tick(param);
     y = param.y;
+    tick_no_focus = param.no_focus;
   }
 
   x = x0 + eff_modal_width - (pad + eff_button_width) * keys.length;
@@ -1860,7 +1863,7 @@ function modalDialogRun() {
       w: eff_button_width,
       h: eff_button_height,
       text: but_label,
-      auto_focus: ii === 0,
+      auto_focus: ii === 0 && !tick_no_focus,
       focus_steal: keys.length === 1 && !modal_dialog.tick,
       allow_modal: true,
       hotactions: eff_button_keys && eff_button_keys.actions || undefined,
@@ -1952,6 +1955,7 @@ export function modalTextEntry(param) {
   param.text = `${param.text || ''}`;
   let old_tick = param.tick;
   param.tick = function (params) {
+    params.no_focus = true;
     let eb_ret = eb.run({
       x: params.x,
       y: params.y,
