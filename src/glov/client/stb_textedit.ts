@@ -438,6 +438,45 @@ export function texteditHasSelection(s: STB_TexteditState): boolean {
   return STB_TEXT_HAS_SELECTION(s);
 }
 
+// For callers that validate (and may modify or reject) the result of edits
+//   after they have been applied: replace the edits made since the text was
+//   `valid_text` with a single change to `new_text`, so that undo never passes
+//   through the rejected text.  The caller should set the cursor/selection afterwards.
+// PORT: GLOV extension
+export function texteditReplaceEdits(str: StbTexteditString, state: STB_TexteditState,
+  valid_text: string, new_text: string
+): void {
+  // Every state in the undo history was valid, so undo back to the last valid one
+  while (str.text !== valid_text && state.undostate.undo_point > 0)
+    stb_text_undo(str, state);
+  stb_textedit_flush_redo(state.undostate);
+  if (str.text !== valid_text) {
+    // History does not reach back to it (e.g. was too large to store)
+    texteditClearUndo(state);
+    str.text = valid_text;
+    stb_textedit_clamp(str, state);
+  }
+  if (new_text === valid_text)
+    return;
+  let prefix = 0;
+  while (prefix < valid_text.length && prefix < new_text.length && valid_text[prefix] === new_text[prefix])
+    ++prefix;
+  let suffix = 0;
+  while (suffix < valid_text.length - prefix && suffix < new_text.length - prefix &&
+    valid_text[valid_text.length - 1 - suffix] === new_text[new_text.length - 1 - suffix])
+    ++suffix;
+  // After the undos, the cursor is where it was before the edits, which is what undo should restore
+  stb_text_makeundo_replace(str, state, prefix, valid_text.length - prefix - suffix, new_text.length - prefix - suffix);
+  str.text = new_text;
+  state.has_preferred_x = false;
+}
+
+export function texteditClearUndo(state: STB_TexteditState): void {
+  stb_textedit_flush_redo(state.undostate);
+  state.undostate.undo_point = 0;
+  state.undostate.undo_char_point = 0;
+}
+
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

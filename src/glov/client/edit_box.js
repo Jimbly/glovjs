@@ -57,8 +57,10 @@ import {
   stb_textedit_key,
   stb_textedit_key_from_input,
   stb_textedit_paste,
+  texteditClearUndo,
   texteditHasSelection,
   texteditNewState,
+  texteditReplaceEdits,
 } from './stb_textedit';
 import {
   drawBox,
@@ -579,6 +581,15 @@ class GlovUIEditBox {
       this.last_valid_state.sel_start = sel_start;
       this.last_valid_state.sel_end = sel_end;
     }
+    if (!this.dom_backed && this.text !== this.textedit_string.text) {
+      // Validation modified or rejected the edits; keep the undo history consistent
+      let { textedit_state } = this;
+      let { cursor, select_start, select_end } = textedit_state;
+      texteditReplaceEdits(this.textedit_string, textedit_state, old_text, this.text);
+      textedit_state.cursor = cursor;
+      textedit_state.select_start = select_start;
+      textedit_state.select_end = select_end;
+    }
   }
   getText() {
     return this.text;
@@ -626,6 +637,9 @@ class GlovUIEditBox {
       }
     }
     this.setTextInternal(new_text);
+    if (!this.dom_backed && new_text !== this.text && this.textedit_state) {
+      texteditClearUndo(this.textedit_state);
+    }
     this.text = new_text;
     this.last_set_text = new_text;
   }

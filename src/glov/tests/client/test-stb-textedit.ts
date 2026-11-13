@@ -15,6 +15,7 @@ import {
   StbTexteditRow,
   StbTexteditString,
   texteditNewState,
+  texteditReplaceEdits,
 } from 'glov/client/stb_textedit';
 
 // Monospace layout: every character is 1 unit wide, rows are 1 unit tall and break after '\n'
@@ -295,4 +296,40 @@ function key(str: StbTexteditString, state: STB_TexteditState, code: number, mod
   key(str, state, KEYS.Z, MOD_CTRL);
   key(str, state, KEYS.Z, MOD_CTRL);
   assert.equal(str.text, 'd'.repeat(500));
+}
+
+// Caller validation modifying or rejecting edits (as edit_box does for max_visual_size)
+{
+  let str = makeString('WWWW');
+  let state = texteditNewState(true);
+  type(str, state, 'x');
+  key(str, state, KEYS.RIGHT);
+  key(str, state, KEYS.RIGHT);
+  stb_textedit_paste(str, state, 'ZZZZZ');
+  assert.equal(str.text, 'xWWZZZZZWW');
+  texteditReplaceEdits(str, state, 'xWWWW', 'xWWZZW'); // trimmed
+  assert.equal(str.text, 'xWWZZW');
+  state.cursor = 5;
+  key(str, state, KEYS.Z, MOD_CTRL);
+  assert.equal(str.text, 'xWWWW');
+  assert.equal(state.cursor, 3);
+  key(str, state, KEYS.Y, MOD_CTRL);
+  assert.equal(str.text, 'xWWZZW');
+  key(str, state, KEYS.Z, MOD_CTRL);
+  // Rejected edit leaves no trace in the history
+  type(str, state, 'q');
+  texteditReplaceEdits(str, state, 'xWWWW', 'xWWWW');
+  assert.equal(str.text, 'xWWWW');
+  key(str, state, KEYS.Y, MOD_CTRL); // nothing to redo
+  assert.equal(str.text, 'xWWWW');
+  // Paste over a selection is two undo records; both are replaced
+  key(str, state, KEYS.HOME);
+  key(str, state, KEYS.RIGHT, MOD_SHIFT);
+  stb_textedit_paste(str, state, 'abcdef');
+  assert.equal(str.text, 'abcdefWWWW');
+  texteditReplaceEdits(str, state, 'xWWWW', 'abWWWW');
+  key(str, state, KEYS.Z, MOD_CTRL);
+  assert.equal(str.text, 'xWWWW');
+  key(str, state, KEYS.Z, MOD_CTRL);
+  assert.equal(str.text, 'WWWW');
 }
