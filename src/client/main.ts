@@ -1009,8 +1009,8 @@ export function main(): void {
       });
     } else {
       autoAtlas('test', sprites.animation.getFrame(dt) as string).drawDualTint({
-        x: test_character.x,
-        y: test_character.y,
+        x: test_character.x - sprite_size / 2,
+        y: test_character.y - sprite_size / 2,
         z: Z.SPRITES,
         w: sprite_size,
         h: sprite_size,
@@ -1021,8 +1021,8 @@ export function main(): void {
 
     if (flagGet('4color')) {
       autoAtlas('test', sprites.animation.getFrame(dt) as string).draw4Color({
-        x: test_character.x,
-        y: test_character.y + 64,
+        x: test_character.x - sprite_size / 2,
+        y: test_character.y - sprite_size / 2 + 64,
         z: Z.SPRITES,
         w: sprite_size,
         h: sprite_size,
