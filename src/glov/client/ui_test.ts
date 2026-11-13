@@ -570,6 +570,10 @@ nec arborei timentem, ut crimina vidit.
     --test_lines;
   }
   internal_y += button_height + pad;
+  if (ui.buttonText({ x: 2, y: internal_y, z: z + 1, text: 'Crash in a scroll area', key: 'crash' })) {
+    assert(false);
+  }
+  internal_y += button_height + pad;
 
   let long_msg = 'Lots of long text that needs to be wrapped on this button label that really' +
       ' needs to be wrapped or otherwise dealt with in a reasonable way.';
