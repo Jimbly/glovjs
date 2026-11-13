@@ -14,6 +14,7 @@ import assert from 'assert';
 import fs from 'fs';
 import repl from 'repl';
 import zlib from 'zlib';
+import { default as createContext } from '@kmamal/gl';
 import { default as sdl, Sdl } from '@kmamal/sdl';
 import { setCrashMessage } from 'glov/client/bootstrap';
 import { setAbilityReloadUpdates } from 'glov/client/client_config';
@@ -35,7 +36,6 @@ import { ErrorCallback, VoidFunc } from 'glov/common/types';
 import { sdlEventQueue, sdlEventsDispatchQueued, sdlEventsStartup } from './platform-sdl-events';
 import { sdlSoundGetAPI } from './platform-sdl-sound';
 import { sdlWindowStateLoad, sdlWindowStateTrack } from './sdl-window-state';
-const createContext = require('@kmamal/gl');
 const { PNG } = require('pngjs');
 
 const { round, min, max } = Math;
@@ -47,29 +47,7 @@ function setEditBoxNearBottom(frame_index: number, required_padding_dom_coords: 
 setCrashMessage('We apologize, a fatal error has occurred.\n\n' +
   'Please report this error to the developer, and then restart the app.');
 
-export type SDLWindow = {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  pixelWidth: number;
-  pixelHeight: number;
-  destroyed: boolean;
-  destroy(): void;
-  visible: boolean;
-  maximize(): void;
-  on<T=unknown>(event: string, cb: (e: T) => void): void;
-  title: string;
-  setTitle(title: string): void;
-  fullscreen: boolean;
-  setFullscreen(fullscreen: boolean): void;
-  borderless: boolean;
-  setBorderless(borderless: boolean): void;
-  mouseCaptured: boolean;
-  relativeMouseMode: boolean;
-  setRelativeMouseMode(relative: boolean): void;
-  setIcon(width: number, height: number, stride: number, format: string, buffer: Buffer): void;
-};
+export type SDLWindow = Sdl.Video.Window;
 
 let sdlwindow: SDLWindow;
 
@@ -85,24 +63,9 @@ let view = {
   ph: 0,
 };
 
-let resize_ext: null | {
-  resize(w: number, h: number): void;
-};
+let resize_ext: createContext.STACKGL_resize_drawingbuffer | null = null;
 
-type SDLWebGLContextAttributes = {
-  alpha: boolean;
-  depth: boolean;
-  stencil: boolean;
-  antialias: boolean;
-  premultiplyAlpha: boolean;
-  preserveDrawingBuffer: boolean;
-  preferLowPowerToHighPerformance: boolean;
-  failIfMajorPerformanceCaveat: boolean;
-  createWebGL2Context: boolean;
-};
-
-type SDLWebGLContext = WebGL2RenderingContext & {
-  swap(): void;
+type SDLWebGLContext = createContext.WebGL2RenderingContext & createContext.WindowRenderingContext & {
   setSwapInterval?(interval: number): boolean;
 };
 
@@ -206,7 +169,7 @@ function startup(param: PlatformStartupParam): PlatformStartupRet {
   sdlwindow.on('resize', checkResizeInternal);
   // Keep the window alive (it may be mid-frame) and handle the close request
   //   along with other queued events
-  sdlwindow.on<{ prevent(): void }>('beforeClose', function (evt) {
+  sdlwindow.on('beforeClose', function (evt) {
     evt.prevent();
     sdlEventQueue(onCloseRequested);
   });
@@ -215,11 +178,12 @@ function startup(param: PlatformStartupParam): PlatformStartupRet {
     window: sdlwindow,
     antialias,
     createWebGL2Context: true,
-  }) as SDLWebGLContext | null;
+  });
   let good = false;
   let webgl2 = false;
   if (gl) {
-    window.gl = (globalThis as unknown as { gl: WebGLRenderingContext }).gl = gl;
+    let dom_gl = gl as unknown as WebGL2RenderingContext;
+    window.gl = (globalThis as unknown as { gl: WebGLRenderingContext }).gl = dom_gl;
     good = true;
     resize_ext = gl.getExtension('STACKGL_resize_drawingbuffer');
     if (gl.setSwapInterval) {
@@ -228,9 +192,9 @@ function startup(param: PlatformStartupParam): PlatformStartupRet {
         console.log('Driver rejected setSwapInterval(1)');
       }
     }
-    let attributes = gl.getContextAttributes() as SDLWebGLContextAttributes;
-    antialias = attributes.antialias;
-    webgl2 = attributes.createWebGL2Context;
+    let attributes = gl.getContextAttributes()!;
+    antialias = Boolean(attributes.antialias);
+    webgl2 = Boolean(attributes.createWebGL2Context);
   }
   if (window_state.maximized) {
     // After creating the context; the resulting 'resize' event resizes the drawing buffer

@@ -1,12 +1,12 @@
 import assert from 'assert';
+import { default as sdl, Sdl } from '@kmamal/sdl';
 import { KEYS, ValidKey } from 'glov/client/input';
 import { Rec } from 'glov/common/types';
-const sdl = require('@kmamal/sdl');
 
 // SDL scancode name (from `sdl.keyboard.SCANCODE`) => GLOV key name (from `KEYS`).
 // Multiple scancodes may map to the same key, matching the browser's `keyCode`
 //   (e.g. both shift keys => SHIFT, numpad enter => RETURN).
-const SCANCODE_TO_KEY: [string, ValidKey][] = [
+const SCANCODE_TO_KEY: [Sdl.Keyboard.ScancodeNames, ValidKey][] = [
   ['BACKSPACE', 'BACKSPACE'],
   ['TAB', 'TAB'],
   ['RETURN', 'RETURN'],
@@ -130,6 +130,6 @@ for (let ii = 0; ii < SCANCODE_TO_KEY.length; ++ii) {
   SCANCODE_MAP[scancode] = KEYS[key];
 }
 
-export function sdlScancodeToKeyCode(scancode: number): number {
+export function sdlScancodeToKeyCode(scancode: Sdl.Keyboard.Scancode): number {
   return SCANCODE_MAP[scancode] || 0;
 }

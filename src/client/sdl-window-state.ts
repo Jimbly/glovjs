@@ -7,9 +7,9 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { default as sdl, Sdl } from '@kmamal/sdl';
 import { getStoragePrefix } from 'glov/client/local_storage';
 import { SDLWindow } from './platform-sdl';
-const sdl = require('@kmamal/sdl');
 
 const { max, min, round } = Math;
 
@@ -33,12 +33,6 @@ type Rect = {
 
 type WindowState = Rect & {
   maximized: boolean;
-};
-
-type SDLDisplay = {
-  geometry: Rect;
-  usable: Rect;
-  scale: number | null;
 };
 
 export type SDLWindowCreateOpts = Partial<Rect>;
@@ -104,7 +98,7 @@ function intersectArea(a: Rect, b: Rect): number {
   return max(0, w) * max(0, h);
 }
 
-function titleBarHeight(displays: SDLDisplay[], x: number, y: number): number {
+function titleBarHeight(displays: Sdl.Video.Display[], x: number, y: number): number {
   if (process.platform !== 'win32') {
     // Other platforms' window coordinates are in unscaled points
     return TITLE_BAR_HEIGHT;
@@ -116,7 +110,7 @@ function titleBarHeight(displays: SDLDisplay[], x: number, y: number): number {
 
 // Is all of `rect` within the displays' usable areas?  (Displays do not
 //   overlap, so it is if the areas of its intersections with them add up to its area.)
-function fullyOnScreen(displays: SDLDisplay[], rect: Rect): boolean {
+function fullyOnScreen(displays: Sdl.Video.Display[], rect: Rect): boolean {
   let r: Rect = {
     x: rect.x + EDGE_TOLERANCE,
     y: rect.y + EDGE_TOLERANCE,
@@ -141,7 +135,7 @@ export function sdlWindowStateLoad(): { create_opts: SDLWindowCreateOpts; maximi
     return { create_opts: {}, maximized: false };
   }
   last_written = JSON.stringify(state);
-  let displays: SDLDisplay[] = sdl.video.displays;
+  let displays = sdl.video.displays;
   let title_h = titleBarHeight(displays, state.x, state.y);
   // The saved position is of the client area, the title bar is above it
   let frame: Rect = {
@@ -193,14 +187,14 @@ export function sdlWindowStateTrack(win: SDLWindow): void {
     timer.unref();
   }
 
-  win.on('move', function (e: Partial<Rect>) {
-    current.x = e.x!;
-    current.y = e.y!;
+  win.on('move', function (e) {
+    current.x = e.x;
+    current.y = e.y;
     schedule();
   });
-  win.on('resize', function (e: Partial<Rect>) {
-    current.width = e.width!;
-    current.height = e.height!;
+  win.on('resize', function (e) {
+    current.width = e.width;
+    current.height = e.height;
     schedule();
   });
   win.on('maximize', function () {

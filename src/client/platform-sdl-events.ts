@@ -1,3 +1,4 @@
+import { Events } from '@kmamal/sdl';
 import { hrnow } from 'glov/client/engine';
 import { inputOnKeyDownInternal, inputOnKeyUpInternal, inputOnTextInputInternal } from 'glov/client/input';
 import {
@@ -60,33 +61,14 @@ function onBlur(): void {
   sdlWindowEmit('blur', {});
 }
 
-type SDLKeyEvent = {
-  // Physical key, a value from `sdl.keyboard.SCANCODE` (USB usage page standard)
-  scancode: number;
-  // Virtual key in the current keyboard mapping: either the character the key
-  //   produces, or a name such as 'escape', 'left', 'f1', 'shift', etc.  null
-  //   if the physical key does not correspond to any virtual key.
-  key: string | null;
-  // Modifier state when the event was generated
-  shift: boolean;
-  ctrl: boolean;
-  alt: boolean;
-  super: boolean;
-  altgr: boolean;
-  capslock: boolean;
-  numlock: boolean;
-};
-
-function modFromEvent(evt: SDLKeyEvent): number {
+function modFromEvent(evt: Events.Window.KeyDown | Events.Window.KeyUp): number {
   return (evt.ctrl ? MOD_CTRL : 0) |
     (evt.alt ? MOD_ALT : 0) |
     // (evt.super ? MOD_META : 0) |
     (evt.shift ? MOD_SHIFT : 0);
 }
 
-function onKeyDown(evt: SDLKeyEvent & {
-  repeat: boolean;
-}, timestamp: number): void {
+function onKeyDown(evt: Events.Window.KeyDown, timestamp: number): void {
   inputOnKeyDownInternal({
     code: sdlScancodeToKeyCode(evt.scancode),
     mod: modFromEvent(evt),
@@ -94,7 +76,7 @@ function onKeyDown(evt: SDLKeyEvent & {
   });
 }
 
-function onKeyUp(evt: SDLKeyEvent, timestamp: number): void {
+function onKeyUp(evt: Events.Window.KeyUp, timestamp: number): void {
   inputOnKeyUpInternal({
     code: sdlScancodeToKeyCode(evt.scancode),
     mod: modFromEvent(evt),
@@ -103,25 +85,14 @@ function onKeyUp(evt: SDLKeyEvent, timestamp: number): void {
   });
 }
 
-function onTextInput(evt: {
-  text: string;
-}): void {
+function onTextInput(evt: Events.Window.TextInput): void {
   inputOnTextInputInternal({
     mod: 0,
     text: evt.text,
   });
 }
 
-type SDLMouseEvent = {
-  // Position relative to the window
-  x: number;
-  y: number;
-  // Event was synthesized from a touch or pen event
-  touch: boolean;
-  pen: boolean;
-};
-
-function mouseEvent(evt: SDLMouseEvent, timestamp: number): {
+function mouseEvent(evt: Events.Window.MouseMove | Events.Window.MouseWheel | MouseButtonEvent, timestamp: number): {
   pageX: number;
   pageY: number;
   timeStamp: number;
@@ -137,45 +108,32 @@ function mouseEvent(evt: SDLMouseEvent, timestamp: number): {
   };
 }
 
-type SDLMouseButtonEvent = SDLMouseEvent & {
-  // A value from `sdl.mouse.BUTTON`: 1=LEFT, 2=MIDDLE, 3=RIGHT, 4=X1, 5=X2
-  button: number;
-};
-
-function mouseButtonEvent(evt: SDLMouseButtonEvent, timestamp: number): unknown {
+type MouseButtonEvent = Events.Window.MouseButtonDown | Events.Window.MouseButtonUp;
+function mouseButtonEvent(evt: MouseButtonEvent, timestamp: number): unknown {
   return {
     ...mouseEvent(evt, timestamp),
+    // SDL (`sdl.mouse.BUTTON`): 1=LEFT, 2=MIDDLE, 3=RIGHT, 4=X1, 5=X2
     // DOM: 0=left, 1=middle, 2=right, 3=back (X1), 4=forward (X2)
     button: evt.button - 1,
   };
 }
 
-function onMouseButtonDown(evt: SDLMouseButtonEvent, timestamp: number): void {
+function onMouseButtonDown(evt: Events.Window.MouseButtonDown, timestamp: number): void {
   sdlWindowEmit('mousedown', mouseButtonEvent(evt, timestamp));
 }
 
-function onMouseButtonUp(evt: SDLMouseButtonEvent, timestamp: number): void {
+function onMouseButtonUp(evt: Events.Window.MouseButtonUp, timestamp: number): void {
   sdlWindowEmit('mouseup', mouseButtonEvent(evt, timestamp));
 }
 
-function onMouseMove(evt: SDLMouseEvent & {
-  // Movement relative to the last position
-  dx: number;
-  dy: number;
-}, timestamp: number): void {
+function onMouseMove(evt: Events.Window.MouseMove, timestamp: number): void {
   sdlWindowEmit('mousemove', mouseEvent(evt, timestamp));
 }
 
 // Pixels per wheel notch, matching what browsers report in `deltaY` (deltaMode 0)
 const WHEEL_PIXELS_PER_NOTCH = 100;
 
-function onMouseWheel(evt: SDLMouseEvent & {
-  // Wheel movement
-  dx: number;
-  dy: number;
-  // Platform reverses the scroll direction; multiply dx and dy by -1 to correct
-  flipped: boolean;
-}, timestamp: number): void {
+function onMouseWheel(evt: Events.Window.MouseWheel, timestamp: number): void {
   let dy = evt.flipped ? -evt.dy : evt.dy;
   sdlWindowEmit('mousewheel', {
     ...mouseEvent(evt, timestamp),
@@ -185,50 +143,27 @@ function onMouseWheel(evt: SDLMouseEvent & {
   });
 }
 
-type SDLTouchDevice = {
-  id: bigint;
-  name: string | null;
-  type: 'direct' | 'indirectAbsolute' | 'indirectRelative' | null;
-};
-
-type SDLFingerEvent = {
-  // null if the event was synthesized from a mouse or pen event
-  device: SDLTouchDevice | null;
-  fingerId: bigint;
-  // Position and pressure, normalized to 0..1
-  x: number;
-  y: number;
-  pressure: number;
-  // Event was synthesized from a mouse or pen event
-  mouse: boolean;
-  pen: boolean;
-};
-
-function onFingerDown(evt: SDLFingerEvent): void {
+function onFingerDown(evt: Events.Window.FingerDown): void {
   // TODO
 }
 
-function onFingerUp(evt: SDLFingerEvent): void {
+function onFingerUp(evt: Events.Window.FingerUp): void {
   // TODO
 }
 
-function onFingerMove(evt: SDLFingerEvent & {
-  // Movement relative to the last position, normalized to -1..1
-  dx: number;
-  dy: number;
-}): void {
+function onFingerMove(evt: Events.Window.FingerMove): void {
   // TODO
 }
 
 // System cancelled the touch (e.g. took over the gesture).  No 'fingerUp'
 //   follows, so treat this as the end of the finger's gesture.
-function onFingerCancel(evt: SDLFingerEvent): void {
+function onFingerCancel(evt: Events.Window.FingerCancel): void {
   // TODO
 }
 
 export function sdlEventsStartup(sdlwindow_in: SDLWindow): void {
   sdlwindow = sdlwindow_in;
-  sdlwindow.on('*', function (a: unknown) {
+  sdlwindow.on('*', function (a) {
     if (a === 'move' || a === 'mouseMove') { // too noisy
       return;
     }
