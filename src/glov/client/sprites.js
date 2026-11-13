@@ -585,6 +585,7 @@ export function spriteResetTopOfFrame() {
   // In case something crashed and leftover from last frame
   clip_stack.length = 0;
   sprite_queue_stack.length = 0;
+  sprite_queue.length = 0;
 }
 
 let clip_paused;
