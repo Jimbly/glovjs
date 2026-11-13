@@ -174,6 +174,8 @@ module.exports = function (config, opts) {
       'prod.posthash:!**/*.bundle.js*',
       'prod.posthash:!**/*.mp3',
       ...sdlapp_bundles.map((a) => `prod.posthash:${a}`),
+      ...config.gzipped_textures.map((ext) => `prod.posthash:!**/*${ext}`),
+      'build.prod.compresstex:**/*.br', // Only brotli versions, not .gz
     ],
     type: gb.SINGLE,
     func: function (job, done) {

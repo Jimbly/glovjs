@@ -261,14 +261,17 @@ function imageFromBuffer(buf: Uint8Array, done: ErrorCallback<HTMLImageElement>)
 }
 
 function loadFile(filename: string, done: ErrorCallback<Buffer>): void {
-  fs.readFile(filename + '.gz', function (err, data) {
+  fs.readFile(filename + '.br', function (err, databr) {
     if (err) {
-      return fs.readFile(filename, done);
+      return fs.readFile(filename + '.gz', function (err, datagz) {
+        if (err) {
+          return fs.readFile(filename, done);
+        }
+        // Using extra-large chunkSize here because the Node.js event loop is often starved
+        zlib.gunzip(datagz, { chunkSize: 1024 * 1024 }, done);
+      });
     }
-    // Using extra-large chunkSize here because the Node.js event loop is often starved
-    zlib.gunzip(data, { chunkSize: 1024 * 1024 }, function (err, data2) {
-      done(err, data2);
-    });
+    zlib.brotliDecompress(databr, { chunkSize: 1024 * 1024 }, done);
   });
 }
 
