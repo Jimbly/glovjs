@@ -100,7 +100,7 @@ const CONTROLLER_NAMES = {
   switch: 'Switch',
   steamdeck: 'SteamDeck',
 };
-type ControllerIcons = keyof typeof CONTROLLER_NAMES;
+export type ControllerIcons = keyof typeof CONTROLLER_NAMES;
 const CONTROLLER_ICONS = Object.keys(CONTROLLER_NAMES) as ControllerIcons[];
 declare module 'glov/client/settings' {
   let controller_icons: ControllerIcons;
@@ -114,8 +114,16 @@ settingsRegister({
   },
 });
 
+function isControllerIcon(s: string): s is ControllerIcons {
+  return Boolean((CONTROLLER_NAMES as TSMap<string>)[s]);
+}
+
 function controllerIconAuto(): ControllerIcons {
   let id = padName().toLowerCase();
+  let m = id.match(/\((\w+)\)$/); // platform-sdl's format
+  if (m && isControllerIcon(m[1])) {
+    return m[1];
+  }
   if (id.includes('dualshock') || id.includes('ps4')) {
     return 'ps4';
   }

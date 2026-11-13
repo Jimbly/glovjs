@@ -1,5 +1,7 @@
+import assert from 'assert';
 import fs from 'fs';
 import { default as sdl, Sdl } from '@kmamal/sdl';
+import type { ControllerIcons } from 'glov/client/bind_ui';
 import { hrnow } from 'glov/client/engine';
 import {
   inputOnGamepadButtonInternal,
@@ -7,6 +9,7 @@ import {
   inputOnGamepadStickInternal,
   PAD,
 } from 'glov/client/input';
+import { unreachable } from 'glov/common/verify';
 import { sdlEventQueue } from './platform-sdl-events';
 
 type GamepadInstance = Sdl.Gamepad.GamepadInstance;
@@ -109,6 +112,38 @@ function onClose(pad: PadData): void {
   }
 }
 
+function sdlDeviceTypeToControllerIcons(devicetype: Sdl.Gamepad.GamepadType): ControllerIcons {
+  switch (devicetype) {
+    case 'standard':
+      return 'xbox';
+    case 'xbox360':
+      return 'xbox';
+    case 'xboxOne':
+      return 'xboxone';
+    case 'ps3':
+      return 'ps4';
+    case 'ps4':
+      return 'ps4';
+    case 'ps5':
+      return 'ps5';
+    case 'nintendoSwitchPro':
+      return 'switch';
+    case 'nintendoSwitchJoyconLeft':
+      return 'switch';
+    case 'nintendoSwitchJoyconRight':
+      return 'switch';
+    case 'nintendoSwitchJoyconPair':
+      return 'switch';
+    case 'gamecube':
+      return 'switch';
+    // case 'steam': // not yet in the published version, TypeScript should notify us when it is
+    //   return 'steamdeck';
+    default:
+      unreachable(devicetype);
+  }
+  assert(false);
+}
+
 function openDevice(device: Sdl.Gamepad.Device): void {
   if (pads.some((pad) => pad?.device_id === device.id)) {
     return;
@@ -129,7 +164,13 @@ function openDevice(device: Sdl.Gamepad.Device): void {
     device_id: device.id,
   };
   pads[idx] = pad;
-  inputOnGamepadNameInternal(idx, device.name || undefined);
+  if (device.name && device.type) {
+    inputOnGamepadNameInternal(idx, `${device.name} (${sdlDeviceTypeToControllerIcons(device.type)})`);
+  } else if (device.type) {
+    inputOnGamepadNameInternal(idx, `(${sdlDeviceTypeToControllerIcons(device.type)})`);
+  } else {
+    inputOnGamepadNameInternal(idx, device.type || undefined);
+  }
   instance.on('buttonDown', (evt) => onButton(pad, evt.button, true));
   instance.on('buttonUp', (evt) => onButton(pad, evt.button, false));
   instance.on('axisMotion', (evt) => onAxisMotion(pad, evt.axis));
