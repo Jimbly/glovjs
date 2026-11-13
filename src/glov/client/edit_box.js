@@ -159,7 +159,9 @@ let padding = {
   top: 2,
   bottom: 2,
 };
-export function editBoxSetPadding(left, right, top, bottom) {
+let edit_box_pixel_scale = 1;
+export function editBoxSetPadding(pixel_scale, left, right, top, bottom) {
+  edit_box_pixel_scale = pixel_scale;
   padding.left = left;
   padding.right = right;
   padding.top = top;
@@ -1000,7 +1002,7 @@ class GlovUIEditBox {
     if (draw_bg) {
       drawBox({
         x, y, z, w, h,
-      }, ui_sprites[focused ? 'edit_border_focused' : 'edit_border']);
+      }, ui_sprites[focused ? 'edit_border_focused' : 'edit_border'], edit_box_pixel_scale);
     }
     if (canvas_render || !this.dom_backed) {
       const { center } = this;
@@ -1043,7 +1045,7 @@ class GlovUIEditBox {
           }
           drawBox({
             x, y, z: fade_z, w, h,
-          }, ui_sprites[focused ? 'edit_border_focused_fade' : 'edit_border_fade']);
+          }, ui_sprites[focused ? 'edit_border_focused_fade' : 'edit_border_fade'], edit_box_pixel_scale);
           if (fade_left !== fade_right) {
             spriteClipPop();
           }

@@ -515,10 +515,10 @@ const base_ui_sprites = {
 
   focusglow: { atlas: 'default' },
 
-  edit_border: { atlas: 'pixely' }, // TODO: add to default atlas
-  edit_border_fade: { atlas: 'pixely' },
-  edit_border_focused: { atlas: 'pixely' },
-  edit_border_focused_fade: { atlas: 'pixely' },
+  edit_border: { atlas: 'default' },
+  edit_border_fade: { atlas: 'default' },
+  edit_border_focused: { atlas: 'default' },
+  edit_border_focused_fade: { atlas: 'default' },
 };
 
 function engineDefaultLocalStorageError(e) {
@@ -2514,10 +2514,28 @@ export function drawCone(x0, y0, x1, y1, z, w0, w1, spread, color) {
     color, glov_font.font_shaders.font_aa, spreadTechParams(spread), blend);
 }
 
+let edit_box_pixel_scale = 1;
+function uiCalcEditBoxPadding() {
+  let s = sprites.edit_border;
+  let { uidata } = s;
+  let { padh, padv } = uidata;
+  assert(padh.length >= 3);
+  assert(padv.length >= 3);
+  let mid_h = 0;
+  for (let ii = 1; ii < padv.length - 1; ++ii) {
+    mid_h += padv[ii];
+  }
+  edit_box_pixel_scale = exports.font_height / mid_h;
+  editBoxSetPadding(edit_box_pixel_scale,
+    padh[0] * edit_box_pixel_scale, padh[padh.length - 1] * edit_box_pixel_scale,
+    padv[0] * edit_box_pixel_scale, padv[padv.length - 1]* edit_box_pixel_scale);
+}
+
 export function setFontHeight(_font_height) {
   uiStyleModify(uiStyleDefault(), {
     text_height: _font_height,
   });
+  uiCalcEditBoxPadding();
 }
 
 function defaultFocusIndicator(x, y, w, h, z) {
@@ -2569,9 +2587,7 @@ export function scaleSizes(scale) {
   let button_height = round(32 * scale);
   setButtonHeight(button_height);
   tooltip_panel_pixel_scale = panel_pixel_scale; // panel_pixel_scale set in setButtonHeight()
-  // TODO: get this from padding data in 9-patch
-  let pad = 32/13*scale;
-  editBoxSetPadding(2 * pad, 2 * pad, pad, pad);
+  uiCalcEditBoxPadding();
 }
 
 export function setPanelPixelScale(scale) {

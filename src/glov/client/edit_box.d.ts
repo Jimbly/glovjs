@@ -76,7 +76,7 @@ export function editBox<T extends string|number=string|number>(params: EditBoxOp
 export function showOnscreenKeyboard(): EventCallback | undefined;
 
 export function editBoxAnyActive(): boolean;
-export function editBoxSetPadding(left: number, right: number, top: number, bottom: number): void;
+export function editBoxSetPadding(pixel_scale: number, left: number, right: number, top: number, bottom: number): void;
 export type Padding = {
   left: number;
   right: number;
