@@ -30,7 +30,7 @@ import type {
 } from 'glov/client/platform-adapter';
 import { settingsGet } from 'glov/client/settings';
 import { ErrorCallback, VoidFunc } from 'glov/common/types';
-import { sdlEventsStartup } from './platform-sdl-events';
+import { sdlEventQueue, sdlEventsDispatchQueued, sdlEventsStartup } from './platform-sdl-events';
 import { sdlSoundGetAPI } from './platform-sdl-sound';
 import { sdlWindowStateLoad, sdlWindowStateTrack } from './sdl-window-state';
 const createContext = require('@kmamal/gl');
@@ -54,6 +54,7 @@ export type SDLWindow = {
   pixelWidth: number;
   pixelHeight: number;
   destroyed: boolean;
+  destroy(): void;
   visible: boolean;
   maximize(): void;
   on<T=unknown>(event: string, cb: (e: T) => void): void;
@@ -75,8 +76,7 @@ let application_root: string; // with trailing slash
 
 // Cached window size, kept up to date by the 'resize' event.  Don't read the
 // window.width/pixelWidth/etc. getters while rendering: they poll for events
-// internally, which can process the close event and destroy the window in the
-// middle of a frame.
+// internally, dispatching events in the middle of a frame.
 let view = {
   w: 0,
   h: 0,
@@ -113,7 +113,8 @@ let gl: SDLWebGLContext | null = null;
 
 let last_swap_time = 0;
 // Many node-sdl APIs (window getters, clipboard, audio, etc) synchronously poll
-//   and dispatch SDL events, so event handlers can run in the middle of a frame.
+//   and dispatch SDL events, so event handlers can run in the middle of a frame
+//   (input events are queued in platform-sdl-events, resizes are deferred here).
 let in_render_frame = false;
 let resize_pending = false;
 
@@ -123,6 +124,7 @@ function renderFrame(): void {
   }
   in_render_frame = true;
   try {
+    sdlEventsDispatchQueued();
     tick(); // note: may never return (if it crashes)
   } finally {
     in_render_frame = false;
@@ -166,6 +168,17 @@ function checkResizeInternal(): void {
   needReposSet(1);
 }
 
+let closing = false;
+function onCloseRequested(): void {
+  if (closing) {
+    return;
+  }
+  closing = true;
+  // TODO: wait for storage saving to finish
+  sdlwindow.destroy(); // emits 'close', which sdl-window-state uses to save the window state
+  process.exit(0);
+}
+
 function startup(param: PlatformStartupParam): PlatformStartupRet {
   let { antialias } = param;
   application_root = (window as unknown as { application_root: string }).application_root;
@@ -190,9 +203,11 @@ function startup(param: PlatformStartupParam): PlatformStartupRet {
 
   checkResizeInternal();
   sdlwindow.on('resize', checkResizeInternal);
-  sdlwindow.on('close', function () {
-    // TODO: wait for storage saving to finish
-    process.exit(0);
+  // Keep the window alive (it may be mid-frame) and handle the close request
+  //   along with other queued events
+  sdlwindow.on<{ prevent(): void }>('beforeClose', function (evt) {
+    evt.prevent();
+    sdlEventQueue(onCloseRequested);
   });
 
   gl = createContext(view.pw, view.ph, {

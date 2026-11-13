@@ -5,11 +5,32 @@ import {
   MOD_CTRL,
   MOD_SHIFT,
 } from 'glov/client/input_constants';
+import { callEach } from 'glov/common/util';
 import { SDLWindow } from './platform-sdl';
 import { sdlScancodeToKeyCode } from './platform-sdl-keys';
 import { sdlWindowEmit } from './sdlwindow';
 
 let sdlwindow: SDLWindow;
+
+// Many node-sdl APIs (window getters, clipboard, audio, etc) synchronously poll
+//   and dispatch SDL events, so they can arrive in the middle of a frame, after
+//   the code that would have read them has already run, losing entire key
+//   presses / clicks.  Instead, queue them and dispatch immediately before ticking.
+type QueuedHandler<T> = (evt: T, timestamp: number) => void;
+let event_queue: (() => void)[] = [];
+export function sdlEventQueue(fn: () => void): void {
+  event_queue.push(fn);
+}
+function queued<T>(handler: QueuedHandler<T>): (evt: T) => void {
+  return function (evt: T): void {
+    sdlEventQueue(handler.bind(null, evt, hrnow()));
+  };
+}
+
+export function sdlEventsDispatchQueued(): void {
+  // Any events polled while dispatching wait for the next frame
+  callEach(event_queue, event_queue = []);
+}
 
 // input.ts sends events with no `target` only to the DOM, not the engine
 const MOUSE_EVENT_TARGET = {
@@ -65,22 +86,22 @@ function modFromEvent(evt: SDLKeyEvent): number {
 
 function onKeyDown(evt: SDLKeyEvent & {
   repeat: boolean;
-}): void {
+}, timestamp: number): void {
   if (evt.repeat) {
     return;
   }
   inputOnKeyDownInternal({
     code: sdlScancodeToKeyCode(evt.scancode),
     mod: modFromEvent(evt),
-    timestamp: hrnow(),
+    timestamp,
   });
 }
 
-function onKeyUp(evt: SDLKeyEvent): void {
+function onKeyUp(evt: SDLKeyEvent, timestamp: number): void {
   inputOnKeyUpInternal({
     code: sdlScancodeToKeyCode(evt.scancode),
     mod: modFromEvent(evt),
-    timestamp: hrnow(),
+    timestamp,
     debug: [evt.scancode],
   });
 }
@@ -103,7 +124,7 @@ type SDLMouseEvent = {
   pen: boolean;
 };
 
-function mouseEvent(evt: SDLMouseEvent): {
+function mouseEvent(evt: SDLMouseEvent, timestamp: number): {
   pageX: number;
   pageY: number;
   timeStamp: number;
@@ -115,7 +136,7 @@ function mouseEvent(evt: SDLMouseEvent): {
     //   converted to canvas pixels by `window.devicePixelRatio`
     pageX: evt.x,
     pageY: evt.y,
-    timeStamp: hrnow(),
+    timeStamp: timestamp,
   };
 }
 
@@ -124,28 +145,28 @@ type SDLMouseButtonEvent = SDLMouseEvent & {
   button: number;
 };
 
-function mouseButtonEvent(evt: SDLMouseButtonEvent): unknown {
+function mouseButtonEvent(evt: SDLMouseButtonEvent, timestamp: number): unknown {
   return {
-    ...mouseEvent(evt),
+    ...mouseEvent(evt, timestamp),
     // DOM: 0=left, 1=middle, 2=right, 3=back (X1), 4=forward (X2)
     button: evt.button - 1,
   };
 }
 
-function onMouseButtonDown(evt: SDLMouseButtonEvent): void {
-  sdlWindowEmit('mousedown', mouseButtonEvent(evt));
+function onMouseButtonDown(evt: SDLMouseButtonEvent, timestamp: number): void {
+  sdlWindowEmit('mousedown', mouseButtonEvent(evt, timestamp));
 }
 
-function onMouseButtonUp(evt: SDLMouseButtonEvent): void {
-  sdlWindowEmit('mouseup', mouseButtonEvent(evt));
+function onMouseButtonUp(evt: SDLMouseButtonEvent, timestamp: number): void {
+  sdlWindowEmit('mouseup', mouseButtonEvent(evt, timestamp));
 }
 
 function onMouseMove(evt: SDLMouseEvent & {
   // Movement relative to the last position
   dx: number;
   dy: number;
-}): void {
-  sdlWindowEmit('mousemove', mouseEvent(evt));
+}, timestamp: number): void {
+  sdlWindowEmit('mousemove', mouseEvent(evt, timestamp));
 }
 
 // Pixels per wheel notch, matching what browsers report in `deltaY` (deltaMode 0)
@@ -157,10 +178,10 @@ function onMouseWheel(evt: SDLMouseEvent & {
   dy: number;
   // Platform reverses the scroll direction; multiply dx and dy by -1 to correct
   flipped: boolean;
-}): void {
+}, timestamp: number): void {
   let dy = evt.flipped ? -evt.dy : evt.dy;
   sdlWindowEmit('mousewheel', {
-    ...mouseEvent(evt),
+    ...mouseEvent(evt, timestamp),
     // SDL: positive is away from the user; DOM: positive is towards the user
     //   (scrolling down)
     deltaY: -dy * WHEEL_PIXELS_PER_NOTCH,
@@ -223,27 +244,27 @@ export function sdlEventsStartup(sdlwindow_in: SDLWindow): void {
     console.log(`SDL EVENT "${a}"`);
   });
 
-  sdlwindow.on('show', onVisible.bind(null, true));
-  sdlwindow.on('hide', onVisible.bind(null, false));
-  sdlwindow.on('expose', onVisible.bind(null, true));
-  sdlwindow.on('minimize', onVisible.bind(null, false));
-  sdlwindow.on('restore', onVisible.bind(null, true));
-  sdlwindow.on('focus', onVisible.bind(null, true));
+  sdlwindow.on('show', queued(onVisible.bind(null, true)));
+  sdlwindow.on('hide', queued(onVisible.bind(null, false)));
+  sdlwindow.on('expose', queued(onVisible.bind(null, true)));
+  sdlwindow.on('minimize', queued(onVisible.bind(null, false)));
+  sdlwindow.on('restore', queued(onVisible.bind(null, true)));
+  sdlwindow.on('focus', queued(onVisible.bind(null, true)));
 
-  sdlwindow.on('focus', onFocus);
-  sdlwindow.on('blur', onBlur);
+  sdlwindow.on('focus', queued(onFocus));
+  sdlwindow.on('blur', queued(onBlur));
 
-  sdlwindow.on('keyDown', onKeyDown);
-  sdlwindow.on('keyUp', onKeyUp);
-  sdlwindow.on('textInput', onTextInput);
+  sdlwindow.on('keyDown', queued(onKeyDown));
+  sdlwindow.on('keyUp', queued(onKeyUp));
+  sdlwindow.on('textInput', queued(onTextInput));
 
-  sdlwindow.on('mouseButtonDown', onMouseButtonDown);
-  sdlwindow.on('mouseButtonUp', onMouseButtonUp);
-  sdlwindow.on('mouseMove', onMouseMove);
-  sdlwindow.on('mouseWheel', onMouseWheel);
+  sdlwindow.on('mouseButtonDown', queued(onMouseButtonDown));
+  sdlwindow.on('mouseButtonUp', queued(onMouseButtonUp));
+  sdlwindow.on('mouseMove', queued(onMouseMove));
+  sdlwindow.on('mouseWheel', queued(onMouseWheel));
 
-  sdlwindow.on('fingerDown', onFingerDown);
-  sdlwindow.on('fingerUp', onFingerUp);
-  sdlwindow.on('fingerMove', onFingerMove);
-  sdlwindow.on('fingerCancel', onFingerCancel);
+  sdlwindow.on('fingerDown', queued(onFingerDown));
+  sdlwindow.on('fingerUp', queued(onFingerUp));
+  sdlwindow.on('fingerMove', queued(onFingerMove));
+  sdlwindow.on('fingerCancel', queued(onFingerCancel));
 }
