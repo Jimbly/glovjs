@@ -1,6 +1,15 @@
 import { Events } from '@kmamal/sdl';
 import { hrnow } from 'glov/client/engine';
-import { inputOnKeyDownInternal, inputOnKeyUpInternal, inputOnTextInputInternal } from 'glov/client/input';
+import {
+  InputMouseEvent,
+  inputOnKeyDownInternal,
+  inputOnKeyUpInternal,
+  inputOnMouseDownInternal,
+  inputOnMouseMoveInternal,
+  inputOnMouseUpInternal,
+  inputOnMouseWheelInternal,
+  inputOnTextInputInternal,
+} from 'glov/client/input';
 import {
   MOD_ALT,
   MOD_CTRL,
@@ -32,22 +41,6 @@ export function sdlEventsDispatchQueued(): void {
   // Any events polled while dispatching wait for the next frame
   callEach(event_queue, event_queue = []);
 }
-
-// input.ts sends events with no `target` only to the DOM, not the engine
-const MOUSE_EVENT_TARGET = {
-  tagName: 'CANVAS',
-  className: '',
-};
-
-let EVENT_BASIC = {
-  target: MOUSE_EVENT_TARGET,
-  stopPropagation: function () {
-    // nothing for now
-  },
-  preventDefault: function () {
-    // nothing for now
-  },
-};
 
 function onVisible(is_visible: boolean): void {
   (window.document as { hidden: boolean }).hidden = !is_visible;
@@ -92,54 +85,49 @@ function onTextInput(evt: Events.Window.TextInput): void {
   });
 }
 
-function mouseEvent(evt: Events.Window.MouseMove | Events.Window.MouseWheel | MouseButtonEvent, timestamp: number): {
-  pageX: number;
-  pageY: number;
-  timeStamp: number;
-} & typeof EVENT_BASIC {
-  // no movementX/Y, no pointer locked support yet
+function mouseEvent(evt: Events.Window.MouseMove | Events.Window.MouseWheel | MouseButtonEvent,
+  timestamp: number
+): InputMouseEvent {
   return {
-    ...EVENT_BASIC,
     // Window-relative, in the same units as `sdlwindow.width/height`, which are
     //   converted to canvas pixels by `window.devicePixelRatio`
-    pageX: evt.x,
-    pageY: evt.y,
-    timeStamp: timestamp,
+    x: evt.x,
+    y: evt.y,
+    timestamp,
   };
 }
 
 type MouseButtonEvent = Events.Window.MouseButtonDown | Events.Window.MouseButtonUp;
-function mouseButtonEvent(evt: MouseButtonEvent, timestamp: number): unknown {
+function mouseButtonEvent(evt: MouseButtonEvent, timestamp: number): InputMouseEvent & { button: number } {
   return {
     ...mouseEvent(evt, timestamp),
     // SDL (`sdl.mouse.BUTTON`): 1=LEFT, 2=MIDDLE, 3=RIGHT, 4=X1, 5=X2
-    // DOM: 0=left, 1=middle, 2=right, 3=back (X1), 4=forward (X2)
+    // GLOV (DOM): 0=left, 1=middle, 2=right, 3=back (X1), 4=forward (X2)
     button: evt.button - 1,
   };
 }
 
 function onMouseButtonDown(evt: Events.Window.MouseButtonDown, timestamp: number): void {
-  sdlWindowEmit('mousedown', mouseButtonEvent(evt, timestamp));
+  inputOnMouseDownInternal(mouseButtonEvent(evt, timestamp), false);
 }
 
 function onMouseButtonUp(evt: Events.Window.MouseButtonUp, timestamp: number): void {
-  sdlWindowEmit('mouseup', mouseButtonEvent(evt, timestamp));
+  inputOnMouseUpInternal(mouseButtonEvent(evt, timestamp), false);
 }
 
 function onMouseMove(evt: Events.Window.MouseMove, timestamp: number): void {
-  sdlWindowEmit('mousemove', mouseEvent(evt, timestamp));
+  inputOnMouseMoveInternal({
+    ...mouseEvent(evt, timestamp),
+    movement_x: evt.dx,
+    movement_y: evt.dy,
+  });
 }
 
-// Pixels per wheel notch, matching what browsers report in `deltaY` (deltaMode 0)
-const WHEEL_PIXELS_PER_NOTCH = 100;
-
 function onMouseWheel(evt: Events.Window.MouseWheel, timestamp: number): void {
-  let dy = evt.flipped ? -evt.dy : evt.dy;
-  sdlWindowEmit('mousewheel', {
+  inputOnMouseWheelInternal({
     ...mouseEvent(evt, timestamp),
-    // SDL: positive is away from the user; DOM: positive is towards the user
-    //   (scrolling down)
-    deltaY: -dy * WHEEL_PIXELS_PER_NOTCH,
+    // In notches, positive is away from the user (scrolling up), same as SDL
+    wheel_delta: evt.flipped ? -evt.dy : evt.dy,
   });
 }
 
