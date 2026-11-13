@@ -157,7 +157,7 @@ function startup(param: PlatformStartupParam): PlatformStartupRet {
   });
   sdlWindowStateTrack(sdlwindow);
   sdlEventsStartup(sdlwindow);
-  sdlGamepadStartup();
+  sdlGamepadStartup(application_root);
   // eslint-disable-next-line @typescript-eslint/no-use-before-define
   loadImageData('favicon.png', false, function (err, img) {
     if (err || !img) {

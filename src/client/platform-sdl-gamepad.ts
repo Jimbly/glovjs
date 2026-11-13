@@ -1,3 +1,4 @@
+import fs from 'fs';
 import { default as sdl, Sdl } from '@kmamal/sdl';
 import { hrnow } from 'glov/client/engine';
 import {
@@ -140,7 +141,21 @@ function openDevice(device: Sdl.Gamepad.Device): void {
   instance.on('close', () => sdlEventQueue(onClose.bind(null, pad)));
 }
 
-export function sdlGamepadStartup(): void {
+function loadMappings(application_root: string): void {
+  let db = `${application_root}gamecontrollerdb.txt`;
+  fs.readFile(db, 'utf8', function (err, text) {
+    if (err) {
+      console.error(`Error reading ${db}: ${err}`);
+      return;
+    }
+    const mappings = text.split('\n').filter((line) => line && !line.startsWith('#'));
+    sdl.gamepad.addMappings(mappings);
+    console.log(`Loaded ${mappings.length} mappings from gamecontrollerdb.txt`);
+  });
+}
+
+export function sdlGamepadStartup(application_root: string): void {
   sdl.gamepad.on('deviceAdd', (evt) => sdlEventQueue(openDevice.bind(null, evt.device)));
   sdl.gamepad.devices.forEach(openDevice);
+  loadMappings(application_root);
 }
