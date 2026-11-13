@@ -493,6 +493,7 @@ class GlovUIEditBox {
     if (max_len > 0 || max_visual_size) {
       // If just max_visual_size, use infinite max_len
       let eff_max_len = max_len || Infinity;
+      let growth = new_text.length - old_text.length;
       let lines = multiline ? new_text.split('\n') : [new_text];
       for (let ii = 0; ii < lines.length; ++ii) {
         let line = lines[ii];
@@ -508,9 +509,8 @@ class GlovUIEditBox {
             max_visual_size.font_height, trimmed) > max_visual_size.width;
         }
         if (max_visual_size && over && trim_over &&
-          // was it over by 2 or more characters?  Probably just pasted, do a truncate instead of reject
-          font.getStringWidth(null,
-            max_visual_size.font_height, line.slice(0, -2)) > max_visual_size.width
+          // was it changed by 2 or more characters?  Probably just pasted, do a truncate instead of reject
+          growth >= 2
         ) {
           while (trimmed.length && font.getStringWidth(null,
             max_visual_size.font_height, trimmed) > max_visual_size.width
