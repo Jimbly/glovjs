@@ -1221,18 +1221,6 @@ export function inputOnGamepadStickInternal(idx: number, stick: number, x: numbe
     v2set(pair, 0, 0);
   }
 
-  // Apply "movement" to drag events
-  if (stick <= 1 && pad_to_touch !== undefined) {
-    let touch_data = touches[`g${gpd.id}`];
-    if (touch_data) {
-      v2scale(temp_delta, pair, getFrameDt());
-      v2add(touch_data.delta, touch_data.delta, temp_delta);
-      touch_data.total += abs(temp_delta[0]) + abs(temp_delta[1]);
-      setMouseToMid();
-      v2copy(touch_data.cur_pos, mouse_pos);
-    }
-  }
-
   // Calculate virtual directional buttons
   if (stick <= 1) {
     let codeoffs = stick === 0 ? 0 : PAD.RSTICK_UP - PAD.LSTICK_UP;
@@ -1267,6 +1255,31 @@ export function fakeTouchEvent(is_down: boolean): void {
   }
 }
 
+function gamepadUpdate(): void {
+  // Apply "movement" to drag events
+  if (pad_to_touch === undefined) {
+    return;
+  }
+  for (let idx = 0; idx < gamepad_data.length; ++idx) {
+    let gpd = gamepad_data[idx];
+    if (!gpd) {
+      continue;
+    }
+    let touch_data = touches[`g${gpd.id}`];
+    if (!touch_data) {
+      continue;
+    }
+    for (let stick_idx = 0; stick_idx < PAD_NUM_STICKS; ++stick_idx) {
+      let pair = gpd.sticks[stick_idx];
+      v2scale(temp_delta, pair, getFrameDt());
+      v2add(touch_data.delta, touch_data.delta, temp_delta);
+      touch_data.total += abs(temp_delta[0]) + abs(temp_delta[1]);
+      setMouseToMid();
+      v2copy(touch_data.cur_pos, mouse_pos);
+    }
+  }
+}
+
 function inputTick(): void {
   // browser frame has occurred since the call to inputEndFrame(),
   // we should now have `touches` and `key_state` populated with edge events
@@ -1295,6 +1308,7 @@ function inputTick(): void {
   }
 
   mouse_over_captured = false;
+  gamepadUpdate();
   inEventTopOfFrame();
   ctrl_checked = false;
   if (touches[pointerlock_touch_id] && !pointerLocked()) {

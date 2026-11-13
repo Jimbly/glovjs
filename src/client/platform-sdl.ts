@@ -34,6 +34,7 @@ import { settingsGet } from 'glov/client/settings';
 import { CursorStyle } from 'glov/client/ui';
 import { ErrorCallback, VoidFunc } from 'glov/common/types';
 import { sdlEventQueue, sdlEventsDispatchQueued, sdlEventsStartup } from './platform-sdl-events';
+import { sdlGamepadStartup } from './platform-sdl-gamepad';
 import { sdlSoundGetAPI } from './platform-sdl-sound';
 import { sdlWindowStateLoad, sdlWindowStateTrack } from './sdl-window-state';
 const { PNG } = require('pngjs');
@@ -156,6 +157,7 @@ function startup(param: PlatformStartupParam): PlatformStartupRet {
   });
   sdlWindowStateTrack(sdlwindow);
   sdlEventsStartup(sdlwindow);
+  sdlGamepadStartup();
   // eslint-disable-next-line @typescript-eslint/no-use-before-define
   loadImageData('favicon.png', false, function (err, img) {
     if (err || !img) {
