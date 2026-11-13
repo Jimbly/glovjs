@@ -136,7 +136,10 @@ let width_3d;
 let height_3d;
 export let pixel_aspect = 1;
 export let render_pixel_perfect = 0; // 1.0 uses integral pixel scalars, 0.5 does for half of the resolutions, etc
-export let dom_to_canvas_ratio = window.devicePixelRatio || 1;
+export let dom_to_canvas_ratio = 1;
+export function engineSetDomToCanvasRatio(value) {
+  dom_to_canvas_ratio = value;
+}
 export let antialias;
 export let antialias_unavailable;
 

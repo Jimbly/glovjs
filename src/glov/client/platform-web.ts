@@ -35,6 +35,7 @@ import * as cmds from './cmds';
 import {
   debugDefineIsSet,
   internal as engine_internal,
+  engineSetDomToCanvasRatio,
   getFrameIndex,
   hrnow,
   isLoading,
@@ -212,6 +213,7 @@ function checkResize(): void {
   let vv = window.visualViewport;
   let dom_to_pixels = window.devicePixelRatio || 1;
   dom_to_canvas_ratio = dom_to_pixels * settingsGet('render_scale_all');
+  engineSetDomToCanvasRatio(dom_to_canvas_ratio);
   let view_w = vv ? vv.width : window.innerWidth;
   let view_h = vv ? vv.height :
     is_ios_safari && window.pageYOffset ? document.documentElement.clientHeight : window.innerHeight;
