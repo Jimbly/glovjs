@@ -60,6 +60,7 @@ import {
 import { webSoundGetAPI } from './platform-web-sound';
 import { settingsGet } from './settings';
 import { blobSupported } from './textures';
+import { CursorStyle } from './ui';
 
 const { max, min, round } = Math;
 
@@ -632,6 +633,10 @@ function clipboardRead(): string | null {
   return webInputPasteText();
 }
 
+function cursorStyle(style: CursorStyle): void {
+  canvas.style.cursor = style;
+}
+
 const platform_web: PlatformAdapter = {
   startup,
   checkResize,
@@ -644,6 +649,7 @@ const platform_web: PlatformAdapter = {
   loadScript,
   clipboardWrite,
   clipboardRead,
+  cursorStyle,
 };
 
 

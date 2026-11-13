@@ -52,6 +52,9 @@ const {
 const effects = require('./effects.js');
 const { effectsQueue } = effects;
 const glov_engine = require('./engine.js');
+const {
+  platformAdapterGet,
+} = require('./engine');
 const glov_font = require('./font.js');
 const { ALIGN, fontSetDefaultSize, fontStyle, fontStyleColored } = glov_font;
 const {
@@ -2070,6 +2073,11 @@ function uiTick(dt) {
   }
 }
 
+let cursor_style = 'default';
+export function uiCursorStyle(style) {
+  cursor_style = style;
+}
+
 function uiEndFrame() {
   spotEndOfFrame();
 
@@ -2084,6 +2092,9 @@ function uiEndFrame() {
     let elem = dom_elems.pop();
     dynamic_text_elem.removeChild(elem);
   }
+
+  platformAdapterGet().cursorStyle(cursor_style);
+  cursor_style = 'default';
 }
 
 function cleanupDOMElems() {
@@ -2104,7 +2115,7 @@ export function menuUp(param) {
 }
 
 export function copyTextToClipboard(text) {
-  return glov_engine.platformAdapterGet().clipboardWrite(text);
+  return platformAdapterGet().clipboardWrite(text);
 }
 
 export function provideUserString(title, str, alt_buttons) {

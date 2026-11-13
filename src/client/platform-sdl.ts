@@ -14,6 +14,7 @@ import assert from 'assert';
 import fs from 'fs';
 import repl from 'repl';
 import zlib from 'zlib';
+import { default as sdl, Sdl } from '@kmamal/sdl';
 import { setCrashMessage } from 'glov/client/bootstrap';
 import { setAbilityReloadUpdates } from 'glov/client/client_config';
 import {
@@ -29,12 +30,12 @@ import type {
   PlatformStartupRet,
 } from 'glov/client/platform-adapter';
 import { settingsGet } from 'glov/client/settings';
+import { CursorStyle } from 'glov/client/ui';
 import { ErrorCallback, VoidFunc } from 'glov/common/types';
 import { sdlEventQueue, sdlEventsDispatchQueued, sdlEventsStartup } from './platform-sdl-events';
 import { sdlSoundGetAPI } from './platform-sdl-sound';
 import { sdlWindowStateLoad, sdlWindowStateTrack } from './sdl-window-state';
 const createContext = require('@kmamal/gl');
-const sdl = require('@kmamal/sdl');
 const { PNG } = require('pngjs');
 
 const { round, min, max } = Math;
@@ -397,6 +398,27 @@ function clipboardRead(): string | null {
   }
 }
 
+const CURSOR_STYLES: Record<CursorStyle, Sdl.Mouse.Cursor> = {
+  default: 'default',
+  none: 'default',
+  wait: 'wait',
+  pointer: 'pointer',
+  text: 'text',
+  move: 'move',
+};
+let cursor_shown = true;
+function cursorStyle(style: CursorStyle): void {
+  let show = style !== 'none';
+  if (show !== cursor_shown) {
+    // TODO: if used, probably need some auto-unhiding upon blur, etc
+    sdl.mouse.showCursor(show);
+    cursor_shown = show;
+  }
+  if (style !== 'none') {
+    sdl.mouse.setCursor(CURSOR_STYLES[style]);
+  }
+}
+
 const platform_sdl: PlatformAdapter = {
   fetch: fetchSDL,
   startup,
@@ -409,6 +431,7 @@ const platform_sdl: PlatformAdapter = {
   loadScript,
   clipboardWrite,
   clipboardRead,
+  cursorStyle,
 };
 
 assert(!window.platform_adapter);

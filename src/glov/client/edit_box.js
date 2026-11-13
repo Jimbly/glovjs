@@ -27,6 +27,7 @@ import {
   MOD_SHIFT,
   mouseConsumeClicks,
   mouseDownEdge,
+  mouseOver,
   pointerLocked,
   pointerLockEnter,
   pointerLockExit,
@@ -59,6 +60,7 @@ import {
   getUIElemData,
   sprites as ui_sprites,
   uiButtonWidth,
+  uiCursorStyle,
   uiFontStyleNormal,
   uiGetDOMElem,
   uiGetDOMTabIndex,
@@ -350,6 +352,9 @@ class GlovUIEditBox {
     if (drag) {
       stb_textedit_drag(this.textedit_string, this.textedit_state, drag.cur_pos[0] - x, drag.cur_pos[1] - y);
       this.focus();
+    }
+    if (mouse_down || drag || mouseOver(clipped_rect)) {
+      uiCursorStyle('text');
     }
   }
 

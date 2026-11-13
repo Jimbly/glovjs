@@ -455,6 +455,9 @@ export function uiGetButtonRolloverColor(): ROVec4;
 export function uiGetTooltipPad(): number;
 export function uiGetTooltipPanelPixelScale(): number;
 
+export type CursorStyle = 'default' | 'none' | 'wait' | 'pointer' | 'text' | 'move';
+export function uiCursorStyle(style: CursorStyle): void;
+
 type UISpriteSet = {
   color_set_shades?: [number, number, number];
   slider_params?: [number, number, number];

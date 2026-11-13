@@ -5,6 +5,7 @@ import type {
 } from 'glov/common/types';
 import type { ROVec3 } from 'glov/common/vmath';
 import type { FetchInternalParams } from './fetch';
+import { CursorStyle } from './ui';
 
 export type PlatformSoundPlayOpts = {
   volume: number;
@@ -89,4 +90,5 @@ export type PlatformAdapter = {
   loadScript(url: string, cb: VoidFunc): void;
   clipboardWrite(text: string): boolean;
   clipboardRead(): string | null;
+  cursorStyle(style: CursorStyle): void;
 };
