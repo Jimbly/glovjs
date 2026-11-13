@@ -2,7 +2,7 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 // Some code from Turbulenz: Copyright (c) 2012-2013 Turbulenz Limited
 // Released under MIT License: https://opensource.org/licenses/MIT
-/* global navigator, BeforeUnloadEvent, Element, Event, EventListener,
+/* global BeforeUnloadEvent, Element, Event, EventListener,
   FocusEvent, HTMLCanvasElement, Touch, TouchEvent */
 
 import assert from 'assert';
@@ -48,6 +48,8 @@ import {
   MOD_ALT,
   MOD_CTRL,
   MOD_SHIFT,
+  PAD_NUM_STICKS,
+  PAD_TOTAL_BUTTONS,
   POINTERLOCK,
 } from './input_constants';
 
@@ -189,8 +191,6 @@ if (typeof Proxy === 'function') {
     }
   });
 }
-const PAD_NUM_SIMPLE_BUTTONS = 17;
-const PAD_TOTAL_BUTTONS = 28;
 export const PAD = {
   A: 0,
   SELECT: 0, // GLOV name
@@ -1093,16 +1093,8 @@ function inputStartup(_canvas: HTMLCanvasElement, params: InputStartupParams): v
 
 const DEADZONE = 0.26;
 const DEADZONE_SQ = DEADZONE * DEADZONE;
-const NUM_STICKS = 2;
 const PAD_THRESHOLD = 0.5; // for turning analog motion into digital events
 
-type GamepadData = {
-  name: string;
-  id: number;
-  timestamp: number;
-  sticks: Vec2[];
-  button_mask: number; // bitmask state of simple buttons as of last querying
-};
 type PadStateEntry = {
   value: number;
   down_mod: number;
@@ -1110,7 +1102,13 @@ type PadStateEntry = {
   repeating: boolean;
 };
 type PadState = PadStateEntry[];
-let pad_states: PadState[] = []; // One map per gamepad to pad button states
+type GamepadData = {
+  name: string;
+  id: number;
+  sticks: Vec2[];
+  button_mask: number; // bitmask state of simple buttons as of last querying
+  pad_state: PadState;
+};
 let gamepad_data: GamepadData[] = []; // Other tracking data per gamepad
 
 function getGamepadData(idx: number): GamepadData {
@@ -1119,16 +1117,15 @@ function getGamepadData(idx: number): GamepadData {
     gpd = gamepad_data[idx] = {
       name: 'unknown',
       id: idx,
-      timestamp: 0,
-      sticks: new Array(NUM_STICKS),
+      sticks: new Array(PAD_NUM_STICKS),
       button_mask: 0,
+      pad_state: [],
     };
-    for (let ii = 0; ii < NUM_STICKS; ++ii) {
+    for (let ii = 0; ii < PAD_NUM_STICKS; ++ii) {
       gpd.sticks[ii] = vec2();
     }
-    pad_states[idx] = [];
     for (let ii = 0; ii < PAD_TOTAL_BUTTONS; ++ii) {
-      pad_states[idx].push({
+      gpd.pad_state.push({
         value: 0,
         down_mod: 0,
         down_edge_time: 0,
@@ -1148,11 +1145,18 @@ export function inputFramePadUp(): null | FramePadUp {
   return frame_padup;
 }
 
-function updatePadState(gpd: GamepadData, ps: PadState, is_down: boolean, padcode: number): void {
+export function inputOnGamepadButtonInternal(idx: number, padcode: number, is_down: boolean, timestamp: number): void {
+  if (padcode >= PAD_TOTAL_BUTTONS) {
+    return;
+  }
+  let gpd = getGamepadData(idx);
+  let ps = gpd.pad_state;
   let pse = ps[padcode];
+  let bit = 1<<padcode;
   if (is_down && !pse.value) {
+    gpd.button_mask |= bit;
     pse.value = DOWN_EDGE;
-    pse.down_mod = gpd.button_mask & ~(1<<padcode);
+    pse.down_mod = gpd.button_mask & ~bit;
     pse.down_edge_time = engine.hrtime;
     pse.repeating = false;
     onUserInput();
@@ -1175,6 +1179,7 @@ function updatePadState(gpd: GamepadData, ps: PadState, is_down: boolean, padcod
       touches[touch_id].down(null, true);
     }
   } else if (!is_down && pse.value) {
+    gpd.button_mask &= ~bit;
     frame_padup = {
       code: padcode,
       mod: pse.down_mod,
@@ -1194,122 +1199,57 @@ function updatePadState(gpd: GamepadData, ps: PadState, is_down: boolean, padcod
   }
 }
 
-type GetGamepadsFn = () => GetGamepadsRet;
-type GamepadQueryButtonData = number | { value: number };
-type GamepadQueryData = {
-  id: string;
-  timestamp: number;
-  buttons: GamepadQueryButtonData[];
-  axes: number[];
-};
-type GetGamepadsRet = (GamepadQueryData | null)[];
-type NavigatorFallback = {
-  gamepads?: GetGamepadsRet;
-  webkitGamepads?: GetGamepadsRet;
-  getGamepads?: GetGamepadsFn;
-  webkitGetGamepads?: GetGamepadsFn;
-};
+export function inputOnGamepadStickInternal(idx: number, stick: number, x: number, y: number, timestamp: number): void {
+  let gpd = getGamepadData(idx);
+  let pair = gpd.sticks[stick];
+  v2set(pair, x, y);
+  let magnitude = v2lengthSq(pair);
+  if (magnitude > DEADZONE_SQ) {
+    magnitude = sqrt(magnitude);
+
+    // Normalize lX and lY
+    v2scale(pair, pair, 1 / magnitude);
+
+    // Clip the magnitude at its max possible value
+    magnitude = min(magnitude, 1);
+
+    // Adjust magnitude relative to the end of the dead zone
+    magnitude = ((magnitude - DEADZONE) / (1 - DEADZONE));
+
+    v2scale(pair, pair, magnitude);
+  } else {
+    v2set(pair, 0, 0);
+  }
+
+  // Apply "movement" to drag events
+  if (stick <= 1 && pad_to_touch !== undefined) {
+    let touch_data = touches[`g${gpd.id}`];
+    if (touch_data) {
+      v2scale(temp_delta, pair, getFrameDt());
+      v2add(touch_data.delta, touch_data.delta, temp_delta);
+      touch_data.total += abs(temp_delta[0]) + abs(temp_delta[1]);
+      setMouseToMid();
+      v2copy(touch_data.cur_pos, mouse_pos);
+    }
+  }
+
+  // Calculate virtual directional buttons
+  if (stick <= 1) {
+    let codeoffs = stick === 0 ? 0 : PAD.RSTICK_UP - PAD.LSTICK_UP;
+    inputOnGamepadButtonInternal(idx, codeoffs + PAD.LSTICK_LEFT, pair[0] < -PAD_THRESHOLD, timestamp);
+    inputOnGamepadButtonInternal(idx, codeoffs + PAD.LSTICK_RIGHT, pair[0] > PAD_THRESHOLD, timestamp);
+    inputOnGamepadButtonInternal(idx, codeoffs + PAD.LSTICK_DOWN, pair[1] < -PAD_THRESHOLD, timestamp);
+    inputOnGamepadButtonInternal(idx, codeoffs + PAD.LSTICK_UP, pair[1] > PAD_THRESHOLD, timestamp);
+  }
+}
+
 export function padName(padindex?: number): string {
   padindex = padindex || 0;
   return gamepad_data[padindex]?.name || 'unknown';
 }
-function gamepadUpdate(): void {
-  let gamepads;
-  try {
-    let nav = navigator as NavigatorFallback;
-    gamepads = (nav.gamepads ||
-      nav.webkitGamepads ||
-      (nav.getGamepads && nav.getGamepads()) ||
-      (nav.webkitGetGamepads && nav.webkitGetGamepads()));
-  } catch (e) {
-    // Firefox blocks gamepad access sometimes, just ignore it we can't access it
-  }
-
-  if (gamepads) {
-    let numGamePads = gamepads.length;
-    for (let ii = 0; ii < numGamePads; ii++) {
-      let gamepad = gamepads[ii];
-      if (!gamepad) {
-        continue;
-      }
-      let gpd = getGamepadData(ii);
-      gpd.name = gamepad.id || 'unknown';
-      let ps = pad_states[ii];
-      // Update button states
-      if (gpd.timestamp < gamepad.timestamp) {
-        let buttons = gamepad.buttons;
-        gpd.timestamp = gamepad.timestamp;
-
-        let button_states = [];
-        let button_mask = 0;
-        let num_buttons = min(buttons.length, PAD_NUM_SIMPLE_BUTTONS);
-        for (let n = 0; n < num_buttons; n++) {
-          let value = buttons[n];
-          if (typeof value === 'object') {
-            value = value.value;
-          }
-          let is_down = value > 0.5;
-          button_states.push(is_down);
-          if (is_down) {
-            button_mask |= 1 << n;
-          }
-        }
-        gpd.button_mask = button_mask;
-        for (let n = 0; n < num_buttons; ++n) {
-          updatePadState(gpd, ps, button_states[n], n);
-        }
-      }
-
-      // Update axes states
-      let axes = gamepad.axes;
-      if (axes.length >= NUM_STICKS * 2) {
-        for (let n = 0; n < NUM_STICKS; ++n) {
-          let pair = gpd.sticks[n];
-          v2set(pair, axes[n*2], -axes[n*2 + 1]);
-          let magnitude = v2lengthSq(pair);
-          if (magnitude > DEADZONE_SQ) {
-            magnitude = sqrt(magnitude);
-
-            // Normalize lX and lY
-            v2scale(pair, pair, 1 / magnitude);
-
-            // Clip the magnitude at its max possible value
-            magnitude = min(magnitude, 1);
-
-            // Adjust magnitude relative to the end of the dead zone
-            magnitude = ((magnitude - DEADZONE) / (1 - DEADZONE));
-
-            v2scale(pair, pair, magnitude);
-          } else {
-            v2set(pair, 0, 0);
-          }
-
-          // Apply "movement" to drag events
-          if (n <= 1 && pad_to_touch !== undefined) {
-            let touch_data = touches[`g${gpd.id}`];
-            if (touch_data) {
-              v2scale(temp_delta, pair, getFrameDt());
-              v2add(touch_data.delta, touch_data.delta, temp_delta);
-              touch_data.total += abs(temp_delta[0]) + abs(temp_delta[1]);
-              setMouseToMid();
-              v2copy(touch_data.cur_pos, mouse_pos);
-            }
-          }
-        }
-
-        // Calculate virtual directional buttons
-        updatePadState(gpd, ps, gpd.sticks[0][0] < -PAD_THRESHOLD, PAD.LSTICK_LEFT);
-        updatePadState(gpd, ps, gpd.sticks[0][0] > PAD_THRESHOLD, PAD.LSTICK_RIGHT);
-        updatePadState(gpd, ps, gpd.sticks[0][1] < -PAD_THRESHOLD, PAD.LSTICK_DOWN);
-        updatePadState(gpd, ps, gpd.sticks[0][1] > PAD_THRESHOLD, PAD.LSTICK_UP);
-
-        updatePadState(gpd, ps, gpd.sticks[1][0] < -PAD_THRESHOLD, PAD.RSTICK_LEFT);
-        updatePadState(gpd, ps, gpd.sticks[1][0] > PAD_THRESHOLD, PAD.RSTICK_RIGHT);
-        updatePadState(gpd, ps, gpd.sticks[1][1] < -PAD_THRESHOLD, PAD.RSTICK_DOWN);
-        updatePadState(gpd, ps, gpd.sticks[1][1] > PAD_THRESHOLD, PAD.RSTICK_UP);
-      }
-    }
-  }
+export function inputOnGamepadNameInternal(idx: number, name: string | undefined): void {
+  let gpd = getGamepadData(idx);
+  gpd.name = name || 'unknown';
 }
 
 export function fakeTouchEvent(is_down: boolean): void {
@@ -1355,7 +1295,6 @@ function inputTick(): void {
   }
 
   mouse_over_captured = false;
-  gamepadUpdate();
   inEventTopOfFrame();
   ctrl_checked = false;
   if (touches[pointerlock_touch_id] && !pointerLocked()) {
@@ -1387,7 +1326,12 @@ function inputEndFrame(skip_mouse?: boolean): void {
     }
   }
 
-  pad_states.forEach(endFrameTickMap);
+  for (let ii = 0; ii < gamepad_data.length; ++ii) {
+    let gpd = gamepad_data[ii];
+    if (gpd) {
+      endFrameTickMap(gpd.pad_state);
+    }
+  }
   if (!skip_mouse) {
     for (let touch_id in touches) {
       let touch_data = touches[touch_id]!;
@@ -1826,7 +1770,7 @@ export function keyUpEdge(keycode: ValidKeyValue, opts?: KeyCheckOpts | null): n
 }
 
 export function padGetAxes(out: Vec2, stickindex: number, padindex?: number): void {
-  assert(stickindex >= 0 && stickindex < NUM_STICKS);
+  assert(stickindex >= 0 && stickindex < PAD_NUM_STICKS);
   if (padindex === undefined || padindex === ANY) {
     let sub = vec2();
     v2set(out, 0, 0);
@@ -1901,7 +1845,7 @@ function padButtonShared(fn: PadFn, padcode: ValidPadValue, padindex?: number, o
   let r = 0;
   // Handle calling without a specific pad index
   if (padindex === undefined || padindex === ANY) {
-    for (let ii = 0; ii < pad_states.length; ++ii) {
+    for (let ii = 0; ii < gamepad_data.length; ++ii) {
       r += padButtonShared(fn, padcode, ii, opts);
     }
     return r;
@@ -1923,7 +1867,7 @@ function padButtonShared(fn: PadFn, padcode: ValidPadValue, padindex?: number, o
   opts = opts || {};
   opts.mod = opts.mod || 0;
   let opts2 = opts as RealizedPadCheckOpts;
-  let ps = pad_states[padindex];
+  let ps = gpd.pad_state;
 
   let am = ANALOG_MAP[padcode];
   if (am) {

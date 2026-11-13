@@ -11,3 +11,7 @@ export const POINTERLOCK = BUTTON_POINTERLOCK;
 export const MOD_SHIFT = 1<<0;
 export const MOD_CTRL = 1<<1;
 export const MOD_ALT = 1<<2;
+
+export const PAD_NUM_SIMPLE_BUTTONS = 17;
+export const PAD_TOTAL_BUTTONS = 28;
+export const PAD_NUM_STICKS = 2;

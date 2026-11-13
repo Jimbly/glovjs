@@ -53,6 +53,7 @@ import type {
   PlatformStartupParam,
   PlatformStartupRet,
 } from './platform-adapter';
+import { webGamepadUpdate } from './platform-web-gamepad';
 import {
   webInputPasteText,
   webInputPasteTextClear,
@@ -290,6 +291,10 @@ function checkResize(): void {
   profilerStop('checkResize');
 }
 
+function platformWebTopOfFrame(): void {
+  webGamepadUpdate();
+}
+
 function platformWebEndOfFrame(): void {
   webInputPasteTextClear();
 }
@@ -334,6 +339,7 @@ function tickWrap(): void {
     }
   }
 
+  platformWebTopOfFrame();
   tick(); // note: may never return (if it crashes)
   platformWebEndOfFrame();
   // eslint-disable-next-line @typescript-eslint/no-use-before-define
