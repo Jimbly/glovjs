@@ -6,6 +6,7 @@ exports.create = editBoxCreate; // eslint-disable-line @typescript-eslint/no-use
 import assert from 'assert';
 import {
   clamp,
+  damp,
   trimEnd,
 } from 'glov/common/util';
 import * as verify from 'glov/common/verify';
@@ -13,7 +14,10 @@ import { v2same } from 'glov/common/vmath';
 import { is_mobile } from './browser';
 import * as camera2d from './camera2d';
 import * as engine from './engine';
-import { platformAdapterGet } from './engine';
+import {
+  getFrameDt,
+  platformAdapterGet,
+} from './engine';
 import {
   eatAllKeyboardInput,
   inputClick,
@@ -40,6 +44,10 @@ import {
   spotSuppressKBNav,
   spotUnfocus,
 } from './spot';
+import {
+  spriteClipPop,
+  spriteClipPush,
+} from './sprites';
 import {
   stb_textedit_char,
   stb_textedit_click,
@@ -147,8 +155,8 @@ function formHook(ev) {
 let padding = {
   left: 3,
   right: 3,
-  above: 2,
-  below: 2,
+  top: 2,
+  bottom: 2,
 };
 export function editBoxSetPadding(left, right, top, bottom) {
   padding.left = left;
@@ -231,6 +239,7 @@ class GlovUIEditBox {
     };
     this.resetCSSCaching();
     this.had_overflow = false;
+    this.scroll_left = 0;
 
     this.textedit_string = {
       text: this.text, // needs to be kept in sync
@@ -964,25 +973,66 @@ class GlovUIEditBox {
       } = canvas_render || edit_box_default_style;
       let font = uiGetFont();
       let lines = text.split('\n');
-      if (this.input && this.input.scrollTop !== 0) {
-        this.input.scrollTop = 0;
+      let { left, top, right } = padding;
+      let eff_w = w - left - right;
+      let xoffs = left;
+      if (this.dom_backed) {
+        // prevent scrolling if it happened for any reason (paste)
+        if (this.input && this.input.scrollTop !== 0) {
+          this.input.scrollTop = 0;
+        }
+      } else {
+        // scroll if required
+        let pos = charIdxToXY(this.text, this.textedit_state.cursor);
+        let line = lines[pos[1]];
+        let cursor_x = this.lineWidth(line, pos[0]);
+        let line_w = pos[0] === line.length ? cursor_x : this.lineWidth(line);
+        let lookahead = min(font_height * 4, round(eff_w / 4));
+        let cursor_x_min = max(0, cursor_x - lookahead);
+        let cursor_x_max = min(line_w, cursor_x + lookahead);
+        let new_scroll;
+        if (cursor_x_min < this.scroll_left) {
+          new_scroll = cursor_x_min;
+        } else if (cursor_x_max > this.scroll_left + eff_w) {
+          new_scroll = cursor_x_max - eff_w;
+        }
+        if (new_scroll !== undefined) {
+          this.scroll_left = damp(this.scroll_left, new_scroll, 100, getFrameDt());
+        }
+        xoffs -= this.scroll_left;
+        let fade_left = this.scroll_left > 0.1;
+        // TODO: multiline: need to do this if _any_ line is scrolled off the end - compute and do later?
+        let fade_right = line_w > this.scroll_left + eff_w + 0.1;
+        let fade_z = z + 0.9;
+        if (fade_left || fade_right) {
+          if (fade_left && !fade_right) {
+            spriteClipPush(fade_z, x, y, w / 2, h);
+          } else if (!fade_left && fade_right) {
+            spriteClipPush(fade_z, x + w / 2, y, w / 2, h);
+          }
+          drawBox({
+            x, y, z: fade_z, w, h,
+          }, ui_sprites[focused ? 'edit_border_focused_fade' : 'edit_border_fade']);
+          if (fade_left !== fade_right) {
+            spriteClipPop();
+          }
+        }
+
       }
       if (draw_bg) {
         drawBox({
-          x, y, w, h,
+          x, y, z, w, h,
         }, ui_sprites[focused ? 'edit_border_focused' : 'edit_border']);
       }
-      let { left, top, right } = padding;
-      let eff_w = w - left - right;
       // draw text
-      // TODO: maybe apply clipper here?  caller necessarily needs to set max_len and multiline appropriately, though.
+      spriteClipPush(z + 0.1, x + left, y, eff_w, h);
       let line_width = [];
       for (let ii = 0; ii < lines.length; ++ii) {
         let line = lines[ii];
         let line_w = font.draw({
           style: font_style,
           height: font_height,
-          x: x + left,
+          x: x + xoffs,
           y: y + top + ii * line_height, z: z + 0.8,
           w: eff_w,
           text: line,
@@ -990,33 +1040,36 @@ class GlovUIEditBox {
         });
         line_width.push(line_w);
       }
-      if (focused) {
+      let selection = this.getSelection();
+      let has_selection = !v2same(selection[0], selection[1]);
+      if (focused && has_selection) {
         // draw selection
-        let selection = this.getSelection();
-        if (!v2same(selection[0], selection[1])) {
-          let first_row = selection[0][1];
-          let last_row = selection[1][1];
-          for (let jj = first_row; jj <= last_row; ++jj) {
-            let line = lines[jj];
-            let selx0 = jj === first_row ? this.lineWidth(line, selection[0][0]) : 0;
-            let selx1 = line && line.length ?
-              (jj === last_row ? this.lineWidth(line, selection[1][0]) : this.lineWidth(line)) : 1;
-            let xoffs = center ? round((eff_w - line_width[jj])/2) : 0;
-            drawRect(x + left + selx0-1 + xoffs,
-              y + top + jj * line_height,
-              x + left + selx1 + xoffs,
-              y + top + (jj + 1) * line_height, z + 0.75, color_selection);
-          }
-        } else {
-          // draw caret
-          let jj = selection[1][1];
+        let first_row = selection[0][1];
+        let last_row = selection[1][1];
+        for (let jj = first_row; jj <= last_row; ++jj) {
           let line = lines[jj];
-          let caret_x = x + left + this.lineWidth(line, selection[1][0]) - 0.5;
-          if (center) {
-            caret_x += round((eff_w - line_width[jj])/2);
-          }
+          let selx0 = jj === first_row ? this.lineWidth(line, selection[0][0]) : 0;
+          let selx1 = line && line.length ?
+            (jj === last_row ? this.lineWidth(line, selection[1][0]) : this.lineWidth(line)) : 1;
+          let center_offs = center ? round((eff_w - line_width[jj])/2) : 0;
+          drawRect(x + xoffs + selx0-1 + center_offs,
+            y + top + jj * line_height,
+            x + xoffs + selx1 + center_offs,
+            y + top + (jj + 1) * line_height, z + 0.75, color_selection);
+        }
+      }
+      spriteClipPop();
+      if (focused && !has_selection) {
+        // draw caret
+        let jj = selection[1][1];
+        let line = lines[jj];
+        let caret_x = x + xoffs + this.lineWidth(line, selection[1][0]) - 0.5;
+        if (center) {
+          caret_x += round((eff_w - line_width[jj])/2);
+        }
+        if (caret_x > x + 0.5 && caret_x < x + w - 0.5) {
           drawLine(caret_x, y + top + line_height*jj + 0.5,
-            caret_x, y + top + line_height*(jj + 1) - 0.5, z + 0.5, 1, 1, color_caret);
+            caret_x, y + top + line_height*(jj + 1) - 0.5, z + 0.95, 1, 1, color_caret);
         }
       }
     }

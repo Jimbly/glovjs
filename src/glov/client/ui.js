@@ -516,7 +516,9 @@ const base_ui_sprites = {
   focusglow: { atlas: 'default' },
 
   edit_border: { atlas: 'pixely' }, // TODO: add to default atlas
+  edit_border_fade: { atlas: 'pixely' },
   edit_border_focused: { atlas: 'pixely' },
+  edit_border_focused_fade: { atlas: 'pixely' },
 };
 
 function engineDefaultLocalStorageError(e) {

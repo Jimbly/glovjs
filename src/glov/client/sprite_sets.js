@@ -42,7 +42,9 @@ const sprite_sets = {
     focusglow: { atlas: 'pixely' },
 
     edit_border: { atlas: 'pixely' },
+    edit_border_fade: { atlas: 'pixely' },
     edit_border_focused: { atlas: 'pixely' },
+    edit_border_focused_fade: { atlas: 'pixely' },
   },
 };
 
