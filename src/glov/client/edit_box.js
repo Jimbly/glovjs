@@ -271,7 +271,8 @@ class GlovUIEditBox {
     if (params.text && params.text !== this.last_set_text) {
       this.setText(params.text);
     }
-    this.h = (this.multiline || 1) * this.font_height + padding.top + padding.bottom;
+    this.multiline = this.multiline || 1;
+    this.h = this.multiline * this.font_height + padding.top + padding.bottom;
   }
 
   lineWidth(line, len) {
