@@ -584,6 +584,7 @@ let clip_stack = [];
 export function spriteResetTopOfFrame() {
   // In case something crashed and leftover from last frame
   clip_stack.length = 0;
+  camera2d.setInputClipping(null);
   sprite_queue_stack.length = 0;
   sprite_queue.length = 0;
 }
