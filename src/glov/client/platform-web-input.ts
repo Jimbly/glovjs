@@ -1,13 +1,27 @@
-/* global ClipboardEvent, EventListener, KeyboardEvent, Element, UIEvent */
-import { Rec, TSMap } from 'glov/common/types';
+/* global ClipboardEvent, EventListener, KeyboardEvent, Element, UIEvent, MouseEvent, Event */
+
+let mouse_log = 0;
+
+import assert from 'assert';
+import { Rec, TSMap, WithRequired } from 'glov/common/types';
+import { cmd_parse } from './cmds';
 import * as engine from './engine';
 import {
+  getFrameIndex,
+} from './engine';
+import {
   inputAllEventsAllowed,
+  InputMouseEvent,
   inputOnKeyDownInternal,
   inputOnKeyUpInternal,
+  inputOnMouseDownInternal,
+  inputOnMouseMoveInternal,
+  inputOnMouseUpInternal,
+  inputOnMouseWheelInternal,
   inputOnTextInputInternal,
   inputUpdateLayoutMap,
   KEYS,
+  pointerLocked,
   protectUnload,
 } from './input';
 import {
@@ -16,6 +30,14 @@ import {
   MOD_SHIFT,
 } from './input_constants';
 import { qwertyKeyCodeFromEvent } from './keycode';
+import { normalizeWheel, WheelEvent } from './normalize_mousewheel';
+
+cmd_parse.registerValue('mouse_log', {
+  type: cmd_parse.TYPE_INT,
+  range: [0, 1],
+  get: () => mouse_log,
+  set: (v) => (mouse_log = v),
+});
 
 type OurKeyboardEvent = KeyboardEvent & {
   target: Element | null;
@@ -26,6 +48,34 @@ type OurInputEvent = UIEvent & {
   target: Element | null;
   glov_do_not_cancel?: boolean;
 };
+
+type OurMouseEvent = MouseEvent & {
+  target: Element | null;
+  glov_do_not_cancel?: boolean;
+  mozMovementX?: number;
+  mozMovementY?: number;
+  webkitMovementX?: number;
+  webkitMovementY?: number;
+};
+
+let last_event: OurInputEvent;
+const skip: TSMap<1> = { isTrusted: 1, sourceCapabilities: 1, path: 1, currentTarget: 1, view: 1 };
+function eventlog(event: OurInputEvent): void {
+  if (event === last_event) {
+    return;
+  }
+  last_event = event;
+  let event_iter = event as unknown as TSMap<TSMap<unknown> & { id: string }>;
+  let pairs = [];
+  for (let k in event_iter) {
+    let v = event_iter[k];
+    if (!v || typeof v === 'function' || k.toUpperCase() === k || skip[k]) {
+      continue;
+    }
+    pairs.push(`${k}:${v.id || v}`);
+  }
+  console.log(`${getFrameIndex()} ${event.type} ${pointerLocked()?'ptrlck':'unlckd'} ${pairs.join(',')}`);
+}
 
 function eventTimestamp(event: UIEvent | null): number {
   if (event) {
@@ -73,7 +123,7 @@ function letEventThrough(event: OurInputEvent, no_dom_if_leaving?: boolean): 1 |
 
   /* Note: not preventing engine from handling this case, because it would cause
      legitimate clicks (e.g. when an edit box is focused)
-     to be lost, instead, relying on `allow_all_events` when a full-screen HTML UI is active.
+     to be lost, instead, relying on inputAllEventsAllowed() when a full-screen HTML UI is active.
   */
   // or, one of those is focused, and going away from it (e.g. input elem focused, clicking on canvas)
   // this also allows drag events that started in a text area to function (issue on Electron)
@@ -94,6 +144,10 @@ function letEventThrough(event: OurInputEvent, no_dom_if_leaving?: boolean): 1 |
   return EVENT_TO_ENGINE;
 }
 
+function letWheelEventThrough(event: OurMouseEvent): boolean | null {
+  // *not* checking for `noglov`, as links have these, and we want to capture scroll events even if mouse is over links
+  return inputAllEventsAllowed() || isInputElement(event.target);
+}
 
 function modFromEvent(event: OurKeyboardEvent): number {
   return (event.shiftKey ? MOD_SHIFT : 0) |
@@ -243,8 +297,131 @@ function onKeyDown(event: OurKeyboardEvent): void {
   }
 }
 
+function onMouseEvent(
+  event: OurMouseEvent,
+  no_stop?: boolean,
+  no_dom_if_leaving?: boolean
+): InputMouseEvent {
+  /// eventlog(event);
+  // Don't block mouse button 3, that's the Back button
+  if (!(letEventThrough(event, no_dom_if_leaving) & EVENT_TO_DOM) && !no_stop && event.button !== 3) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  // offsetX/layerX return position relative to text-entry boxes, not good!
+  // clientX/clientY do not handle weird scrolling that happens on iOS, but
+  //   should not affect mouse events (but maybe on Safari desktop?)
+  let x = event.pageX;
+  let y = event.pageY;
+  // if (event.offsetX !== undefined) {
+  //   mouse_pos[0] = event.offsetX;
+  //   mouse_pos[1] = event.offsetY;
+  // } else {
+  //   mouse_pos[0] = event.layerX;
+  //   mouse_pos[1] = event.layerY;
+  // }
+
+  let movement_x = event.movementX || event.mozMovementX || event.webkitMovementX;
+  let movement_y = event.movementY || event.mozMovementY || event.webkitMovementY;
+
+  return {
+    x, y,
+    movement_x,
+    movement_y,
+    button: event.button,
+    timestamp: event.timeStamp,
+  };
+}
+
+function onMouseMove(event: OurMouseEvent): void {
+  let evt2 = onMouseEvent(event);
+  inputOnMouseMoveInternal(evt2);
+}
+
+function onMouseDown(event: OurMouseEvent): void {
+  if (mouse_log) {
+    eventlog(event);
+  }
+  let evt2 = onMouseEvent(event, false, true);
+  let no_click = !(letEventThrough(event, true) & EVENT_TO_ENGINE);
+  inputOnMouseDownInternal(evt2, no_click);
+  //This solves input bug when game is running as iframe. E.g. Facebook Instant
+  if (window.focus) {
+    window.focus();
+  }
+}
+
+function hasButton(event: InputMouseEvent): event is WithRequired<InputMouseEvent, 'button'> {
+  return event.button !== undefined;
+}
+
+function onMouseUp(event: OurMouseEvent): void {
+  if (mouse_log) {
+    eventlog(event);
+  }
+  let evt2 = onMouseEvent(event);
+  assert(hasButton(evt2));
+  let no_click = !(letEventThrough(event) & EVENT_TO_ENGINE);
+  inputOnMouseUpInternal(evt2, no_click);
+}
+
+function onWheel(event: OurMouseEvent): void {
+  let evt2 = onMouseEvent(event, true);
+  let normalized = normalizeWheel(event as unknown as WheelEvent);
+  inputOnMouseWheelInternal({
+    ...evt2,
+    wheel_delta: -normalized.pixel_y/100,
+  });
+  if (!letWheelEventThrough(event)) {
+    event.stopPropagation();
+    event.preventDefault();
+  }
+}
+
+let passive_param: false | { passive: false } = false;
+
+function dummyListener(evt: Event): void {
+  // nothing
+}
+
+function ignored(event: OurInputEvent): void {
+  // eventlog(event);
+  if (!(letEventThrough(event) & EVENT_TO_DOM)) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+}
+
 export function webInputStartup(): void {
+  try {
+    let opts = Object.defineProperty({}, 'passive', {
+      get: function () {
+        passive_param = { passive: false };
+        return false;
+      }
+    });
+    window.addEventListener('test', dummyListener, opts);
+    window.removeEventListener('test', dummyListener, opts);
+  } catch (e) {
+    passive_param = false;
+  }
+
   window.addEventListener('keydown', onKeyDown as EventListener, false);
   window.addEventListener('keyup', onKeyUp as EventListener, false);
   window.addEventListener('paste', onPaste as EventListener, false);
+
+  window.addEventListener('mousemove', onMouseMove as EventListener, false);
+  window.addEventListener('mousedown', onMouseDown as EventListener, false);
+  window.addEventListener('mouseup', onMouseUp as EventListener, false);
+  if (window.WheelEvent) {
+    window.addEventListener('wheel', onWheel as EventListener, passive_param);
+  } else {
+    window.addEventListener('DOMMouseScroll', onWheel as EventListener, false);
+    window.addEventListener('mousewheel', onWheel as EventListener, false);
+  }
+
+  window.addEventListener('click', ignored as EventListener, false);
+  //window.addEventListener('click', eventlog as EventListener, false);
+  window.addEventListener('contextmenu', ignored as EventListener, false);
 }

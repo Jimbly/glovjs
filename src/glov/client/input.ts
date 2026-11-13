@@ -3,8 +3,7 @@
 // Some code from Turbulenz: Copyright (c) 2012-2013 Turbulenz Limited
 // Released under MIT License: https://opensource.org/licenses/MIT
 /* global navigator, BeforeUnloadEvent, Element, Event, EventListener,
-  FocusEvent, HTMLCanvasElement, MouseEvent, Touch, TouchEvent,
-  UIEvent */
+  FocusEvent, HTMLCanvasElement, Touch, TouchEvent */
 
 import assert from 'assert';
 
@@ -16,8 +15,6 @@ const UP_EDGE = 3; // only for pads
 // per-app overrideable options
 const TOUCH_AS_MOUSE = true;
 let map_analog_to_dpad = false; // default binds and actions should take care of this now
-
-let mouse_log = 0;
 
 // legacy APIs
 export const click = inputClick; // eslint-disable-line @typescript-eslint/no-use-before-define
@@ -257,7 +254,6 @@ import { internal as actions_internal } from './actions';
 const { actionEatAll } = actions_internal;
 import { is_firefox, is_mac_osx } from './browser';
 import * as camera2d from './camera2d';
-import { cmd_parse } from './cmds';
 import * as engine from './engine';
 import {
   getFrameDt,
@@ -275,7 +271,6 @@ import {
   localStorageGetJSON,
   localStorageSetJSON,
 } from './local_storage';
-import { normalizeWheel, WheelEvent } from './normalize_mousewheel';
 import * as pointer_lock from './pointer_lock';
 import * as settings from './settings';
 import { soundResume } from './sound';
@@ -304,13 +299,6 @@ let no_active_touches = true;
 
 export let touch_mode = localStorageGetJSON('touch_mode', false);
 export let pad_mode = !touch_mode && localStorageGetJSON('pad_mode', false);
-
-cmd_parse.registerValue('mouse_log', {
-  type: cmd_parse.TYPE_INT,
-  range: [0, 1],
-  get: () => mouse_log,
-  set: (v) => (mouse_log = v),
-});
 
 export function inputTouchMode(): boolean {
   return touch_mode;
@@ -414,19 +402,6 @@ export function inputKeyIsText(key: number): true | undefined {
   return text_keys[key];
 }
 
-type OurInputEvent = UIEvent & {
-  target: Element | null;
-  glov_do_not_cancel?: boolean;
-};
-type OurMouseEvent = MouseEvent & {
-  target: Element | null;
-  glov_do_not_cancel?: boolean;
-  mozMovementX?: number;
-  mozMovementY?: number;
-  webkitMovementX?: number;
-  webkitMovementY?: number;
-};
-
 type EventInternal = { timestamp: number };
 type EventWithTimestamp = Event | EventInternal;
 
@@ -470,7 +445,7 @@ class TouchData {
   start_pos: Vec2;
   button: ButtonIndex;
   touch: boolean;
-  constructor(pos: Vec2, touch: boolean, button: ButtonIndex, event: Event | null) {
+  constructor(pos: Vec2, touch: boolean, button: ButtonIndex, event: EventWithTimestamp | null) {
     this.cur_pos = pos.slice(0) as Vec2;
     this.start_pos = pos.slice(0) as Vec2;
     this.touch = touch;
@@ -478,7 +453,7 @@ class TouchData {
     this.origin_time = eventTimestamp(event);
   }
 
-  down(event: UIEvent | null, is_edge: boolean): void {
+  down(event: EventWithTimestamp | null, is_edge: boolean): void {
     if (is_edge) {
       this.down_edge++;
     }
@@ -554,96 +529,12 @@ export function pointerLockExit(): void {
   movement_questionable_frames = MOVEMENT_QUESTIONABLE_FRAMES;
 }
 
-let last_event: OurInputEvent;
-const skip: TSMap<1> = { isTrusted: 1, sourceCapabilities: 1, path: 1, currentTarget: 1, view: 1 };
-function eventlog(event: OurInputEvent): void {
-  if (event === last_event) {
-    return;
-  }
-  last_event = event;
-  let event_iter = event as unknown as TSMap<TSMap<unknown> & { id: string }>;
-  let pairs = [];
-  for (let k in event_iter) {
-    let v = event_iter[k];
-    if (!v || typeof v === 'function' || k.toUpperCase() === k || skip[k]) {
-      continue;
-    }
-    pairs.push(`${k}:${v.id || v}`);
-  }
-  console.log(`${getFrameIndex()} ${event.type} ${pointerLocked()?'ptrlck':'unlckd'} ${pairs.join(',')}`);
-}
-
 let allow_all_events = false;
 export function inputAllowAllEvents(allow: boolean): void {
   allow_all_events = allow;
 }
 export function inputAllEventsAllowed(): boolean {
   return allow_all_events;
-}
-
-function isInputElement(target: Element | null): boolean | null {
-  return target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' ||
-    target.tagName === 'LABEL' || target.tagName === 'VIDEO');
-}
-
-function letWheelEventThrough(event: OurMouseEvent): boolean | null {
-  // *not* checking for `noglov`, as links have these, and we want to capture scroll events even if mouse is over links
-  return allow_all_events || isInputElement(event.target);
-}
-
-// eslint-disable-next-line func-style
-let event_filter: (event: OurInputEvent) => boolean = function (): boolean {
-  return false;
-};
-
-// `filter` returns true if the event should be allowed to propagate to the DOM,
-// and (for mouse up/down events) not be sent to the engine
-export function inputSetEventFilter(filter: (event: OurInputEvent) => boolean): void {
-  event_filter = filter;
-}
-
-const EVENT_TO_ENGINE = 1; // Note: only mouse-up/down events get filtered, all events otherwise got to-engine
-const EVENT_TO_DOM = 2;
-const EVENT_TO_BOTH = 3;
-function letEventThrough(event: OurInputEvent, no_dom_if_leaving?: boolean): 1 | 2 | 3 {
-  if (!event.target || inputAllEventsAllowed() || event.glov_do_not_cancel) {
-    return EVENT_TO_DOM;
-  }
-  // Going to an input or related element
-  if (isInputElement(event.target) ||
-    String(event.target.className).includes('noglov') || event_filter(event)) {
-    return EVENT_TO_DOM;
-  }
-
-  /* Note: not preventing engine from handling this case, because it would cause
-     legitimate clicks (e.g. when an edit box is focused)
-     to be lost, instead, relying on `allow_all_events` when a full-screen HTML UI is active.
-  */
-  // or, one of those is focused, and going away from it (e.g. input elem focused, clicking on canvas)
-  // this also allows drag events that started in a text area to function (issue on Electron)
-  if (document.activeElement && event.target !== document.activeElement &&
-    (isInputElement(document.activeElement) ||
-      String(document.activeElement.className).includes('noglov'))
-  ) {
-    if (no_dom_if_leaving) {
-      // for mouse down events leaving a focused input element, we do _not_ want
-      // them to go to the DOM, because it will unfocus the input element, which,
-      // if it's the Chat UI, will cause the element the user is trying to click
-      // on to disappear before the click (mouse up) even comes through.
-      return EVENT_TO_ENGINE;
-    } else {
-      return EVENT_TO_BOTH;
-    }
-  }
-  return EVENT_TO_ENGINE;
-}
-
-function ignored(event: OurInputEvent): void {
-  // eventlog(event);
-  if (!(letEventThrough(event) & EVENT_TO_DOM)) {
-    event.preventDefault();
-    event.stopPropagation();
-  }
 }
 
 let ctrl_checked = false;
@@ -828,41 +719,36 @@ let last_abs_move_time = 0;
 let last_move_x = 0;
 let last_move_y = 0;
 let seen_mousemove = false;
-function onMouseMove(event: OurMouseEvent, no_stop?: boolean, no_dom_if_leaving?: boolean): void {
+export type InputMouseEvent = {
+  x: number;
+  y: number;
+  timestamp: number;
+  button?: number;
+  movement_x?: number;
+  movement_y?: number;
+  wheel_delta?: number;
+};
+function onMouseMove(event: InputMouseEvent): void {
+  if (touch_mode) {
+    localStorageSetJSON('touch_mode', false);
+    touch_mode = false;
+  }
+  if (pad_mode) {
+    localStorageSetJSON('pad_mode', false);
+    pad_mode = false;
+  }
+
   seen_mousemove = true;
   renderNeeded();
-  /// eventlog(event);
-  // Don't block mouse button 3, that's the Back button
-  if (!(letEventThrough(event, no_dom_if_leaving) & EVENT_TO_DOM) && !no_stop && event.button !== 3) {
-    event.preventDefault();
-    event.stopPropagation();
-    if (touch_mode) {
-      localStorageSetJSON('touch_mode', false);
-      touch_mode = false;
-    }
-    if (pad_mode) {
-      localStorageSetJSON('pad_mode', false);
-      pad_mode = false;
-    }
-  }
   mouse_moved = true;
-  // offsetX/layerX return position relative to text-entry boxes, not good!
-  // clientX/clientY do not handle weird scrolling that happens on iOS, but
-  //   should not affect mouse events (but maybe on Safari desktop?)
-  mouse_pos[0] = event.pageX;
-  mouse_pos[1] = event.pageY;
-  // if (event.offsetX !== undefined) {
-  //   mouse_pos[0] = event.offsetX;
-  //   mouse_pos[1] = event.offsetY;
-  // } else {
-  //   mouse_pos[0] = event.layerX;
-  //   mouse_pos[1] = event.layerY;
-  // }
+
+  mouse_pos[0] = event.x;
+  mouse_pos[1] = event.y;
+
   mouse_pos_is_touch = false;
 
-  let movement_x = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
-  let movement_y = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
-
+  let movement_x = event.movement_x || 0;
+  let movement_y = event.movement_y || 0;
   mouse_move_x += movement_x;
 
   let any_movement = false;
@@ -870,8 +756,8 @@ function onMouseMove(event: OurMouseEvent, no_stop?: boolean, no_dom_if_leaving?
     setMouseToMid();
     if (movement_x || movement_y) {
       // Smooth out (ignore) large jumps in movement
-      // This is, I believe, just a bug with Chromium on Windows, as it repositions the hidden mouse cursor
-      let ts = event.timeStamp || Date.now();
+      // This is, I believe, just a bug with Chromium on Windows as it repositions the hidden mouse cursor
+      let ts = event.timestamp || Date.now();
       let abs_x = abs(movement_x);
       let abs_y = abs(movement_y);
       let abs_move = abs_x + abs_y;
@@ -914,15 +800,16 @@ function onMouseMove(event: OurMouseEvent, no_stop?: boolean, no_dom_if_leaving?
       }
     }
   }
+
 }
 
-function onMouseDown(event: OurMouseEvent): void {
-  if (mouse_log) {
-    eventlog(event);
-  }
-  onMouseMove(event, false, true); // update mouse_pos
+export function inputOnMouseMoveInternal(event: InputMouseEvent): void {
+  onMouseMove(event);
+}
+
+export function inputOnMouseDownInternal(event: InputMouseEvent, no_click: boolean): void {
+  onMouseMove(event); // update mouse_pos
   onUserInput();
-  let no_click = !(letEventThrough(event, true) & EVENT_TO_ENGINE);
 
   let button = event.button as ButtonIndex;
   mouse_down[button] = true;
@@ -937,10 +824,6 @@ function onMouseDown(event: OurMouseEvent): void {
     inEventHandle('mousedown', event);
   }
   mouse_button_had_edge = true;
-  //This solves input bug when game is running as iframe. E.g. Facebook Instant
-  if (window.focus) {
-    window.focus();
-  }
 }
 
 let last_up_edges = [{
@@ -959,12 +842,8 @@ function registerMouseUpEdge(touch_data: TouchData, timestamp: number): void {
   t.timestamp = timestamp;
 }
 
-function onMouseUp(event: OurMouseEvent): void {
-  if (mouse_log) {
-    eventlog(event);
-  }
+export function inputOnMouseUpInternal(event: WithRequired<InputMouseEvent, 'button'>, no_click: boolean): void {
   onMouseMove(event); // update mouse_pos
-  let no_click = !(letEventThrough(event) & EVENT_TO_ENGINE);
   let button = event.button;
   if (mouse_down[button]) {
     let touch_id = `m${button}`;
@@ -992,24 +871,18 @@ type WheelEventData = {
   dispatched: boolean;
 };
 let wheel_events: WheelEventData[] = [];
-function onWheel(event: OurMouseEvent): void {
+export function inputOnMouseWheelInternal(event: WithRequired<InputMouseEvent, 'wheel_delta'>): void {
   renderNeeded();
   let saved = mouse_moved; // don't trigger mouseMoved()
-  onMouseMove(event, true);
+  onMouseMove(event);
   // onUserInput(); - Browser doesn't count mousewheel as user input :(
   mouse_moved = saved;
-  let normalized = normalizeWheel(event as unknown as WheelEvent);
   wheel_events.push({
     // Note: must use `mouse_pos`, not `event.pageX`, if we're pointer locked, the position is updated
     pos: [mouse_pos[0], mouse_pos[1]],
-    delta: -normalized.pixel_y/100,
+    delta: event.wheel_delta,
     dispatched: false,
   });
-
-  if (!letWheelEventThrough(event)) {
-    event.stopPropagation();
-    event.preventDefault();
-  }
 }
 
 let last_touch_pos = vec2();
@@ -1207,21 +1080,6 @@ function inputStartup(_canvas: HTMLCanvasElement, params: InputStartupParams): v
     window.removeEventListener('test', dummyListener, opts);
   } catch (e) {
     passive_param = false;
-  }
-
-  window.addEventListener('click', ignored as EventListener, false);
-  //window.addEventListener('click', eventlog as EventListener, false);
-  window.addEventListener('contextmenu', ignored as EventListener, false);
-  window.addEventListener('mousemove', function (event: Event) {
-    onMouseMove(event as OurMouseEvent);
-  }, false);
-  window.addEventListener('mousedown', onMouseDown as EventListener, false);
-  window.addEventListener('mouseup', onMouseUp as EventListener, false);
-  if (window.WheelEvent) {
-    window.addEventListener('wheel', onWheel as EventListener, passive_param);
-  } else {
-    window.addEventListener('DOMMouseScroll', onWheel as EventListener, false);
-    window.addEventListener('mousewheel', onWheel as EventListener, false);
   }
 
   window.addEventListener('blur', onBlurOrFocus, false);
