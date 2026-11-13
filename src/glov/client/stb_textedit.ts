@@ -1430,6 +1430,10 @@ function stb_text_undo(str: StbTexteditString, state: STB_TexteditState): void
             stb_textedit_discard_redo(s);
          }
          r = s.undo_rec[s.redo_point-1];
+         // PORT: r may now be a different (stale) record than the one filled in above
+         r.insert_length = u.delete_length;
+         r.delete_length = u.insert_length;
+         r.where = u.where;
 
          r.char_storage = s.redo_char_point - u.delete_length;
          s.redo_char_point = s.redo_char_point - u.delete_length;

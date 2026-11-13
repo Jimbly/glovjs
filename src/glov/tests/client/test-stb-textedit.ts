@@ -274,3 +274,25 @@ function key(str: StbTexteditString, state: STB_TexteditState, code: number, mod
   key(str, state, KEYS.DEL, MOD_CTRL);
   assert.equal(str.text, '');
 }
+
+// Undo that must discard a redo record to make room for its redo characters
+{
+  let str = makeString('d'.repeat(500));
+  let state = texteditNewState(true);
+  key(str, state, KEYS.A, MOD_CTRL);
+  key(str, state, KEYS.DEL); // 500 chars held in undo storage
+  stb_textedit_paste(str, state, 'a'.repeat(300));
+  stb_textedit_paste(str, state, 'b'.repeat(250));
+  key(str, state, KEYS.Z, MOD_CTRL); // 250 chars held in redo storage
+  assert.equal(str.text, 'a'.repeat(300));
+  key(str, state, KEYS.Z, MOD_CTRL); // no room for another 300, discards the 'b' redo
+  assert.equal(str.text, '');
+  key(str, state, KEYS.Y, MOD_CTRL);
+  assert.equal(str.text, 'a'.repeat(300));
+  assert.equal(state.cursor, 300);
+  key(str, state, KEYS.Y, MOD_CTRL); // 'b' redo was discarded
+  assert.equal(str.text, 'a'.repeat(300));
+  key(str, state, KEYS.Z, MOD_CTRL);
+  key(str, state, KEYS.Z, MOD_CTRL);
+  assert.equal(str.text, 'd'.repeat(500));
+}
