@@ -789,12 +789,13 @@ export function inputOnKeyDownInternal(event: {
     ks.repeating = false;
 
     inEventHandle('keydown', event);
-    text_input_queue.push({
-      type: 'key',
-      code,
-      mod,
-    });
   }
+  // Add to input queue even if it _is_ a repeat event
+  text_input_queue.push({
+    type: 'key',
+    code,
+    mod,
+  });
 }
 
 export function inputOnTextInputInternal(event: {

@@ -87,9 +87,6 @@ function modFromEvent(evt: SDLKeyEvent): number {
 function onKeyDown(evt: SDLKeyEvent & {
   repeat: boolean;
 }, timestamp: number): void {
-  if (evt.repeat) {
-    return;
-  }
   inputOnKeyDownInternal({
     code: sdlScancodeToKeyCode(evt.scancode),
     mod: modFromEvent(evt),
