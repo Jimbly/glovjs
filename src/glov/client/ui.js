@@ -1955,6 +1955,7 @@ export function modalTextEntry(param) {
     let eb_ret = eb.run({
       x: params.x,
       y: params.y,
+      z: Z.MODAL + 1,
       w: params.avail_width || param.edit_w,
       font_height: params.font_height,
     });
