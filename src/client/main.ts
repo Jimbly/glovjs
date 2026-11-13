@@ -1136,6 +1136,7 @@ export function main(): void {
       if (flagGet('ui_test')) {
         flagSet('lines', false);
         flagSet('scores', false);
+        flagSet('crashes', false);
       }
     }
 
@@ -1144,6 +1145,7 @@ export function main(): void {
       if (flagGet('lines')) {
         flagSet('ui_test', false);
         flagSet('scores', false);
+        flagSet('crashes', false);
       }
     }
 
@@ -1152,6 +1154,7 @@ export function main(): void {
       if (flagGet('scores')) {
         flagSet('ui_test', false);
         flagSet('lines', false);
+        flagSet('crashes', false);
       }
     }
 
@@ -1178,6 +1181,11 @@ export function main(): void {
 
     if (miniButton('Crashes', 'Toggles crash testing', flagGet('crashes'))) {
       flagToggle('crashes');
+      if (flagGet('crashes')) {
+        flagSet('scores', false);
+        flagSet('ui_test', false);
+        flagSet('lines', false);
+      }
     }
 
     if (flagGet('particles')) {
