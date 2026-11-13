@@ -6,7 +6,7 @@ import { ROVec4, vec4 } from 'glov/common/vmath';
 import { bindUIRun } from './bind_ui';
 import { collapsagoriesHeader, collapsagoriesStart, collapsagoriesStop } from './collapsagories';
 import { colorPicker } from './color_picker';
-import { EditBox, editBoxCreate } from './edit_box';
+import { EditBox, editBoxCreate, editBoxGetPadding } from './edit_box';
 import * as engine from './engine';
 import { ALIGN, Font, FontStyle, fontStyle, fontStyleAlpha } from './font';
 import { fscreenActive, fscreenEnter, fscreenExit } from './fscreen';
@@ -83,6 +83,10 @@ function init(x: number, y: number, column_width: number): void {
     x: x + column_width + column_width,
     y: y,
     w: column_width - 8,
+    max_visual_size: {
+      font_height: uiTextHeight(),
+      width: column_width - 8 - (editBoxGetPadding().left + editBoxGetPadding().right),
+    },
   });
   demo_menu = simpleMenuCreate({
     items: [

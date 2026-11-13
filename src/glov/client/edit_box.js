@@ -57,7 +57,6 @@ import {
   stb_textedit_key,
   stb_textedit_key_from_input,
   stb_textedit_paste,
-  stb_textedit_prep_selection_at_cursor,
   texteditHasSelection,
   texteditNewState,
 } from './stb_textedit';
@@ -163,6 +162,9 @@ export function editBoxSetPadding(left, right, top, bottom) {
   padding.right = right;
   padding.top = top;
   padding.bottom = bottom;
+}
+export function editBoxGetPadding() {
+  return padding;
 }
 
 function charIdxToXY(text, offset) {
@@ -396,7 +398,7 @@ class GlovUIEditBox {
     } else {
       this.textedit_state.select_start = sel_start;
       this.textedit_state.select_end = sel_end;
-      stb_textedit_prep_selection_at_cursor(this.textedit_state);
+      this.textedit_state.cursor = sel_end;
     }
   }
   setTextInternal(new_text) {
@@ -423,9 +425,12 @@ class GlovUIEditBox {
       sel_end = input.selectionEnd;
     } else {
       new_text = this.textedit_string.text;
-      // do we need selection state at this level in this path?
-      sel_start = 0;
-      sel_end = 0;
+      if (texteditHasSelection(this.textedit_state)) {
+        sel_start = this.textedit_state.select_start;
+        sel_end = this.textedit_state.select_end;
+      } else {
+        sel_start = sel_end = this.textedit_state.cursor;
+      }
     }
     if (new_text === this.text) {
       this.last_valid_state.sel_start = sel_start;

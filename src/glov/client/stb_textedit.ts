@@ -845,7 +845,7 @@ function stb_textedit_move_to_word_next( str: StbTexteditString, c: number ): nu
 const STB_TEXTEDIT_MOVEWORDRIGHT = stb_textedit_move_to_word_next;
 
 // update selection and cursor to match each other
-export function stb_textedit_prep_selection_at_cursor(state: STB_TexteditState): void
+function stb_textedit_prep_selection_at_cursor(state: STB_TexteditState): void
 {
    if (!STB_TEXT_HAS_SELECTION(state))
       state.select_start = state.select_end = state.cursor;
