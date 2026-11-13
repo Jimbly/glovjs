@@ -774,6 +774,11 @@ class GlovUIEditBox {
     }
 
     const { text, x, y, z, w, h } = this;
+    const { left, top, right, bottom } = padding;
+    const eff_w = w - left - right;
+    const eff_x = x + left;
+    const eff_h = h - top - bottom;
+    const eff_y = y + top;
 
     let clipped_rect = {
       x, y, w, h
@@ -883,7 +888,7 @@ class GlovUIEditBox {
       }
       if (elem) {
         if (!this.spellcheck) {
-          elem.spellcheck = false; // JE: this seems wrong, should be this.input.spellcheck?
+          elem.spellcheck = false; // JE: this seems wrong, should be this.input.spellcheck? Works though...
         }
 
         let clip_path = '';
@@ -893,10 +898,10 @@ class GlovUIEditBox {
           clipped_rect.h !== h
         ) {
           // partially clipped
-          let x0 = `${(clipped_rect.x - x)/w*100}%`;
-          let x1 = `${(clipped_rect.x + clipped_rect.w - x)/w*100}%`;
-          let y0 = `${(clipped_rect.y - y)/h*100}%`;
-          let y1 = `${(clipped_rect.y + clipped_rect.w - y)/h*100}%`;
+          let x0 = `${(clipped_rect.x - eff_x)/eff_w*100}%`;
+          let x1 = `${(clipped_rect.x + clipped_rect.w - eff_x)/eff_w*100}%`;
+          let y0 = `${(clipped_rect.y - eff_y)/eff_h*100}%`;
+          let y1 = `${(clipped_rect.y + clipped_rect.w - eff_y)/eff_h*100}%`;
           clip_path = `polygon(${x0} ${y0}, ${x1} ${y0}, ${x1} ${y1}, ${x0} ${y1})`;
         } else {
           clip_path = '';
@@ -922,10 +927,10 @@ class GlovUIEditBox {
           elem.style.transform = scale;
         }
 
-        let pos = camera2d.htmlPos(x, y);
+        let pos = camera2d.htmlPos(eff_x, eff_y);
         elem.style.left = `${pos[0]}%`;
         elem.style.top = `${pos[1]}%`;
-        let size = camera2d.htmlSize(w, h);
+        let size = camera2d.htmlSize(eff_w, eff_h);
         elem.style.width = `${size[0]/extra_scale}%`;
         elem.style.height = `${size[1]/extra_scale}%`;
 
@@ -977,23 +982,26 @@ class GlovUIEditBox {
       mouseConsumeClicks(clipped_rect);
     }
 
+    // TODO: move this global and overridable
+    let edit_box_default_style = {
+      color_selection: [0.5, 0.5, 0.5, 1],
+      color_caret: [0, 0, 0, 0.8],
+      draw_bg: true,
+    };
+    const {
+      color_selection,
+      color_caret,
+      draw_bg,
+    } = canvas_render || edit_box_default_style;
+    if (draw_bg) {
+      drawBox({
+        x, y, z, w, h,
+      }, ui_sprites[focused ? 'edit_border_focused' : 'edit_border']);
+    }
     if (canvas_render || !this.dom_backed) {
       const { center } = this;
-      // TODO: move this global and overridable
-      let edit_box_default_style = {
-        color_selection: [0.5, 0.5, 0.5, 1],
-        color_caret: [0, 0, 0, 0.8],
-        draw_bg: true,
-      };
-      const {
-        color_selection,
-        color_caret,
-        draw_bg,
-      } = canvas_render || edit_box_default_style;
       let font = uiGetFont();
       let lines = text.split('\n');
-      let { left, top, right } = padding;
-      let eff_w = w - left - right;
       let xoffs = left;
       if (this.dom_backed) {
         // prevent scrolling if it happened for any reason (paste)
@@ -1037,11 +1045,6 @@ class GlovUIEditBox {
           }
         }
 
-      }
-      if (draw_bg) {
-        drawBox({
-          x, y, z, w, h,
-        }, ui_sprites[focused ? 'edit_border_focused' : 'edit_border']);
       }
       // draw text
       spriteClipPush(z + 0.1, x + left, y, eff_w, h);

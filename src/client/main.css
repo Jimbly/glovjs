@@ -25,7 +25,7 @@ textarea, input.canvas_render {
   font-family: perfectvga,"Lucida Console",Courier,monospace;
 }
 input.canvas_render {
-  /* Nudge up a bit, as it doesn't quite line up with parent element for unknown reasons */
+  comment: 'Nudge up a bit, as it doesn't quite line up with parent element for unknown reasons';
   position: relative;
   top: -15%;
 }
@@ -139,8 +139,13 @@ canvas {
   padding: 0;
   margin: 0;
   box-sizing: border-box;
-  background: white;
-  border-width: 1px;
+  --background: white;
+  --border-width: 1px;
+  background: none;
+  border: none;
+}
+.glovui_dynamic input:focus-visible {
+  outline: none;
 }
 
 input[type="search"]::-webkit-search-cancel-button {
