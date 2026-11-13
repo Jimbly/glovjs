@@ -348,6 +348,10 @@ const STB_TEXTEDIT_K_REDO2 = KEYS.Z | STB_TEXTEDIT_K_CONTROL | STB_TEXTEDIT_K_SH
 const STB_TEXTEDIT_K_INSERT = KEYS.INS;
 const STB_TEXTEDIT_K_WORDLEFT = KEYS.LEFT | STB_TEXTEDIT_K_CONTROL;
 const STB_TEXTEDIT_K_WORDRIGHT = KEYS.RIGHT | STB_TEXTEDIT_K_CONTROL;
+// GLOV extensions (not in the C)
+const STB_TEXTEDIT_K_SELECTALL = KEYS.A | STB_TEXTEDIT_K_CONTROL;
+const STB_TEXTEDIT_K_WORDBACKSPACE = KEYS.BACKSPACE | STB_TEXTEDIT_K_CONTROL;
+const STB_TEXTEDIT_K_WORDDELETE = KEYS.DEL | STB_TEXTEDIT_K_CONTROL;
 // No secondary bindings: these are values that real input can never produce
 // (the C would leave them undefined and #ifdef out their cases)
 const STB_TEXTEDIT_K_UNUSED = 1 << 30;
@@ -461,6 +465,7 @@ class StbUndoRecord
    insert_length = 0;
    delete_length = 0;
    char_storage = 0;
+   cursor = 0; // PORT: cursor position before the change, restored by undo
 }
 
 class StbUndoState
@@ -555,6 +560,7 @@ function stb_undo_record_copy(dst: StbUndoRecord, src: StbUndoRecord): void
    dst.insert_length = src.insert_length;
    dst.delete_length = src.delete_length;
    dst.char_storage = src.char_storage;
+   dst.cursor = src.cursor;
 }
 function STB_TEXTEDIT_memmove_recs(arr: StbUndoRecord[], dst: number, src: number, count: number): void
 {
@@ -1162,6 +1168,39 @@ while (retry) { retry = false;
          state.has_preferred_x = false;
          break;
 
+      case STB_TEXTEDIT_K_WORDBACKSPACE: // PORT: GLOV extension
+         if (STB_TEXT_HAS_SELECTION(state))
+            stb_textedit_delete_selection(str, state);
+         else {
+            stb_textedit_clamp(str, state);
+            if (state.cursor > 0) {
+               let start = STB_TEXTEDIT_MOVEWORDLEFT(str, state.cursor);
+               stb_textedit_delete(str, state, start, state.cursor - start);
+               state.cursor = start;
+            }
+         }
+         state.has_preferred_x = false;
+         break;
+
+      case STB_TEXTEDIT_K_WORDDELETE: // PORT: GLOV extension
+         if (STB_TEXT_HAS_SELECTION(state))
+            stb_textedit_delete_selection(str, state);
+         else {
+            stb_textedit_clamp(str, state);
+            if (state.cursor < STB_TEXTEDIT_STRINGLEN(str)) {
+               let end = STB_TEXTEDIT_MOVEWORDRIGHT(str, state.cursor);
+               stb_textedit_delete(str, state, state.cursor, end - state.cursor);
+            }
+         }
+         state.has_preferred_x = false;
+         break;
+
+      case STB_TEXTEDIT_K_SELECTALL: // PORT: GLOV extension
+         state.select_start = 0;
+         state.cursor = state.select_end = STB_TEXTEDIT_STRINGLEN(str);
+         state.has_preferred_x = false;
+         break;
+
       case STB_TEXTEDIT_K_TEXTSTART2:
       case STB_TEXTEDIT_K_TEXTSTART:
          state.cursor = state.select_start = state.select_end = 0;
@@ -1327,13 +1366,15 @@ function stb_text_create_undo_record(state: StbUndoState, numchars: number): Stb
 }
 
 // PORT: returns an index into undo_char, or -1 instead of NULL
-function stb_text_createundo(state: StbUndoState, pos: number, insert_len: number, delete_len: number): number
+// PORT: takes the current cursor position
+function stb_text_createundo(state: StbUndoState, pos: number, insert_len: number, delete_len: number, cursor: number): number
 {
    let r = stb_text_create_undo_record(state, insert_len);
    if (r === null)
       return -1;
 
    r.where = pos;
+   r.cursor = cursor;
    r.insert_length = insert_len;
    r.delete_length = delete_len;
 
@@ -1409,7 +1450,10 @@ function stb_text_undo(str: StbTexteditString, state: STB_TexteditState): void
       s.undo_char_point -= u.insert_length;
    }
 
-   state.cursor = u.where + u.insert_length;
+   r.cursor = u.cursor; // PORT: preserved for undoing the redo
+   // PORT: restore the cursor to where it was (the C uses `u.where + u.insert_length`,
+   //   which is wrong for a forward delete)
+   state.cursor = u.cursor;
    state.select_start = state.select_end = state.cursor;
 
    s.undo_point--;
@@ -1433,6 +1477,7 @@ function stb_text_redo(str: StbTexteditString, state: STB_TexteditState): void
    u.delete_length = r.insert_length;
    u.insert_length = r.delete_length;
    u.where = r.where;
+   u.cursor = r.cursor; // PORT
    u.char_storage = -1;
 
    if (r.delete_length) {
@@ -1470,13 +1515,13 @@ function stb_text_redo(str: StbTexteditString, state: STB_TexteditState): void
 
 function stb_text_makeundo_insert(state: STB_TexteditState, where: number, length: number): void
 {
-   stb_text_createundo(state.undostate, where, 0, length);
+   stb_text_createundo(state.undostate, where, 0, length, state.cursor);
 }
 
 function stb_text_makeundo_delete(str: StbTexteditString, state: STB_TexteditState, where: number, length: number): void
 {
    let i: number;
-   let p = stb_text_createundo(state.undostate, where, length, 0);
+   let p = stb_text_createundo(state.undostate, where, length, 0, state.cursor);
    if (p >= 0) {
       for (i=0; i < length; ++i)
          state.undostate.undo_char[p+i] = STB_TEXTEDIT_GETCHAR(str, where+i);
@@ -1486,7 +1531,7 @@ function stb_text_makeundo_delete(str: StbTexteditString, state: STB_TexteditSta
 function stb_text_makeundo_replace(str: StbTexteditString, state: STB_TexteditState, where: number, old_length: number, new_length: number): void
 {
    let i: number;
-   let p = stb_text_createundo(state.undostate, where, old_length, new_length);
+   let p = stb_text_createundo(state.undostate, where, old_length, new_length, state.cursor);
    if (p >= 0) {
       for (i=0; i < old_length; ++i)
          state.undostate.undo_char[p+i] = STB_TEXTEDIT_GETCHAR(str, where+i);

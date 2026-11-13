@@ -207,3 +207,70 @@ function key(str: StbTexteditString, state: STB_TexteditState, code: number, mod
   assert.equal(str.text, history[history.length - 1]);
   assert.equal(state.undostate.undo_rec.length, 99);
 }
+
+// Undo restores the cursor to where it was before the change
+{
+  let str = makeString('abcdef');
+  let state = texteditNewState(true);
+  key(str, state, KEYS.RIGHT);
+  key(str, state, KEYS.RIGHT);
+  key(str, state, KEYS.DEL);
+  assert.equal(str.text, 'abdef');
+  key(str, state, KEYS.Z, MOD_CTRL);
+  assert.equal(str.text, 'abcdef');
+  assert.equal(state.cursor, 2); // before the restored character
+  key(str, state, KEYS.Y, MOD_CTRL);
+  assert.equal(str.text, 'abdef');
+  assert.equal(state.cursor, 2);
+  key(str, state, KEYS.Z, MOD_CTRL); // undo of the redo
+  assert.equal(state.cursor, 2);
+  key(str, state, KEYS.END);
+  key(str, state, KEYS.BACKSPACE);
+  key(str, state, KEYS.Z, MOD_CTRL);
+  assert.equal(str.text, 'abcdef');
+  assert.equal(state.cursor, 6); // after the restored character
+  // Insert mode replacement
+  key(str, state, KEYS.HOME);
+  key(str, state, KEYS.INS);
+  type(str, state, 'X');
+  assert.equal(str.text, 'Xbcdef');
+  key(str, state, KEYS.Z, MOD_CTRL);
+  assert.equal(str.text, 'abcdef');
+  assert.equal(state.cursor, 0);
+}
+
+// Ctrl+A, Ctrl+Backspace, Ctrl+Delete
+{
+  let str = makeString('hello big world');
+  let state = texteditNewState(true);
+  key(str, state, KEYS.A, MOD_CTRL);
+  assert.equal(state.select_start, 0);
+  assert.equal(state.select_end, 15);
+  assert.equal(state.cursor, 15);
+  key(str, state, KEYS.END);
+  key(str, state, KEYS.BACKSPACE, MOD_CTRL);
+  assert.equal(str.text, 'hello big ');
+  assert.equal(state.cursor, 10);
+  key(str, state, KEYS.BACKSPACE, MOD_CTRL);
+  assert.equal(str.text, 'hello ');
+  key(str, state, KEYS.Z, MOD_CTRL);
+  assert.equal(str.text, 'hello big ');
+  assert.equal(state.cursor, 10);
+  key(str, state, KEYS.HOME);
+  key(str, state, KEYS.DEL, MOD_CTRL);
+  assert.equal(str.text, 'big ');
+  assert.equal(state.cursor, 0);
+  key(str, state, KEYS.Z, MOD_CTRL);
+  assert.equal(str.text, 'hello big ');
+  assert.equal(state.cursor, 0);
+  // With a selection, deletes just the selection
+  key(str, state, KEYS.RIGHT, MOD_SHIFT);
+  key(str, state, KEYS.BACKSPACE, MOD_CTRL);
+  assert.equal(str.text, 'ello big ');
+  key(str, state, KEYS.A, MOD_CTRL);
+  key(str, state, KEYS.DEL, MOD_CTRL);
+  assert.equal(str.text, '');
+  key(str, state, KEYS.BACKSPACE, MOD_CTRL); // nothing to delete
+  key(str, state, KEYS.DEL, MOD_CTRL);
+  assert.equal(str.text, '');
+}
