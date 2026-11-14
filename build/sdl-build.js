@@ -5,6 +5,8 @@ const os = require('os');
 const path = require('path');
 const { asyncEach } = require('glov-async');
 const gb = require('glov-build');
+const argv = require('minimist')(process.argv.slice(2));
+const exec = require('./exec');
 const { patchExe } = require('./patch-exe');
 const sourcemapRemap = require('./sourcemap-remap');
 
@@ -472,4 +474,33 @@ module.exports = function (config, opts) {
       'default',
     ],
   });
+
+  gb.task({
+    name: 'sdl-client',
+    deps: [
+      // do not run until after these are done, but does not cause a hard reload
+      'sdl-dev',
+    ],
+    input: [
+      'sdlcopy-dev-bundles:**',
+      // 'sdlcopy-from-dev',
+    ],
+    ...exec({
+      cwd: 'dist/game/build.sdl',
+      cmd: 'node',
+      args: [
+        argv.port ? `--inspect=${9230 + Number(argv.port) - 3000}` : '--inspect=9230',
+        '--enable-source-maps',
+        'sdl:sdlmain.js',
+      ].concat(argv.debug ? ['--debug'] : []),
+      // .concat(argv['net-delay'] === false ? ['--no-net-delay'] : [])
+      // .concat(argv.timeout === false ? ['--no-timeout'] : [])
+      // .concat(argv['packet-debug'] === false ? ['--no-packet-debug'] : [])
+      // .concat(argv.env ? [`--env=${argv.env}`] : [])
+      stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
+      // shell: true,
+      // detached: true,
+    }),
+  });
+
 };
