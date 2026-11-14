@@ -25,7 +25,9 @@ export type StorageStore = {
   set(key: string, value: undefined | string): void;
 };
 let external_store: StorageStore | null = null;
+let too_late_to_add_external = false;
 export function localStorageAddExternalStore(store: StorageStore): void {
+  assert(!too_late_to_add_external);
   external_store = store;
 }
 
@@ -44,6 +46,7 @@ let lsd_overlay: Partial<Record<string, string>> = {};
 
 export function localStorageGet(key: string): string | undefined {
   assert(is_set);
+  too_late_to_add_external = true;
   let ret: string | null | undefined;
   if (external_store && external_store.test(key)) {
     ret = external_store.get(key);
@@ -66,6 +69,7 @@ let on_error: null | ((e: unknown) => void) = localStorageDefaultErrorHandler;
 
 export function localStorageSet(key: string, value: string | null | undefined): void {
   assert(is_set);
+  too_late_to_add_external = true;
   if (value === null) {
     value = undefined;
   }

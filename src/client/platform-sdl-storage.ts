@@ -1,11 +1,17 @@
+// No imports except types and localStorage, need 0% chance of registering settings, etc before our hook
 import assert from 'assert';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { getStoragePrefix } from 'glov/client/local_storage';
+import { filewatchTriggerChange } from 'glov/client/filewatch';
+import {
+  getStoragePrefix,
+  localStorageAddExternalStore,
+} from 'glov/client/local_storage';
 import {
   DataObject,
   ErrorCallback,
+  TSMap,
   VoidFunc,
 } from 'glov/common/types';
 import { forwardSlashes } from 'glov/common/util';
@@ -27,7 +33,7 @@ export function storagePostInit(): void {
 
 let after_init_cbs: (() => void)[] | null = [];
 
-let data_store: Partial<Record<string, string | DataObject>> = Object.create(null);
+let data_store: TSMap<string | DataObject> = Object.create(null);
 
 let flush_queue: string[] = [];
 let flush_in_progress = false;
@@ -45,7 +51,6 @@ function localAppDataPath(): string {
   }
   return forwardSlashes(path.join(base, getStoragePrefix()));
 }
-
 
 function prefixUserFile(output_file: string): string {
   let parsed = path.parse(output_file);
@@ -232,6 +237,8 @@ function restoreFromBaks(): void {
 }
 
 function initDone(): void {
+  // eslint-disable-next-line @typescript-eslint/no-use-before-define
+  storageRegister();
   console.log(`[STORAGE] Storage initialized, ${Object.keys(data_store).length} files loaded`);
   let cbs = after_init_cbs!;
   after_init_cbs = null;
@@ -336,7 +343,7 @@ export type StorageParams = {
 export function storageStartup(params: StorageParams, next: VoidFunc): void {
   assert(!inited);
   inited = true; // invalid to call storageSetKey after this line
-  MAX_BACKUPS = params.max_backups || 2; // QP2A: 9
+  MAX_BACKUPS = params.max_backups || 3; // QP2A: 9
   assert(MAX_BACKUPS <= 9); // needs code changes otherwise
 
   storageWhenReady(next);
@@ -359,7 +366,9 @@ export function storageStartup(params: StorageParams, next: VoidFunc): void {
     }
     console.log(`[STORAGE] Detected ${new_contents ? 'change to' : 'delete of'} "${filename}"`);
     data_store[file_dir] = new_contents;
-    // QP2ATODO mainWindow()?.webContents.send('electron-storage-change', { filename: file_dir, data: new_contents });
+    let m = file_dir.match(/^files\/(.+)\.(txt|json)$/);
+    assert(m);
+    filewatchTriggerChange(`${m[1]}.localStorage`);
   }
   function onFileChange(event_type: string, filename: string): void {
     if (!filename) {
@@ -420,7 +429,7 @@ export function storageStartup(params: StorageParams, next: VoidFunc): void {
 }
 
 
-export function storageSetFile(
+function storageSetFile(
   file: string,
   value: string | undefined,
 ): void {
@@ -448,6 +457,7 @@ export function storageSetFile(
   flushFile(key);
 }
 
+// donotcheckin: this probably isn't needed, just use localStorageGet now?
 export function storageGetJSON<T=unknown>(file: string, field: string, def: T): T {
   assert(file.endsWith('.json'));
   let obj = data_store[file];
@@ -460,7 +470,7 @@ export function storageGetJSON<T=unknown>(file: string, field: string, def: T): 
   return ret === undefined ? def : ret as T;
 }
 
-export function storageSetJSON(file: string, field: string, value: unknown): void {
+function storageSetJSON(file: string, field: string, value: unknown): void {
   assert(file.endsWith('.json'));
   let obj = data_store[file];
   if (obj) {
@@ -479,6 +489,84 @@ export function storageSetJSON(file: string, field: string, value: unknown): voi
 
   flushFile(file);
 }
+
+function settingsFile(key: string): string | null {
+  if (
+    key.startsWith('flag_') || // ui_test
+    [
+      'cmd_parse_leaderboardmode', // QP2A
+      'cmd_parse_delayederror', // QP2A
+      'demo_migrate_done', // QP2A
+      'demo_migrate_avail', // QP2A
+    ].includes(key)
+  ) {
+    return 'user-settings.json';
+  } else if ([
+    'cmd_parse_maxfps_2',
+    'cmd_parse_useanimationframe',
+    'cmd_parse_volume',
+    'cmd_parse_volumemusic',
+    'cmd_parse_volumesound',
+    'cmd_parse_volumebeeps', // QP2A
+    'cmd_parse_pixelperfect', // QP2A
+  ].includes(key)) {
+    return 'device-settings.json';
+  } else if (
+    key.startsWith('lt.') || // QP2A
+    key.match(/^p.+\.\d+$/) || // QP2A
+    key.startsWith('win_count') || // QP2A
+    key.startsWith('ach.') || // QP2A
+    key === 'cmd_parse_solitaire_unlocked' // QP2A
+  ) {
+    return 'user-stats.json';
+  } else if (
+    key.startsWith('uitest.') || // ui_test
+    key.match(/^c.+\.\d+$/) || // QP2A
+    key.match(/^z.+\.best$/) || // QP2A
+    key.match(/^z.+\.oldbest$/) // QP2A
+  ) {
+    return 'file';
+  }
+  return 'local-storage.json';
+}
+
+function filenameForKey(key: string): string {
+  // QP2A let ext = key.startsWith('z') ? 'json' : 'txt';
+  let ext = 'json';
+  return `files/${key}.${ext}`;
+}
+
+function storageRegister(): void {
+  localStorageAddExternalStore({
+    test: function (key: string): boolean {
+      return Boolean(settingsFile(key));
+    },
+    get: function (key: string): string | undefined {
+      let settings_file = settingsFile(key);
+      assert(settings_file);
+      if (settings_file === 'file') {
+        let entry = data_store[filenameForKey(key)] as string | undefined;
+        return entry;
+      }
+      let obj = data_store[settings_file] as TSMap<string> | undefined;
+      if (!obj) {
+        return undefined;
+      }
+      return obj[key];
+    },
+    set: function (key: string, value: string | undefined): void {
+      let settings_file = settingsFile(key);
+      assert(settings_file);
+      if (settings_file === 'file') {
+        let filename = filenameForKey(key);
+        storageSetFile(filename, value);
+        return;
+      }
+      storageSetJSON(settings_file, key, value);
+    },
+  });
+}
+
 
 let demo_migrate: null | {
   demo_files_root: string;
