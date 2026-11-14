@@ -36,10 +36,13 @@ import { ErrorCallback, VoidFunc } from 'glov/common/types';
 import { sdlEventQueue, sdlEventsDispatchQueued, sdlEventsStartup } from './platform-sdl-events';
 import { sdlGamepadStartup } from './platform-sdl-gamepad';
 import { sdlSoundGetAPI } from './platform-sdl-sound';
+import { storagePostInit } from './platform-sdl-storage';
 import { sdlWindowStateLoad, sdlWindowStateTrack } from './sdl-window-state';
 const { PNG } = require('pngjs');
 
 const { round, min, max } = Math;
+
+storagePostInit(); // storage init must be done before requiring this and related
 
 function setEditBoxNearBottom(frame_index: number, required_padding_dom_coords: number): void {
   // TODO?
@@ -146,7 +149,7 @@ function onCloseRequested(): void {
 
 function startup(param: PlatformStartupParam): PlatformStartupRet {
   let { antialias } = param;
-  application_root = (window as unknown as { application_root: string }).application_root;
+  application_root = window.application_root;
 
   let window_state = sdlWindowStateLoad();
   sdlwindow = sdl.video.createWindow({

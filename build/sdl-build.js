@@ -33,6 +33,7 @@ module.exports = function (config, opts) {
         __dirname: null,
         process: null,
         Buffer: null,
+        setImmediate: null,
       },
       bare: true,
       browserField: false,

@@ -14,6 +14,7 @@ const browserify_options_entrypoint = {
   bundleExternal: false,
   insertGlobalVars: {
     __dirname: null, // for SDL build
+    setImmediate: null, // for SDL build
     Buffer: null,
   },
   prelude: fs.readFileSync(__dirname + '/preludeapp.js', 'utf8').trim(),

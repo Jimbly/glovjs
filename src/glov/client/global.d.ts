@@ -15,6 +15,9 @@ declare module 'glov/client/global' {
 
       // GL context
       gl: WebGLRenderingContext | WebGL2RenderingContext;
+
+      // SDL
+      application_root: string;
     }
 
     const BUILD_TIMESTAMP: string;

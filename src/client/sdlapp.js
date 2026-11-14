@@ -10,7 +10,12 @@ require('./sdlwindow');
 require('glov/client/bootstrap');
 require('./platform-sdl-bootstrap');
 require('./appconfig');
-require('./platform-sdl');
-// require('./platform-steamworks');
-require('./main').main();
-window.time_load_init = Date.now();
+// require('./platform-steamworks').steamInit({
+//   main_app_id: 480,
+//   demo_app_id: null,
+// });
+require('./platform-sdl-storage').storageStartup({}, function () {
+  require('./platform-sdl');
+  require('./main').main();
+  window.time_load_init = Date.now();
+});
