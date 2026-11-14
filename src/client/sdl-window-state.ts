@@ -4,11 +4,8 @@
 // events internally (and throw once the window is destroyed), so they are not
 // safe to call from arbitrary points, notably while handling 'close'.
 
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
 import { default as sdl, Sdl } from '@kmamal/sdl';
-import { getStoragePrefix } from 'glov/client/local_storage';
+import { localStorageGetJSON, localStorageSetJSON } from 'glov/client/local_storage';
 import { SDLWindow } from './platform-sdl';
 
 const { max, min, round } = Math;
@@ -37,29 +34,12 @@ type WindowState = Rect & {
 
 export type SDLWindowCreateOpts = Partial<Rect>;
 
-function statePath(): string {
-  let base: string;
-  if (process.platform === 'win32') {
-    base = process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming');
-  } else if (process.platform === 'darwin') {
-    base = path.join(os.homedir(), 'Library', 'Application Support');
-  } else {
-    base = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config');
-  }
-  return path.join(base, getStoragePrefix(), 'window.json');
-}
-
 function isInt(v: unknown): v is number {
   return Number.isInteger(v) && Math.abs(v as number) < 2 ** 31;
 }
 
 function stateRead(): WindowState | null {
-  let data;
-  try {
-    data = JSON.parse(fs.readFileSync(statePath(), 'utf8'));
-  } catch {
-    return null; // missing (first run) or unreadable
-  }
+  let data = localStorageGetJSON<WindowState | null>('sdl-window-state', null);
   if (!data || !isInt(data.x) || !isInt(data.y) ||
     !isInt(data.width) || data.width <= 0 || !isInt(data.height) || data.height <= 0
   ) {
@@ -74,22 +54,8 @@ function stateRead(): WindowState | null {
   };
 }
 
-let last_written = '';
 function stateWrite(state: WindowState): void {
-  let str = JSON.stringify(state);
-  if (str === last_written) {
-    return;
-  }
-  let filename = statePath();
-  try {
-    fs.mkdirSync(path.dirname(filename), { recursive: true });
-    let tmp = `${filename}.tmp`;
-    fs.writeFileSync(tmp, str);
-    fs.renameSync(tmp, filename);
-    last_written = str;
-  } catch (e) {
-    console.error(`Error saving window state to ${filename}:`, e);
-  }
+  localStorageSetJSON('sdl-window-state', state);
 }
 
 function intersectArea(a: Rect, b: Rect): number {
@@ -134,7 +100,6 @@ export function sdlWindowStateLoad(): { create_opts: SDLWindowCreateOpts; maximi
   if (!state) {
     return { create_opts: {}, maximized: false };
   }
-  last_written = JSON.stringify(state);
   let displays = sdl.video.displays;
   let title_h = titleBarHeight(displays, state.x, state.y);
   // The saved position is of the client area, the title bar is above it

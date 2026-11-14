@@ -37,6 +37,7 @@ let data_store: TSMap<string | DataObject> = Object.create(null);
 
 let flush_queue: string[] = [];
 let flush_in_progress = false;
+let shutting_down = false;
 
 let suppress_changes: Partial<Record<string, true>> = Object.create(null);
 
@@ -61,8 +62,15 @@ function prefixUserFile(output_file: string): string {
   return output_file;
 }
 
+let on_flush_finish: VoidFunc | undefined;
+
 function flushStep(): void {
   if (!flush_queue.length || flush_in_progress) {
+    if (on_flush_finish) {
+      let cb = on_flush_finish;
+      on_flush_finish = undefined;
+      cb();
+    }
     return;
   }
   flush_in_progress = true;
@@ -488,15 +496,18 @@ function settingsFile(key: string): string | null {
     ].includes(key)
   ) {
     return 'user-settings.json';
-  } else if ([
-    'cmd_parse_maxfps_2',
-    'cmd_parse_useanimationframe',
-    'cmd_parse_volume',
-    'cmd_parse_volumemusic',
-    'cmd_parse_volumesound',
-    'cmd_parse_volumebeeps', // QP2A
-    'cmd_parse_pixelperfect', // QP2A
-  ].includes(key)) {
+  } else if (
+    key.startsWith('sdl-') || // sdl-window-state
+    [
+      'cmd_parse_maxfps_2',
+      'cmd_parse_useanimationframe',
+      'cmd_parse_volume',
+      'cmd_parse_volumemusic',
+      'cmd_parse_volumesound',
+      'cmd_parse_volumebeeps', // QP2A
+      'cmd_parse_pixelperfect', // QP2A
+    ].includes(key)
+  ) {
     return 'device-settings.json';
   } else if (
     key.startsWith('lt.') || // QP2A
@@ -542,6 +553,10 @@ function storageRegister(): void {
       return obj[key];
     },
     set: function (key: string, value: string | undefined): void {
+      if (shutting_down) {
+        console.error(`localStorage write after shutdown "${key}"="${value}"`);
+        return;
+      }
       let settings_file = settingsFile(key);
       assert(settings_file);
       if (settings_file === 'file') {
@@ -552,6 +567,16 @@ function storageRegister(): void {
       storageSetJSON(settings_file, key, value);
     },
   });
+}
+
+export function storageShutdown(next: VoidFunc): void {
+  assert(!shutting_down);
+  shutting_down = true;
+  if (flush_in_progress || flush_queue.length) {
+    on_flush_finish = next;
+  } else {
+    next();
+  }
 }
 
 

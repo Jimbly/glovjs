@@ -36,7 +36,7 @@ import { ErrorCallback, VoidFunc } from 'glov/common/types';
 import { sdlEventQueue, sdlEventsDispatchQueued, sdlEventsStartup } from './platform-sdl-events';
 import { sdlGamepadStartup } from './platform-sdl-gamepad';
 import { sdlSoundGetAPI } from './platform-sdl-sound';
-import { storagePostInit } from './platform-sdl-storage';
+import { storagePostInit, storageShutdown } from './platform-sdl-storage';
 import { sdlWindowStateLoad, sdlWindowStateTrack } from './sdl-window-state';
 const { PNG } = require('pngjs');
 
@@ -85,14 +85,18 @@ let last_swap_time = 0;
 //   (input events are queued in platform-sdl-events, resizes are deferred here).
 let in_render_frame = false;
 let resize_pending = false;
+let closing = false;
 
 function renderFrame(): void {
-  if (!gl) {
+  if (!gl || sdlwindow.destroyed || closing) {
     return;
   }
   in_render_frame = true;
   try {
     sdlEventsDispatchQueued();
+    if (closing) {
+      return;
+    }
     tick(); // note: may never return (if it crashes)
   } finally {
     in_render_frame = false;
@@ -136,15 +140,15 @@ function checkResizeInternal(): void {
   needReposSet(1);
 }
 
-let closing = false;
 function onCloseRequested(): void {
   if (closing) {
     return;
   }
   closing = true;
-  // TODO: wait for storage saving to finish
   sdlwindow.destroy(); // emits 'close', which sdl-window-state uses to save the window state
-  process.exit(0);
+  storageShutdown(function () {
+    process.exit(0);
+  });
 }
 
 function startup(param: PlatformStartupParam): PlatformStartupRet {
