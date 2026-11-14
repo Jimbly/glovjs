@@ -457,19 +457,6 @@ function storageSetFile(
   flushFile(key);
 }
 
-// donotcheckin: this probably isn't needed, just use localStorageGet now?
-export function storageGetJSON<T=unknown>(file: string, field: string, def: T): T {
-  assert(file.endsWith('.json'));
-  let obj = data_store[file];
-  if (obj) {
-    assert(typeof obj === 'object');
-  } else {
-    obj = {};
-  }
-  let ret = obj[field];
-  return ret === undefined ? def : ret as T;
-}
-
 function storageSetJSON(file: string, field: string, value: unknown): void {
   assert(file.endsWith('.json'));
   let obj = data_store[file];
