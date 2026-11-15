@@ -152,7 +152,7 @@ function onFingerCancel(evt: Events.Window.FingerCancel): void {
 export function sdlEventsStartup(sdlwindow_in: SDLWindow): void {
   sdlwindow = sdlwindow_in;
   sdlwindow.on('*', function (a) {
-    if (a === 'move' || a === 'mouseMove') { // too noisy
+    if (a === 'move' || a === 'mouseMove' || 'mouseWheel') { // too noisy, also handled
       return;
     }
     if (a === 'keyUp' || a === 'keyDown') { // handled
