@@ -29,14 +29,13 @@ export function inEventHandle(type, event) {
   switch (type) {
     case 'keydown':
     case 'keyup':
-      if (list[event.keyCode]) {
-        list[event.keyCode](type, event);
+      if (list[event.code]) {
+        list[event.code](type, event);
       }
       break;
     case 'mouseup':
     case 'mousedown': {
-      let x = event.pageX;
-      let y = event.pageY;
+      let { x, y } = event;
       let button = event.button || 0;
       for (let ii = 0; ii < list.length; ++ii) {
         let elem = list[ii];
