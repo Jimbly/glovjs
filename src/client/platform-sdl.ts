@@ -389,7 +389,16 @@ function fetchSDL(params: FetchInternalParams, done: ErrorCallback<unknown>): vo
 }
 
 function loadScript(url: string, done: VoidFunc): void {
-  // TODO
+  url = url.split('?')[0].split('#')[0];
+  fs.readFile(application_root + url, 'utf8', function (err, data) {
+    if (err) {
+      console.error(`Error loading "${url}": ${err}`);
+      return done();
+    }
+    // eslint-disable-next-line no-eval
+    eval(data);
+    done();
+  });
 }
 
 function clipboardWrite(text: string): boolean {
