@@ -91,4 +91,9 @@ export type PlatformAdapter = {
   clipboardWrite(text: string): boolean;
   clipboardRead(): string | null;
   cursorStyle(style: CursorStyle): void;
+
+  fscreenAvailable(): boolean;
+  fscreenEnter(): void;
+  fscreenExit(): void;
+  fscreenActive(): boolean;
 };

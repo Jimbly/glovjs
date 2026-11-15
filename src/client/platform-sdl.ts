@@ -148,13 +148,31 @@ function checkResizeInternal(): void {
 }
 
 let sdlWindowStateFullscreen: OnFullscreen;
+
+function fscreenAvailable(): boolean {
+  return true;
+}
+function fscreenEnter(): void {
+  sdlwindow.setFullscreen(true);
+  sdlWindowStateFullscreen(true);
+}
+function fscreenExit(): void {
+  sdlwindow.setFullscreen(false);
+  sdlWindowStateFullscreen(false);
+}
+function fscreenActive(): boolean {
+  return sdlwindow.fullscreen;
+}
+
 function checkFullscreenToggle(): void {
   if (keyDownEdge(KEYS.ENTER, { mod: MOD_ALT }) ||
     keyDownEdge(KEYS.F11)
   ) {
-    let new_value = !sdlwindow.fullscreen;
-    sdlwindow.setFullscreen(new_value);
-    sdlWindowStateFullscreen(new_value);
+    if (fscreenActive()) {
+      fscreenExit();
+    } else {
+      fscreenEnter();
+    }
   }
 }
 
@@ -431,6 +449,11 @@ const platform_sdl: PlatformAdapter = {
   clipboardWrite,
   clipboardRead,
   cursorStyle,
+
+  fscreenAvailable,
+  fscreenEnter,
+  fscreenExit,
+  fscreenActive,
 };
 
 assert(!window.platform_adapter);

@@ -53,6 +53,12 @@ import type {
   PlatformStartupParam,
   PlatformStartupRet,
 } from './platform-adapter';
+import {
+  fscreenActive,
+  fscreenAvailable,
+  fscreenEnter,
+  fscreenExit,
+} from './platform-web-fscreen';
 import { webGamepadUpdate } from './platform-web-gamepad';
 import {
   webInputPasteText,
@@ -658,6 +664,11 @@ const platform_web: PlatformAdapter = {
   clipboardWrite,
   clipboardRead,
   cursorStyle,
+
+  fscreenAvailable,
+  fscreenEnter,
+  fscreenExit,
+  fscreenActive,
 };
 
 

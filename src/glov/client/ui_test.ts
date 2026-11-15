@@ -8,8 +8,8 @@ import { collapsagoriesHeader, collapsagoriesStart, collapsagoriesStop } from '.
 import { colorPicker } from './color_picker';
 import { EditBox, editBoxCreate, editBoxGetPadding } from './edit_box';
 import * as engine from './engine';
+import { platformAdapterGet } from './engine';
 import { ALIGN, Font, FontStyle, fontStyle, fontStyleAlpha } from './font';
-import { fscreenActive, fscreenEnter, fscreenExit } from './fscreen';
 import * as input from './input';
 import {
   mouseOver,
@@ -542,7 +542,8 @@ nec arborei timentem, ut crimina vidit.
   internal_y += header_h + pad;
 
   ui.buttonText({ x: 2, y: internal_y, z: z + 1, text: 'Fullscreen',
-    in_event_cb: fscreenActive() ? fscreenExit : fscreenEnter });
+    in_event_cb: platformAdapterGet().fscreenActive() ?
+      platformAdapterGet().fscreenExit : platformAdapterGet().fscreenEnter });
   internal_y += button_height + pad;
   if (ui.buttonText({ x: 2, y: internal_y, z: z + 1, text: 'Edit Keybinds' })) {
     keybinds_up = true;
