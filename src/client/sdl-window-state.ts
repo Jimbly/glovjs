@@ -5,6 +5,7 @@
 // safe to call from arbitrary points, notably while handling 'close'.
 
 import { default as sdl, Sdl } from '@kmamal/sdl';
+import { MODE_DEVELOPMENT } from 'glov/client/client_config';
 import { localStorageGetJSON, localStorageSetJSON } from 'glov/client/local_storage';
 import { SDLWindow } from './platform-sdl';
 
@@ -30,9 +31,12 @@ type Rect = {
 
 type WindowState = Rect & {
   maximized: boolean;
+  fullscreen: boolean;
 };
 
-export type SDLWindowCreateOpts = Partial<Rect>;
+export type SDLWindowCreateOpts = Partial<Rect> & {
+  fullscreen: boolean;
+};
 
 function isInt(v: unknown): v is number {
   return Number.isInteger(v) && Math.abs(v as number) < 2 ** 31;
@@ -51,6 +55,7 @@ function stateRead(): WindowState | null {
     width: data.width,
     height: data.height,
     maximized: Boolean(data.maximized),
+    fullscreen: Boolean(data.fullscreen),
   };
 }
 
@@ -98,7 +103,7 @@ function fullyOnScreen(displays: Sdl.Video.Display[], rect: Rect): boolean {
 export function sdlWindowStateLoad(): { create_opts: SDLWindowCreateOpts; maximized: boolean } {
   let state = stateRead();
   if (!state) {
-    return { create_opts: {}, maximized: false };
+    return { create_opts: { fullscreen: !MODE_DEVELOPMENT }, maximized: false };
   }
   let displays = sdl.video.displays;
   let title_h = titleBarHeight(displays, state.x, state.y);
@@ -109,9 +114,9 @@ export function sdlWindowStateLoad(): { create_opts: SDLWindowCreateOpts; maximi
     width: state.width,
     height: state.height + title_h,
   };
-  let { width, height } = state;
+  let { width, height, fullscreen } = state;
   if (fullyOnScreen(displays, frame)) {
-    return { create_opts: { x: state.x, y: state.y, width, height }, maximized: state.maximized };
+    return { create_opts: { x: state.x, y: state.y, width, height, fullscreen }, maximized: state.maximized };
   }
   // Some part is off-screen (e.g. a monitor was disconnected or the window was
   //   dragged partly off-screen): leave the position unset so SDL centers it,
@@ -121,14 +126,16 @@ export function sdlWindowStateLoad(): { create_opts: SDLWindowCreateOpts; maximi
     width = min(width, bounds.width);
     height = min(height, bounds.height - title_h);
   }
-  return { create_opts: { width, height }, maximized: state.maximized };
+  return { create_opts: { width, height, fullscreen }, maximized: state.maximized };
 }
 
+export type OnFullscreen = (is_fullscreen: boolean) => void;
 // Call immediately after creating the window (before maximizing it, if desired)
-export function sdlWindowStateTrack(win: SDLWindow): void {
+export function sdlWindowStateTrack(win: SDLWindow): OnFullscreen {
   let current: Rect = { x: win.x, y: win.y, width: win.width, height: win.height };
   let normal: Rect = { ...current };
   let maximized = false;
+  let fullscreen = false;
   let timer: ReturnType<typeof setTimeout> | null = null;
 
   function commit(): void {
@@ -136,12 +143,10 @@ export function sdlWindowStateTrack(win: SDLWindow): void {
       clearTimeout(timer);
       timer = null;
     }
-    // Note: fullscreen is not tracked (node-sdl does not expose events for it,
-    //   and this app does not currently use fullscreen)
-    if (!maximized) {
+    if (!maximized && !fullscreen) {
       normal = { ...current };
     }
-    stateWrite({ ...normal, maximized });
+    stateWrite({ ...normal, maximized, fullscreen });
   }
 
   function schedule(): void {
@@ -171,4 +176,10 @@ export function sdlWindowStateTrack(win: SDLWindow): void {
     schedule();
   });
   win.on('close', commit);
+
+  function onFullscreen(is_fullscreen: boolean): void {
+    fullscreen = is_fullscreen;
+    schedule();
+  }
+  return onFullscreen;
 }

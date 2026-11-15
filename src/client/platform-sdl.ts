@@ -19,11 +19,13 @@ import { default as sdl, Sdl } from '@kmamal/sdl';
 import { setCrashMessage } from 'glov/client/bootstrap';
 import { setAbilityReloadUpdates } from 'glov/client/client_config';
 import {
+  addTickFunc,
   internal as engine_internal,
   hrnow,
 } from 'glov/client/engine';
 const { needReposSet, setCanvasDims, tick, disableNumberExtend } = engine_internal;
 import { FetchInternalParams, fetchNative } from 'glov/client/fetch';
+import { keyDownEdge, KEYS, MOD_ALT } from 'glov/client/input';
 import type {
   PlatformAdapter,
   PlatformSoundAPI,
@@ -37,7 +39,11 @@ import { sdlEventQueue, sdlEventsDispatchQueued, sdlEventsStartup } from './plat
 import { sdlGamepadStartup } from './platform-sdl-gamepad';
 import { sdlSoundGetAPI } from './platform-sdl-sound';
 import { storagePostInit, storageShutdown } from './platform-sdl-storage';
-import { sdlWindowStateLoad, sdlWindowStateTrack } from './sdl-window-state';
+import {
+  OnFullscreen,
+  sdlWindowStateLoad,
+  sdlWindowStateTrack,
+} from './sdl-window-state';
 const { PNG } = require('pngjs');
 
 const { round, min, max } = Math;
@@ -140,6 +146,17 @@ function checkResizeInternal(): void {
   needReposSet(1);
 }
 
+let sdlWindowStateFullscreen: OnFullscreen;
+function checkFullscreenToggle(): void {
+  if (keyDownEdge(KEYS.ENTER, { mod: MOD_ALT }) ||
+    keyDownEdge(KEYS.F11)
+  ) {
+    let new_value = !sdlwindow.fullscreen;
+    sdlwindow.setFullscreen(new_value);
+    sdlWindowStateFullscreen(new_value);
+  }
+}
+
 function onCloseRequested(): void {
   if (closing) {
     return;
@@ -157,12 +174,11 @@ function startup(param: PlatformStartupParam): PlatformStartupRet {
 
   let window_state = sdlWindowStateLoad();
   sdlwindow = sdl.video.createWindow({
-    // fullscreen: true,
     resizable: true,
     opengl: true,
     ...window_state.create_opts,
   });
-  sdlWindowStateTrack(sdlwindow);
+  sdlWindowStateFullscreen = sdlWindowStateTrack(sdlwindow);
   sdlEventsStartup(sdlwindow);
   sdlGamepadStartup(application_root);
   // eslint-disable-next-line @typescript-eslint/no-use-before-define
@@ -182,6 +198,8 @@ function startup(param: PlatformStartupParam): PlatformStartupRet {
     evt.prevent();
     sdlEventQueue(onCloseRequested);
   });
+
+  addTickFunc(checkFullscreenToggle);
 
   gl = createContext(view.pw, view.ph, {
     window: sdlwindow,
