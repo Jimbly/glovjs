@@ -8,6 +8,7 @@ platformRegister('sdl', {
   reload_updates: false,
   random_creation_name: false,
   exit: true,
+  linkHandler: sdlLinkHandler, // eslint-disable-line @typescript-eslint/no-use-before-define
 });
 
 import assert from 'assert';
@@ -411,6 +412,10 @@ function cursorStyle(style: CursorStyle): void {
   if (style !== 'none') {
     sdl.mouse.setCursor(CURSOR_STYLES[style]);
   }
+}
+
+function sdlLinkHandler(url: string): void {
+  console.log('!!!!TODO: sdlLinkHandler', url);
 }
 
 const platform_sdl: PlatformAdapter = {
