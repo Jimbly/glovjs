@@ -1,8 +1,20 @@
 /* eslint n/global-require:off */
 import assert from 'assert';
-import { actionDown, actionEdge } from 'glov/client/actions';
+import {
+  actionBindKB,
+  actionBindPad,
+  actionDown,
+  actionEdge,
+  actionExists,
+  ActionKey,
+  actionRegister,
+} from 'glov/client/actions';
 import { autoAtlas } from 'glov/client/autoatlas';
-import { bindUIStartup } from 'glov/client/bind_ui';
+import {
+  bindNameFromAction,
+  bindUIStartup,
+  DEFAULT_BINDABLE_CMDS,
+} from 'glov/client/bind_ui';
 import { MODE_DEVELOPMENT, platformSetRichPresence } from 'glov/client/client_config';
 import { cmd_parse } from 'glov/client/cmds';
 import { editBox } from 'glov/client/edit_box';
@@ -771,6 +783,20 @@ function crashTest(): void {
   yy += yadv;
 }
 
+declare module 'glov/client/actions' {
+  interface ActionRegistry {
+    spine: 0;
+  }
+}
+
+function actionsInit(): void {
+  actionRegister('spine');
+  actionBindKB('P', 'spine');
+  actionBindPad('Y', 'spine');
+  // Better to feed into bindUIRun, but we can hack this here for the demo:
+  DEFAULT_BINDABLE_CMDS.spine = 'Spine Test';
+}
+
 export function main(): void {
   {
     let url_base = getURLBase();
@@ -822,8 +848,10 @@ export function main(): void {
   }
   let font = engine.font;
 
+
   particlesStartup();
 
+  actionsInit();
   bindUIStartup();
 
   // const font = engine.font;
@@ -1057,9 +1085,19 @@ export function main(): void {
     let mini_button_w = floor((uiButtonWidth() - 2) / 2);
 
     function miniButton(text: string, tooltip?: string, active?: boolean): ButtonRet | null {
+      let hotaction: ActionKey | undefined;
+      let text_lc = text.toLowerCase();
+      if (actionExists(text_lc)) {
+        hotaction = text_lc;
+        let bind_name = bindNameFromAction('spine');
+        if (bind_name) {
+          text = `${text} (${bind_name})`;
+        }
+      }
       let ret = buttonText({
         x, y, text, tooltip,
         w: mini_button_w,
+        hotaction,
         colors: active ? colors_active : colors_inactive,
       });
       x += 2 + mini_button_w;

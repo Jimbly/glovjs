@@ -25,13 +25,16 @@ import {
   plural,
 } from 'glov/common/util';
 import { Vec4 } from 'glov/common/vmath';
-import { actionExists } from './actions';
+import { actionExists, ActionKey } from './actions';
 import { autoResetEachFrame, autoResetSkippedFrames } from './auto_reset';
 import { autoAtlas, autoAtlasContains, autoAtlasSwap } from './autoatlas';
 import {
   bindBind,
   BindExport,
   bindExport,
+  bindIsController,
+  bindIsKey,
+  bindsForCmd,
   BindType,
   bindUnbind,
 } from './binds';
@@ -76,6 +79,7 @@ import { scrollAreaCreate } from './scroll_area';
 import { dropDown } from './selection_box';
 import * as settings from './settings';
 import { settingsRegister, settingsSet } from './settings';
+import type { SettingsValueKeys } from './settings_types';
 import {
   buttonText,
   copyTextToClipboard,
@@ -1280,4 +1284,29 @@ export function bindUIRun(opts: UIBox & {
   }
 
   return ret;
+}
+
+// Technically can be any string, but lets limit automation to actions and settings?
+export type BindValue = ActionKey | SettingsValueKeys;
+
+export function bindNameFromAction(action: BindValue): string | undefined {
+  let binds = bindsForCmd(action);
+  if (!binds.length) {
+    return;
+  }
+  let best_bind: string | undefined;
+  let best_bind_frame = -1;
+  for (let ii = 0; ii < binds.length; ++ii) {
+    let bind = binds[ii];
+    if (bindIsKey(bind) && !inputPadMode() ||
+      bindIsController(bind) && inputPadMode()
+    ) {
+      let key_name = bindLocalName(bind);
+      if (!best_bind || bind.last_used > best_bind_frame) {
+        best_bind = key_name;
+        best_bind_frame = bind.last_used;
+      }
+    }
+  }
+  return best_bind;
 }
