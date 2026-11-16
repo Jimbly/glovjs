@@ -33,6 +33,7 @@ import * as camera2d from './camera2d';
 import { MODE_DEVELOPMENT } from './client_config';
 import * as cmds from './cmds';
 import {
+  addTickFunc,
   debugDefineIsSet,
   internal as engine_internal,
   engineSetDomToCanvasRatio,
@@ -43,6 +44,7 @@ import {
 } from './engine';
 const { disableNumberExtend, needReposSet, setCanvasDims, tick } = engine_internal;
 import { ERR_CONNECTION, ERR_TIMEOUT, fetch, FetchInternalParams, fetchNative } from './fetch';
+import { keyDown, keyDownEdge, KEYS, MOD_ALT } from './input';
 import {
   localStorageGetJSON,
   localStorageSetJSON,
@@ -381,6 +383,25 @@ function requestFrame(user_time?: number): void {
   }
 }
 
+let esc_down_time = 0;
+function checkFullscreenToggle(): void {
+  keyDownEdge(KEYS.ENTER, { mod: MOD_ALT, in_event_cb: function () {
+    if (fscreenActive()) {
+      fscreenExit();
+    } else {
+      fscreenEnter();
+    }
+  } });
+  if (fscreenActive() && keyDown(KEYS.ESC)) {
+    esc_down_time += keyDown(KEYS.ESC);
+    if (esc_down_time > 1000) {
+      fscreenExit();
+    }
+  } else {
+    esc_down_time = 0;
+  }
+}
+
 type DiableWebGL2Data = {
   ua: string;
   ts: number;
@@ -456,6 +477,8 @@ function startup(param: PlatformStartupParam): PlatformStartupRet {
   }
 
   webInputStartup();
+
+  addTickFunc(checkFullscreenToggle);
 
   return {
     good,

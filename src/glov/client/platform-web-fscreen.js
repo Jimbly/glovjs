@@ -1,4 +1,6 @@
-// From 'fscreen' module, https://github.com/rafrex/fscreen, MIT Licensed
+// Some code from 'fscreen' module, https://github.com/rafrex/fscreen, MIT Licensed
+
+/* global navigator */
 
 // Changes:
 //   Fixed depending on Object.keys() ordering
@@ -65,8 +67,24 @@ const vendor = (
 export function fscreenEnter() {
   let element = document.documentElement;
   eatPossiblePromise(element[vendor[key.requestFullscreen]]());
+
+  try {
+    // Check if the Keyboard Lock API is supported
+    if ('keyboard' in navigator && 'lock' in navigator.keyboard) {
+      eatPossiblePromise(navigator.keyboard.lock(['Escape']));
+    }
+  } catch (e) {
+    // ignored
+  }
 }
 export function fscreenExit() {
+  try {
+    if ('keyboard' in navigator && 'unlock' in navigator.keyboard) {
+      eatPossiblePromise(navigator.keyboard.unlock());
+    }
+  } catch (e) {
+    // ignored
+  }
   eatPossiblePromise(document[vendor[key.exitFullscreen]]());
 }
 // export function addEventListener(type, handler, options) {
