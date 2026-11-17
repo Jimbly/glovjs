@@ -38,6 +38,11 @@ import { CursorStyle } from 'glov/client/ui';
 import { ErrorCallback, VoidFunc } from 'glov/common/types';
 import { sdlEventQueue, sdlEventsDispatchQueued, sdlEventsStartup } from './platform-sdl-events';
 import { sdlGamepadStartup } from './platform-sdl-gamepad';
+import {
+  keyboardLocalName,
+  keyboardLocalNameInverse,
+  sdlKeyboardLayoutStartup,
+} from './platform-sdl-keylayout';
 import { sdlSoundGetAPI } from './platform-sdl-sound';
 import { storagePostInit, storageShutdown } from './platform-sdl-storage';
 import {
@@ -200,6 +205,7 @@ function startup(param: PlatformStartupParam): PlatformStartupRet {
   sdlWindowStateFullscreen = sdlWindowStateTrack(sdlwindow);
   sdlEventsStartup(sdlwindow);
   sdlGamepadStartup(application_root);
+  sdlKeyboardLayoutStartup();
   // eslint-disable-next-line @typescript-eslint/no-use-before-define
   loadImageData('favicon.png', false, function (err, img) {
     if (err || !img) {
@@ -463,6 +469,9 @@ const platform_sdl: PlatformAdapter = {
   fscreenEnter,
   fscreenExit,
   fscreenActive,
+
+  keyboardLocalName,
+  keyboardLocalNameInverse,
 };
 
 assert(!window.platform_adapter);
