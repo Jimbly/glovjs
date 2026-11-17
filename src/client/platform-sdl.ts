@@ -36,13 +36,14 @@ import type {
 import { settingsGet } from 'glov/client/settings';
 import { CursorStyle } from 'glov/client/ui';
 import { ErrorCallback, VoidFunc } from 'glov/common/types';
-import { sdlEventQueue, sdlEventsDispatchQueued, sdlEventsStartup } from './platform-sdl-events';
+import { sdlEventsDispatchQueued, sdlEventsStartup } from './platform-sdl-events';
 import { sdlGamepadStartup } from './platform-sdl-gamepad';
 import {
   keyboardLocalName,
   keyboardLocalNameInverse,
   sdlKeyboardLayoutStartup,
 } from './platform-sdl-keylayout';
+import { sdlShutdownBeforeClose, sdlShutdownTest } from './platform-sdl-shutdown';
 import { sdlSoundGetAPI } from './platform-sdl-sound';
 import { storagePostInit, storageShutdown } from './platform-sdl-storage';
 import {
@@ -170,6 +171,7 @@ function fscreenActive(): boolean {
 }
 
 function checkFullscreenToggle(): void {
+  sdlShutdownTest();
   if (keyDownEdge(KEYS.ENTER, { mod: MOD_ALT }) ||
     keyDownEdge(KEYS.F11)
   ) {
@@ -181,7 +183,7 @@ function checkFullscreenToggle(): void {
   }
 }
 
-function onCloseRequested(): void {
+export function onCloseRequested(): void {
   if (closing) {
     return;
   }
@@ -219,10 +221,14 @@ function startup(param: PlatformStartupParam): PlatformStartupRet {
   sdlwindow.on('resize', checkResizeInternal);
   // Keep the window alive (it may be mid-frame) and handle the close request
   //   along with other queued events
+  function requestClose(): void {
+    sdlShutdownBeforeClose();
+  }
   sdlwindow.on('beforeClose', function (evt) {
     evt.prevent();
-    sdlEventQueue(onCloseRequested);
+    requestClose();
   });
+  window.close = requestClose;
 
   addTickFunc(checkFullscreenToggle);
 
