@@ -4,6 +4,7 @@
 import assert from 'assert';
 import { ROVec4, vec4 } from 'glov/common/vmath';
 import { bindUIRun } from './bind_ui';
+import { getAbilityExit } from './client_config';
 import { collapsagoriesHeader, collapsagoriesStart, collapsagoriesStop } from './collapsagories';
 import { colorPicker } from './color_picker';
 import { EditBox, editBoxCreate, editBoxGetPadding } from './edit_box';
@@ -549,6 +550,12 @@ nec arborei timentem, ut crimina vidit.
     keybinds_up = true;
   }
   internal_y += button_height + pad;
+  if (getAbilityExit()) {
+    if (ui.buttonText({ x: 2, y: internal_y, z: z + 1, text: 'Exit' })) {
+      window.close();
+    }
+    internal_y += button_height + pad;
+  }
 
   ui.label({ x: 2, y: internal_y, size: text_height * 0.5, text: 'Small text param size' });
   internal_y += text_height * 0.5;
