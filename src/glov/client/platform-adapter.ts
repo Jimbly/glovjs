@@ -5,7 +5,8 @@ import type {
 } from 'glov/common/types';
 import type { ROVec3 } from 'glov/common/vmath';
 import type { FetchInternalParams } from './fetch';
-import { CursorStyle } from './ui';
+import type { ValidKey } from './input';
+import type { CursorStyle } from './ui';
 
 export type PlatformSoundPlayOpts = {
   volume: number;
@@ -96,4 +97,6 @@ export type PlatformAdapter = {
   fscreenEnter(): void;
   fscreenExit(): void;
   fscreenActive(): boolean;
+  keyboardLocalName(key_code: number /* KEYS.FOO */): string | undefined;
+  keyboardLocalNameInverse(letter: ValidKey): ValidKey | null;
 };

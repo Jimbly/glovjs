@@ -67,6 +67,10 @@ import {
   webInputPasteTextClear,
   webInputStartup,
 } from './platform-web-input';
+import {
+  keyboardLocalName,
+  keyboardLocalNameInverse,
+} from './platform-web-keylayout';
 import { webSoundGetAPI } from './platform-web-sound';
 import { settingsGet } from './settings';
 import { blobSupported } from './textures';
@@ -692,6 +696,9 @@ const platform_web: PlatformAdapter = {
   fscreenEnter,
   fscreenExit,
   fscreenActive,
+
+  keyboardLocalName,
+  keyboardLocalNameInverse,
 };
 
 

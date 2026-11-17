@@ -1,5 +1,3 @@
-/* globals navigator */
-
 export const DEFAULT_BINDABLE_CMDS: Rec<string, string> = {
   up: 'General Interface#Up',
   left: 'Left',
@@ -39,7 +37,7 @@ import {
   bindUnbind,
 } from './binds';
 import { cmd_parse } from './cmds';
-import { debugDefineIsSet, getFrameDt } from './engine';
+import { debugDefineIsSet, getFrameDt, platformAdapterGet } from './engine';
 import {
   ALIGN,
   FontStyle,
@@ -72,7 +70,6 @@ import {
   MOD_CTRL,
   MOD_SHIFT,
 } from './input_constants';
-import { eventCodeFromKeyCode, qwertyKeyCodeFromEventCode } from './keycode';
 import { localStorageGetJSON, localStorageSetJSON } from './local_storage';
 import { markdownImageRegisterAutoAtlas } from './markdown_renderables';
 import { scrollAreaCreate } from './scroll_area';
@@ -662,66 +659,11 @@ export function bindUIStartup(): void {
   persist_binds = true;
 }
 
-type LayoutMapper = {
-  get: (event_code: string) => string | undefined;
-  keys: () => string[]; // not actually, it's really some kind of Iterator
-};
-let layout_map: LayoutMapper;
-let layout_inverse_map: Rec<ValidKey, ValidKey>;
-
-let layout_map_initing = false;
-function layoutMapInit(): void {
-  if (layout_map_initing) {
-    return;
-  }
-
-  let nav = navigator as unknown as {
-    keyboard: {
-      getLayoutMap: () => Promise<LayoutMapper>;
-    };
-  };
-  if (!nav.keyboard || !nav.keyboard.getLayoutMap) {
-    return;
-  }
-
-  layout_map_initing = true;
-  nav.keyboard.getLayoutMap().then(function (lm) {
-    layout_map = lm;
-    layout_inverse_map = {};
-    if (layout_map) {
-      let keys = layout_map.keys();
-      if (keys && keys.forEach) {
-        keys.forEach(function (event_code: string) {
-          let input_code_number = qwertyKeyCodeFromEventCode(event_code);
-          if (!input_code_number) {
-            return;
-          }
-          let input_code_name = inputLookupKeyName(input_code_number);
-          if (!input_code_name) {
-            return;
-          }
-          let key_name = layout_map.get(event_code);
-          if (key_name) {
-            let key_name_uc = key_name.toUpperCase();
-            if (inputValidKeyName(key_name_uc)) {
-              layout_inverse_map[key_name_uc] = input_code_name;
-            }
-          }
-        });
-      }
-    }
-  }, function (err) {
-    console.warn(`Error getting keyboard layout map: ${err}`);
-  });
-  setTimeout(function () {
-    layout_map_initing = false;
-  }, 1000);
-}
-
 // Given a letter like 'W', return the input API key name (e.g. 'Z' on Azerty) that maps to it
 export function inverseMappedHotkey(letter: ValidKey): ValidKey {
-  if (layout_inverse_map && layout_inverse_map[letter]) {
-    return layout_inverse_map[letter];
+  let from_layoutmap = platformAdapterGet().keyboardLocalNameInverse(letter);
+  if (from_layoutmap) {
+    return from_layoutmap;
   }
   let key_code = inputKeyInverseMapped(letter);
   if (key_code) {
@@ -734,22 +676,11 @@ export function inverseMappedHotkey(letter: ValidKey): ValidKey {
 }
 
 function keyLocalName(key: ValidKey): string | undefined {
-  layoutMapInit();
   let key_code = KEYS[key];
   if (key_code) {
-    if (layout_map) {
-      // convert to event code
-      let event_code = eventCodeFromKeyCode(key_code);
-      if (event_code) {
-        try {
-          let ret = layout_map.get(event_code);
-          if (ret) {
-            return toCamelCase(ret);
-          }
-        } catch (e) {
-          // ignore
-        }
-      }
+    let from_layoutmap = platformAdapterGet().keyboardLocalName(key_code);
+    if (from_layoutmap) {
+      return toCamelCase(from_layoutmap);
     }
     let ret = inputKeyName(key_code);
     if (ret) {
