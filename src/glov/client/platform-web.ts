@@ -413,6 +413,7 @@ type DiableWebGL2Data = {
 
 function startup(param: PlatformStartupParam): PlatformStartupRet {
   let { antialias } = param;
+  let preserveDrawingBuffer = param.preserve_drawing_buffer;
 
   safearea_ignore_bottom = param.safearea_ignore_bottom || false;
 
@@ -444,10 +445,10 @@ function startup(param: PlatformStartupParam): PlatformStartupRet {
     context_names.splice(0, 1);
   }
   let context_opts = [
-    { antialias, powerPreference, alpha: false },
-    { powerPreference, alpha: false },
-    { antialias, alpha: false },
-    { alpha: false },
+    { antialias, powerPreference, alpha: false, preserveDrawingBuffer },
+    { powerPreference, alpha: false, preserveDrawingBuffer },
+    { antialias, alpha: false, preserveDrawingBuffer },
+    { alpha: false, preserveDrawingBuffer },
     {},
   ];
   let good = false;

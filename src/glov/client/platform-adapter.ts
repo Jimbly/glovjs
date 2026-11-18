@@ -68,6 +68,7 @@ export type PlatformStartupParam = {
   antialias: boolean;
   high?: boolean;
   force_webgl2?: boolean;
+  preserve_drawing_buffer: boolean;
   safearea_ignore_bottom?: boolean;
   tick: VoidFunc;
 };

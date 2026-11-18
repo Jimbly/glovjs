@@ -114,9 +114,9 @@ function renderFrame(): void {
   } finally {
     in_render_frame = false;
   }
-  // TODO: don't call swap if tick chose not to render anything
   profilerStart('gl.swap');
   let start = Date.now();
+  // TODO: don't call swap if tick chose not to render anything
   gl.swap();
   last_swap_time = Date.now() - start;
   profilerStop();
@@ -235,6 +235,7 @@ function startup(param: PlatformStartupParam): PlatformStartupRet {
   gl = createContext(view.pw, view.ph, {
     window: sdlwindow,
     antialias,
+    preserveDrawingBuffer: param.preserve_drawing_buffer,
     createWebGL2Context: true,
   });
   let good = false;

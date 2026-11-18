@@ -29,6 +29,7 @@ const {
   },
 } = require('./actions');
 const { internal: { bindsTopOfFrame }, bindDispatch } = require('./binds');
+const { is_mobile } = require('./browser.js');
 const { buildUIStartup } = require('./build_ui.js');
 const camera2d = require('./camera2d.js');
 require('./engine_cmds.js');
@@ -1232,6 +1233,8 @@ export function startup(params) {
     antialias,
     high: params.high,
     force_webgl2: params.force_webgl2,
+    // Allows capturing the previous frame (for error reports); costly on mobile/tiled GPUs
+    preserve_drawing_buffer: params.preserve_drawing_buffer ?? !is_mobile,
   }));
 
   if (good) {
