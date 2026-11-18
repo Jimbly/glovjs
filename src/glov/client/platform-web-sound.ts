@@ -151,17 +151,33 @@ type SoundInstance= {
   howl: HowlSound;
   id: number;
 };
+function instanceLocation(psi: PlatformSoundInstance): number {
+  let sound = psi as unknown as SoundInstance;
+  let v = sound.howl.seek(undefined, sound.id);
+  if (typeof v !== 'number') {
+    // Howler sometimes returns `self` from `seek()`
+    return 0;
+  }
+  return v;
+}
+
 function soundPlay(psid: PlatformSoundID, opts: PlatformSoundPlayOpts): PlatformSoundInstance | null {
   let id = psid as unknown as number;
   let howl = sounds[id];
   if (!howl) {
     return null;
   }
+  let seek_time = opts.seek ? instanceLocation(opts.seek) : 0;
   let howler_id = howl.play(undefined, {
-    volume: opts.volume,
+    // Howler cannot seek before playing; avoid an audible blip from the start
+    volume: opts.seek ? 0 : opts.volume,
     pos: opts.pos,
     stereo: opts.pan,
   });
+  if (opts.seek) {
+    howl.seek(seek_time, howler_id);
+    howl.volume(opts.volume, howler_id);
+  }
   return {
     howl,
     id: howler_id,
@@ -177,21 +193,6 @@ function instancePlaying(psi: PlatformSoundInstance): boolean {
   let sound = psi as unknown as SoundInstance;
   // return sound.howl.playing(id); // not reliable if it hasn't started yet? :(
   return !sound.howl.ended(sound.id);
-}
-
-function instanceLocation(psi: PlatformSoundInstance): number {
-  let sound = psi as unknown as SoundInstance;
-  let v = sound.howl.seek(undefined, sound.id);
-  if (typeof v !== 'number') {
-    // Howler sometimes returns `self` from `seek()`
-    return 0;
-  }
-  return v;
-}
-
-function instanceSeek(psi: PlatformSoundInstance, time: number): void {
-  let sound = psi as unknown as SoundInstance;
-  sound.howl.seek(time, sound.id);
 }
 
 function instanceVolume(psi: PlatformSoundInstance, vol: number): void {
@@ -229,7 +230,6 @@ const api: PlatformSoundAPI = {
   instanceStop,
   instancePlaying,
   instanceLocation,
-  instanceSeek,
   instanceVolume,
   instancePan,
   instancePos,

@@ -27,6 +27,7 @@ import {
   PannerAttr,
   PlatformSoundAPI,
   PlatformSoundID,
+  PlatformSoundInstance,
   PlatformSoundLoadOpts,
 } from './platform-adapter';
 import * as settings from './settings';
@@ -59,7 +60,7 @@ export interface GlovSoundSetUp {
   volume(vol: number): void;
   playing(): boolean;
   duration(): number;
-  location(time?: number): number;
+  location(): number;
   fade(target_volume: number, time: number): void;
 
   stereo(pan: number): void;
@@ -69,6 +70,7 @@ export interface GlovSoundSetUp {
 
 type GlovSoundSetUpInternal = GlovSoundSetUp & {
   volume_current: number;
+  inst: PlatformSoundInstance;
 };
 
 // Placeholder to track reference to sound whenever it's played
@@ -499,6 +501,7 @@ export type GlovSoundPlayOpts = {
   as_music?: boolean;
   pos?: ROVec3;
   stereo?: number;
+  seek?: GlovSoundSetUp; // start at this sound's current playback location
 };
 export function soundPlay(soundid: SoundID): GlovSoundSetUp | null;
 export function soundPlay(soundid: SoundID, volume: number): GlovSoundSetUp | null;
@@ -514,6 +517,7 @@ export function soundPlay(
   let as_music = false;
   let pos: ROVec3 | undefined;
   let stereo: number | undefined;
+  let seek: PlatformSoundInstance | undefined;
   if (param !== undefined) {
     if (typeof param === 'number') {
       volume = param;
@@ -526,6 +530,7 @@ export function soundPlay(
       }
       pos = param.pos;
       stereo = param.stereo;
+      seek = (param.seek as GlovSoundSetUpInternal | undefined)?.inst;
     }
   }
   if (settings.volume * (as_music ? settings.volume_music : settings.volume_sound) === 0) {
@@ -554,6 +559,7 @@ export function soundPlay(
     volume: volume * settingsVolume(),
     pos,
     pan: stereo,
+    seek,
   });
   if (!inst) {
     return null;
@@ -563,16 +569,14 @@ export function soundPlay(
   let played_sound: GlovSoundSetUpInternal = {
     name: soundid,
     volume_current: volume,
+    inst,
     stop: function () {
       api.instanceStop(inst);
     },
     playing: function () {
       return api.instancePlaying(inst);
     },
-    location: (time?: number) => { // get current location
-      if (time !== undefined) {
-        api.instanceSeek(inst, time);
-      }
+    location: () => {
       return api.instanceLocation(inst);
     },
     duration: function () {

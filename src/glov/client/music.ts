@@ -89,7 +89,7 @@ function tickMusic(): void {
 
   if (playing_music_name !== music_name) {
     let cross = false;
-    let cross_loc = 0;
+    let cross_from: GlovSoundSetUp | undefined;
     if (last_music_ref) {
       if (last_music_ref.playing() && last_music_name === music_name) {
         assert(playing_music_name === null);
@@ -106,7 +106,7 @@ function tickMusic(): void {
           if (!last_music_fading_out) {
             last_music_fading_out = true;
             if (cross) {
-              cross_loc = last_music_ref.location();
+              cross_from = last_music_ref;
             }
             last_music_ref.fade(0,
               cross ? FADE_CROSS/music_volume :
@@ -130,10 +130,8 @@ function tickMusic(): void {
         last_music_ref = soundPlay(music_name, {
           volume: 0.001,
           as_music: true,
+          seek: cross_from,
         });
-        if (cross_loc && last_music_ref) {
-          last_music_ref.location(cross_loc);
-        }
         last_music_fading_out = false;
         if (last_music_ref) {
           last_music_ref.fade(override_volume || music_volume, cross ? FADE_CROSS/music_volume : FADE_UP/music_volume);

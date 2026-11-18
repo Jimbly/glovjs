@@ -8,10 +8,12 @@ import type { FetchInternalParams } from './fetch';
 import type { ValidKey } from './input';
 import type { CursorStyle } from './ui';
 
+export type PlatformSoundInstance = { _opaque: 'PlatformSoundInstance' };
 export type PlatformSoundPlayOpts = {
   volume: number;
   pos?: ROVec3;
   pan?: number;
+  seek?: PlatformSoundInstance; // start at this sound's current playback location
 };
 
 // @see https://developer.mozilla.org/en-US/docs/Web/API/PannerNode
@@ -33,7 +35,6 @@ export type PlatformSoundLoadOpts = {
 };
 
 export type PlatformSoundID = { _opaque: 'PlatformSoundID' };
-export type PlatformSoundInstance = { _opaque: 'PlatformSoundInstance' };
 export type PlatformSoundAPI = {
   listenerPos(pos: ROVec3): void;
   listenerOrientation(up: ROVec3, forward: ROVec3): void;
@@ -57,7 +58,6 @@ export type PlatformSoundAPI = {
   instanceStop(sound: PlatformSoundInstance): void;
   instancePlaying(sound: PlatformSoundInstance): boolean;
   instanceLocation(sound: PlatformSoundInstance): number;
-  instanceSeek(sound: PlatformSoundInstance, time: number): void;
   instanceVolume(sound: PlatformSoundInstance, vol: number): void;
   instancePan(sound: PlatformSoundInstance, pan: number): void;
   instancePos(sound: PlatformSoundInstance, new_pos: ROVec3): void;

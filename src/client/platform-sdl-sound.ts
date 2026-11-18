@@ -54,9 +54,6 @@ function instanceLocation(sound: PlatformSoundInstance): number {
   // TODO
   return 0;
 }
-function instanceSeek(sound: PlatformSoundInstance, time: number): void {
-  // TODO
-}
 function instanceVolume(sound: PlatformSoundInstance, vol: number): void {
   // TODO
 }
@@ -84,7 +81,6 @@ const api: PlatformSoundAPI = {
   instanceStop,
   instancePlaying,
   instanceLocation,
-  instanceSeek,
   instanceVolume,
   instancePan,
   instancePos,
