@@ -43,6 +43,7 @@ import {
   localStorageGetJSON,
   localStorageSetJSON,
 } from 'glov/client/local_storage';
+import { musicSet, musicStartup } from 'glov/client/music';
 import { netInit } from 'glov/client/net';
 import {
   particlesCreateSystem,
@@ -60,12 +61,9 @@ import * as settings from 'glov/client/settings';
 import { settingsSet } from 'glov/client/settings';
 import { slider } from 'glov/client/slider';
 import {
-  FADE_IN,
-  FADE_OUT,
   sound3DListener,
   soundLoad,
   soundPlay,
-  soundPlayMusic,
 } from 'glov/client/sound';
 import { spineCreate } from 'glov/client/spine';
 import { SPOT_NAVTYPE_SIMPLE, spotSetNavtype, spotSuppressPad } from 'glov/client/spot';
@@ -90,6 +88,7 @@ import {
   buttonText,
   drawLine,
   drawRect,
+  isMenuUp,
   LINE_ALIGN,
   LINE_CAP_ROUND,
   LINE_CAP_SQUARE,
@@ -1203,9 +1202,9 @@ export function main(): void {
     if (miniButton('Music', 'Toggles playing a looping background music track', flagGet('music'))) {
       flagToggle('music');
       if (flagGet('music')) {
-        soundPlayMusic(music_file, 1, FADE_IN);
+        musicSet(music_file);
       } else {
-        soundPlayMusic(music_file, 0, FADE_OUT);
+        musicSet(null);
       }
     }
 
@@ -1274,11 +1273,16 @@ export function main(): void {
     // May want this: ensure we don't have extra images bundled? webFSReportUnused();
     setState(test);
     if (flagGet('music')) {
-      soundPlayMusic(music_file);
+      musicSet(music_file);
     }
     test(dt);
   }
 
+  musicStartup({
+    dimmer: () => {
+      return isMenuUp() ? 0.7 : 0;
+    },
+  });
   initGraphics();
   setState(testInit);
 }

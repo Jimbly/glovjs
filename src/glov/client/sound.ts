@@ -27,7 +27,6 @@ import {
   PannerAttr,
   PlatformSoundAPI,
   PlatformSoundID,
-  PlatformSoundInstance,
   PlatformSoundLoadOpts,
 } from './platform-adapter';
 import * as settings from './settings';
@@ -89,14 +88,6 @@ type LoadedSound = {
   glov_load_opts: SoundLoadOpts;
 };
 
-interface GlovMusic {
-  sound: PlatformSoundID | null;
-  inst: PlatformSoundInstance | null;
-  current_volume: number;
-  target_volume: number;
-  sys_volume: number;
-}
-
 interface Fade {
   sound: GlovSoundSetUp;
   target_volume: number;
@@ -143,7 +134,6 @@ let sound_params: SoundSystemParams;
 let last_played: TSMap<number> = {};
 let frame_timestamp = 0;
 let fades: Fade[] = [];
-let music: GlovMusic[];
 
 export function fadesCount(): number {
   return fades.length;
@@ -434,17 +424,6 @@ export function soundStartup(params: Partial<SoundSystemParams>): void {
 
   sound_params = defaults(params || {}, default_params);
 
-  // Music
-  music = []; // 0 is current, 1 is previous (fading out)
-  for (let ii = 0; ii < 2; ++ii) {
-    music.push({
-      sound: null,
-      inst: null,
-      current_volume: 0,
-      target_volume: 0,
-      sys_volume: 0,
-    });
-  }
   filewatchOn('.mp3', soundReload);
   filewatchOn('.ogg', soundReload);
   filewatchOn('.wav', soundReload);
@@ -493,45 +472,9 @@ export function soundTick(dt: number): void {
       active_sfx_as_music[i].set_volume_when_played = musicVolume();
     }
   }
-  // Do music fading
   // Cannot rely on Howler's fading because starting a fade when one is in progress
   //   messes things up, as well causes snaps in volume :(
   let max_fade = dt * sound_params.fade_rate;
-  for (let ii = 0; ii < music.length; ++ii) {
-    let mus = music[ii];
-    if (!mus.sound) {
-      continue;
-    }
-    let target = (settings.volume * settings.volume_music === 0) ? 0 : mus.target_volume;
-    if (mus.current_volume !== target) {
-      let delta = target - mus.current_volume;
-      let fade_amt = min(abs(delta), max_fade);
-      if (delta < 0) {
-        mus.current_volume = max(target, mus.current_volume - fade_amt);
-      } else {
-        mus.current_volume = min(target, mus.current_volume + fade_amt);
-      }
-      if (!mus.target_volume && !mus.current_volume) {
-        if (mus.inst) {
-          api.instanceStop(mus.inst);
-          mus.inst = null;
-        }
-        mus.sound = null;
-      }
-    }
-    if (mus.sound) {
-      let sys_volume = mus.current_volume * musicVolume();
-      if (!mus.inst) {
-        mus.inst = api.soundPlay(mus.sound, { volume: sys_volume });
-        mus.sys_volume = sys_volume;
-      }
-      if (mus.inst && mus.sys_volume !== sys_volume) {
-        api.instanceVolume(mus.inst, sys_volume);
-        mus.sys_volume = sys_volume;
-      }
-    }
-  }
-
   for (let ii = fades.length - 1; ii >= 0; --ii) {
     let fade = fades[ii];
     let delta = fade.target_volume - fade.volume;
@@ -697,77 +640,6 @@ export function soundPlayStreaming(
     }
   });
   return played_sound;
-}
-
-export function soundPlayMusic(soundname: string, volume?: number, transition?: number): void {
-  if (settings.volume * settings.volume_music === 0) {
-    return;
-  }
-  if (volume === undefined) {
-    volume = 1;
-  }
-  transition = transition || FADE_DEFAULT;
-  soundLoad(soundname, { streaming: true, loop: true }, (err) => {
-    let sound = null;
-    if (err) {
-      // Likely case: MP3 not supported, no WAV fallback
-    } else {
-      sound = sounds[soundname];
-      assert(sound);
-      if (music[0].sound === sound.id) {
-        // Same sound, just adjust volume, if required
-        music[0].target_volume = volume;
-        if (!transition) {
-          if (!volume) {
-            if (music[0].inst) {
-              api.instanceStop(music[0].inst);
-              music[0].inst = null;
-            }
-            music[0].sound = null;
-          } else {
-            let sys_volume = music[0].sys_volume = volume * musicVolume();
-            if (music[0].inst) {
-              api.instanceVolume(music[0].inst, sys_volume);
-            }
-            if ((!music[0].inst || !api.instancePlaying(music[0].inst)) && soundResumed()) {
-              music[0].inst = api.soundPlay(sound.id, { volume: sys_volume });
-            }
-          }
-        }
-        return;
-      }
-    }
-    // fade out previous music, if any
-    if (music[0].current_volume) {
-      if (transition & FADE_OUT) {
-        // swap to position 1, start fadeout
-        let temp = music[1];
-        music[1] = music[0];
-        music[0] = temp;
-        music[1].target_volume = 0;
-      }
-    }
-    if (music[0].sound) {
-      if (music[0].inst) {
-        api.instanceStop(music[0].inst);
-        music[0].inst = null;
-      }
-      music[0].sound = null;
-    }
-    music[0].sound = sound ? sound.id : null;
-    if (sound) {
-      music[0].target_volume = volume;
-      let start_vol = (transition & FADE_IN) ? 0 : volume;
-      music[0].current_volume = start_vol;
-      if (soundResumed()) {
-        let sys_volume = start_vol * musicVolume();
-        music[0].inst = api.soundPlay(sound.id, { volume: sys_volume });
-        music[0].sys_volume = sys_volume;
-      }
-    } else {
-      music[0].target_volume = music[0].current_volume = 0;
-    }
-  });
 }
 
 export function soundLoading(): number {
