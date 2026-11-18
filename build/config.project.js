@@ -66,7 +66,7 @@ module.exports = function (config) {
   });
   config.client_fsdata.push('ldtkproc:**');
   config.fsdata_embed.push('.ldtkl');
-  
+
   // SDL native app support
   nodeSDL(config, {
     exe_name: 'sdltest',
