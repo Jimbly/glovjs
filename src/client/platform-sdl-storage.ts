@@ -378,7 +378,7 @@ export function storageStartup(params: StorageParams, next: VoidFunc): void {
     assert(m);
     filewatchTriggerChange(`${m[1]}.localStorage`);
   }
-  function onFileChange(event_type: string, filename: string): void {
+  function onFileChange(event_type: string, filename: string | null): void {
     if (!filename) {
       return;
     }
