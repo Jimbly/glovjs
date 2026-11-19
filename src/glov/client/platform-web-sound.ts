@@ -54,7 +54,7 @@ let sounds: Rec<number, HowlSound> = {};
 function listenerPos(pos: ROVec3): void {
   Howler.pos(pos[0], pos[1], pos[2]);
 }
-function listenerOrientation(up: ROVec3, forward: ROVec3): void {
+function listenerOrientation(forward: ROVec3, up: ROVec3): void {
   Howler.orientation(forward[0], forward[1], forward[2], up[0], up[1], up[2]);
 }
 

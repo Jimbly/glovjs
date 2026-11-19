@@ -60,7 +60,7 @@ function listenerPos(pos: ROVec3): void {
   listener_pos = [pos[0], pos[1], pos[2]];
   sendListener();
 }
-function listenerOrientation(up: ROVec3, forward: ROVec3): void {
+function listenerOrientation(forward: ROVec3, up: ROVec3): void {
   listener_up = [up[0], up[1], up[2]];
   listener_forward = [forward[0], forward[1], forward[2]];
   sendListener();

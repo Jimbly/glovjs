@@ -37,7 +37,7 @@ export type PlatformSoundLoadOpts = {
 export type PlatformSoundID = { _opaque: 'PlatformSoundID' };
 export type PlatformSoundAPI = {
   listenerPos(pos: ROVec3): void;
-  listenerOrientation(up: ROVec3, forward: ROVec3): void;
+  listenerOrientation(forward: ROVec3, up: ROVec3): void;
 
   load(
     filename: string,
