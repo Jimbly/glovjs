@@ -7,6 +7,7 @@
 // Maybe need to add a separate bootstrap if we need to require much.
 import assert from 'assert';
 import type { TSMap } from 'glov/common/types';
+import type { Worker as NodeWorker } from 'worker_threads';
 import {
   bootstrapDebugMsg,
   bootstrapHandleError,
@@ -14,7 +15,11 @@ import {
 import { locateAsset } from './locate_asset';
 import { webFSGetData, webFSSetToWorkerCB } from './webfs';
 
-let workers: Worker[] = [];
+type AnyWorker = {
+  postMessage(message: unknown, transfer?: Transferable[]): void;
+};
+
+let workers: AnyWorker[] = [];
 
 export function numWorkers(): number {
   return workers.length;
@@ -92,13 +97,41 @@ function workerOnError(
   }
 }
 
+function nodeWorkerOnError(err: Error): void {
+  bootstrapHandleError(null, null, null, null, err);
+}
+
 let debug_names: Partial<Record<number, string>> | undefined;
+let default_worker_filename = 'worker.bundle.js';
+
+const is_node = typeof Worker === 'undefined';
+
+function allocWorkerNode(idx: number, worker_filename: string): AnyWorker {
+  // eslint-disable-next-line n/global-require
+  const NodeWorkerCtor: typeof NodeWorker = require('worker_threads').Worker;
+  let worker = new NodeWorkerCtor(`${window.application_root || ''}${locateAsset(worker_filename)}`, {
+    name: debug_names?.[idx],
+  });
+  worker.on('message', function (data: unknown) {
+    workerOnMessage(idx, { data });
+  });
+  worker.on('error', nodeWorkerOnError);
+  // Must be after adding the 'message' listener, which re-refs the worker
+  worker.unref();
+  return worker as unknown as AnyWorker;
+}
+
+function allocWorkerWeb(idx: number, worker_filename: string): AnyWorker {
+  let suffix = debug_names && debug_names[idx] && `#${debug_names[idx]}` || '';
+  let web_worker = new Worker(`${locateAsset(worker_filename)}${suffix}`);
+  web_worker.onmessage = workerOnMessage.bind(null, idx);
+  web_worker.onerror = workerOnError;
+  return web_worker;
+}
 
 function allocWorker(idx: number, worker_filename?: string): void {
-  let suffix = debug_names && debug_names[idx] && `#${debug_names[idx]}` || '';
-  let worker = new Worker(`${locateAsset(worker_filename || 'worker.bundle.js')}${suffix}`);
-  worker.onmessage = workerOnMessage.bind(null, workers.length);
-  worker.onerror = workerOnError;
+  worker_filename = worker_filename || default_worker_filename;
+  let worker = (is_node ? allocWorkerNode : allocWorkerWeb)(idx, worker_filename);
   workers.push(worker);
 
   if (webFSGetData()) {
@@ -114,8 +147,11 @@ export function setNumWorkers(max_workers: number, worker_filename?: string): vo
 
 export let keep_busy = 0;
 
-export function startup(worker_filename: string, debug_names_in: typeof debug_names): void {
-  if (String(window.location).match(/^https?:\/\/localhost/)) {
+export function startup(worker_filename?: string, debug_names_in?: typeof debug_names): void {
+  if (worker_filename) {
+    default_worker_filename = worker_filename;
+  }
+  if (is_node || String(window.location).match(/^https?:\/\/localhost/)) {
     debug_names = debug_names_in;
   }
   addHandler<{ msg: string; clear?: boolean }>('debugmsg', function (source, data) {

@@ -5,22 +5,31 @@
 
 require('./polyfill.js');
 
-if (!self.profilerStart) {
-  self.profilerStart = self.profilerStop = self.profilerStopStart = function () {
-    // no profiling in the worker thread
-  };
-}
-
 import assert from 'assert';
 import type { TSMap } from 'glov/common/types';
+import type { MessagePort, TransferListItem } from 'worker_threads';
 import {
   webFSApplyReload,
   webFSGetData,
   webFSStartup,
 } from './webfs';
 
+const is_node = typeof self === 'undefined';
+const parent_port: MessagePort | null = is_node ? require('worker_threads').parentPort : null;
+const glob = is_node ? globalThis : self;
+
+if (!glob.profilerStart) {
+  glob.profilerStart = glob.profilerStop = glob.profilerStopStart = function () {
+    // no profiling in the worker thread
+  };
+}
+
 export function sendmsg<T=unknown>(id: string, data: T, transfer?: Transferable[]): void {
-  (postMessage as (message: unknown, transfer?: Transferable[]) => void)({ id, data }, transfer);
+  if (parent_port) {
+    parent_port.postMessage({ id, data }, transfer as unknown as TransferListItem[]);
+  } else {
+    (postMessage as (message: unknown, transfer?: Transferable[]) => void)({ id, data }, transfer);
+  }
 }
 
 export function debugmsg(msg: string, clear?: boolean): void {
@@ -31,8 +40,8 @@ function consoleLogForward(...args: unknown[]): void {
   sendmsg('log', args.join(' '));
 }
 
-if (!self.console) {
-  self.console = {
+if (!glob.console) {
+  glob.console = {
     log: consoleLogForward,
     info: consoleLogForward,
     warn: consoleLogForward,
@@ -40,19 +49,28 @@ if (!self.console) {
   } as Console;
 }
 
+function sendError(e: unknown): void {
+  // Manually "cloning" the Error object, because it's toJSON (or some other
+  //   serialization logic) strips the relevant bits on MacOS Safari.
+  // Just send the fields we need for bootstrap.js's handling
+  sendmsg('error', {
+    message: (e as Error)?.message || String(e),
+    stack: (e as Error)?.stack,
+  });
+}
+
 // Catch errors not happening inside handlers' try/catch
-self.addEventListener('error', function (evt) {
-  if (evt.error) {
-    // Manually "cloning" the Error object, because it's toJSON (or some other
-    //   serialization logic) strips the relevant bits on MacOS Safari.
-    // Just send the fields we need for bootstrap.js's handling
-    sendmsg('error', {
-      message: evt.error.message,
-      stack: evt.error.stack,
-    });
-    evt.preventDefault();
-  }
-});
+if (is_node) {
+  // Also receives unhandled rejections (Node's default --unhandled-rejections=throw)
+  process.on('uncaughtException', sendError);
+} else {
+  self.addEventListener('error', function (evt) {
+    if (evt.error) {
+      sendError(evt.error);
+      evt.preventDefault();
+    }
+  });
+}
 
 export type WorkerReqHandler<T=unknown> = (payload: T) => void;
 
@@ -113,23 +131,30 @@ function isMyWorkerMessage(evt: unknown): evt is MyWorkerMessage {
 }
 
 
-self.onmessage = function (evt_in: { data: unknown }) {
+function onMessage(evt: unknown): void {
   // start work, end yield/idle
   startWork();
-  let evt = evt_in.data;
   if (isMyWorkerMessage(evt)) {
     let handler = handlers[evt.id];
     assert(handler, evt.id);
     try {
       handler(evt.data);
     } catch (e) {
-      sendmsg('error', { message: (e as Error).message || String(e), stack: (e as Error).stack });
+      sendError(e);
     }
   } else {
     console.log('worker (worker thread) unhandled message', evt);
   }
   endWork();
-};
+}
+
+if (parent_port) {
+  parent_port.on('message', onMessage);
+} else {
+  self.onmessage = function (evt_in: { data: unknown }) {
+    onMessage(evt_in.data);
+  };
+}
 
 addHandler('busy', function (data: number) {
   let start = Date.now();

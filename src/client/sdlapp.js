@@ -16,6 +16,7 @@ require('./appconfig');
 // });
 require('./platform-sdl-storage').storageStartup({}, function () {
   require('./platform-sdl');
+  require('glov/client/worker_comm.js').startup('sdlworker.bundle.js');
   require('./main').main();
   window.time_load_init = Date.now();
 });

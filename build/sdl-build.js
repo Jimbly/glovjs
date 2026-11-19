@@ -23,6 +23,42 @@ module.exports = function (config, opts) {
     ]
   };
 
+  const browserify_options_deps_node = {
+    insertGlobalVars: {
+      __dirname: null,
+      process: null,
+      Buffer: null,
+      setImmediate: null,
+    },
+    bare: true,
+    browserField: false,
+    transform: [
+      ['babelify', {
+        global: true,
+        presets: [
+          ['@babel/env', {
+            // Node 10+ required to keep native classes for SDL
+            targets: { node: '14' },
+            loose: true
+          }],
+        ],
+      }],
+    ],
+    exclude: [
+      'electron',
+      'worker_threads',
+      'node:worker_threads',
+      'node:os',
+      'node:events',
+      './dist/linux64/steamworksjs.linux-x64-gnu.node',
+      './dist/osx/steamworksjs.darwin-arm64.node',
+      './dist/osx/steamworksjs.darwin-x64.node',
+      './dist/win64/steamworksjs.win32-x64-msvc.node',
+      '../../dist/sdl.node',
+      '../../dist/webgl.node',
+    ],
+  };
+
   config.bundles.push({
     entrypoint: 'sdlapp',
     deps: 'sdlapp_deps',
@@ -30,41 +66,14 @@ module.exports = function (config, opts) {
     is_cli: true,
     do_version: 'client/sdlapp.ver.json',
     do_reload: true,
-    browserify_options_deps_override: {
-      insertGlobalVars: {
-        __dirname: null,
-        process: null,
-        Buffer: null,
-        setImmediate: null,
-      },
-      bare: true,
-      browserField: false,
-      transform: [
-        ['babelify', {
-          global: true,
-          presets: [
-            ['@babel/env', {
-              // Node 10+ required to keep native classes for SDL
-              targets: { node: '14' },
-              loose: true
-            }],
-          ],
-        }],
-      ],
-      exclude: [
-        'electron',
-        'worker_threads',
-        'node:worker_threads',
-        'node:os',
-        'node:events',
-        './dist/linux64/steamworksjs.linux-x64-gnu.node',
-        './dist/osx/steamworksjs.darwin-arm64.node',
-        './dist/osx/steamworksjs.darwin-x64.node',
-        './dist/win64/steamworksjs.win32-x64-msvc.node',
-        '../../dist/sdl.node',
-        '../../dist/webgl.node',
-      ],
-    },
+    browserify_options_deps_override: browserify_options_deps_node,
+  }, {
+    entrypoint: 'sdlworker',
+    deps: 'sdlworker_deps',
+    is_worker: true,
+    is_cli: true,
+    do_version: null,
+    browserify_options_deps_override: browserify_options_deps_node,
   });
 
   gb.task({
@@ -140,6 +149,7 @@ module.exports = function (config, opts) {
 
   const sdlapp_bundles = [
     '**/sdlapp*.bundle.js*',
+    '**/sdlworker.bundle.js*',
     '**/sdlapp.ver.json',
   ];
   gb.task({
