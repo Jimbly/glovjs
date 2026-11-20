@@ -11,6 +11,7 @@ Z.BORDERS = Z.BORDERS || 90;
 Z.UI = Z.UI || 100;
 Z.MODAL = Z.MODAL || 1000;
 Z.TOOLTIP = Z.TOOLTIP || 2000;
+Z.ENGINE_LOADING = Z.ENGINE_LOADING || 97000;
 Z.DEBUG = Z.DEBUG || 9800;
 
 // very high, but can still add integers

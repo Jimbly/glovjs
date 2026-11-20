@@ -118,7 +118,7 @@ const {
   uiBindSounds,
 } = require('./ui.js');
 const urlhash = require('./urlhash.js');
-const { callEach, ridx } = require('glov/common/util.js');
+const { callEach, damp, ridx } = require('glov/common/util.js');
 const verify = require('glov/common/verify.js');
 const {
   mat3, mat4,
@@ -1410,6 +1410,19 @@ function loadingForceClear() {
   }
 }
 
+let loading_clear_color = vec4(0.01, 0.01, 0.01, 1);
+let loading_bar_bg_color = vec4(0.1, 0.1, 0.1, 1);
+let loading_bar_fill_color = vec4(0.4, 0.4, 0.4, 1);
+export function setLoadingColors(clear_color, bg_color, fill_color) {
+  v4copy(loading_clear_color, clear_color);
+  v4copy(loading_bar_bg_color, bg_color);
+  v4copy(loading_bar_fill_color, fill_color);
+}
+let loading_progress_discover = 0; // incremented when load count increases
+let loading_progress_load = 0; // incremented when load count decreases
+let loading_last_value = 0;
+let loading_max_seen = 0;
+let loading_fake = 1;
 function loading() {
   let load_count = loadsPending();
   let elem_loading_text = document.getElementById('loading_text');
@@ -1417,6 +1430,32 @@ function loading() {
     elem_loading_text.innerText = `Loading (${load_count})...`;
   }
   renderNeeded();
+  gl.clearColor(loading_clear_color[0], loading_clear_color[1], loading_clear_color[2], 1);
+
+  let delta = load_count - loading_last_value;
+  if (delta > 0) {
+    loading_progress_discover++;
+    loading_max_seen += delta;
+  } else if (delta < 0) {
+    loading_progress_load += loading_last_value - load_count;
+  }
+  loading_last_value = load_count;
+  loading_fake = damp(loading_fake, 0, 10000, frame_dt);
+  let progress = 0.1 * (1 - 2 / (loading_progress_discover + 2)) +
+    0.7 * (1 - loading_max_seen / (loading_progress_load + loading_max_seen)) +
+    0.2 * (1 - loading_fake);
+  progress *= 1.9; // seems to approach 0.5
+  if (!load_count) {
+    progress = 1;
+  } else if (progress > 0.95) {
+    progress = 0.95;
+  }
+  let x = floor(game_width * 0.25);
+  let w = game_width - x * 2;
+  let y = floor(game_height * 0.68);
+  let h = floor(game_height * 0.04);
+  drawRect(x, y, x + w, y + h, Z.ENGINE_LOADING, loading_bar_bg_color);
+  drawRect(x + 1, y + 1, x + 1 + (w - 2) * progress, y + h - 1, Z.ENGINE_LOADING, loading_bar_fill_color);
   if (!load_count) {
     is_loading = false;
     app_state = after_loading_state;
