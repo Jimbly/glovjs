@@ -75,7 +75,7 @@
     "@types/request": "^2.48.7",
     "@wasm-audio-decoders/ogg-vorbis": "^0.1.20",
     "@yao-pkg/pkg": "^6.25.0",
-    "alphafix": "1.0.2",
+    "alphafix": "1.0.6",
     "babel-plugin-replace-ts-export-assignment": "^0.0.2",
     "babel-plugin-transform-preprocessor": "^1.0.0",
     "babelify": "^10.0.0",
