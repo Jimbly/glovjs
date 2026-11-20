@@ -135,7 +135,7 @@ export function sdlWindowStateTrack(win: SDLWindow): OnFullscreen {
   let current: Rect = { x: win.x, y: win.y, width: win.width, height: win.height };
   let normal: Rect = { ...current };
   let maximized = false;
-  let fullscreen = false;
+  let fullscreen = win.fullscreen;
   let timer: ReturnType<typeof setTimeout> | null = null;
 
   function commit(): void {
