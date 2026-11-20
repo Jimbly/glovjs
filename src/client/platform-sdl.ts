@@ -12,6 +12,7 @@ platformRegister('sdl', {
 });
 
 import assert from 'assert';
+import { spawn } from 'child_process';
 import fs from 'fs';
 import repl from 'repl';
 import zlib from 'zlib';
@@ -448,7 +449,25 @@ function cursorStyle(style: CursorStyle): void {
 }
 
 function sdlLinkHandler(url: string): void {
-  console.log('!!!!TODO: sdlLinkHandler', url);
+  // TODO: use SDL_OpenURL once node-sdl has stabalized a bit and we can fork it or add it
+  if (!(/^https?:\/\//i).test(url)) {
+    return;
+  }
+  let cmd: string;
+  let args: string[];
+  if (process.platform === 'win32') {
+    cmd = 'rundll32';
+    args = ['url.dll,FileProtocolHandler', url];
+  } else if (process.platform === 'darwin') {
+    cmd = 'open';
+    args = [url];
+  } else {
+    cmd = 'xdg-open';
+    args = [url];
+  }
+  let child = spawn(cmd, args, { detached: true, stdio: 'ignore', windowsHide: true });
+  child.on('error', (err) => console.error(`openURL failed: ${err}`));
+  child.unref();
 }
 
 const platform_sdl: PlatformAdapter = {

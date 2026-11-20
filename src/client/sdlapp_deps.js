@@ -5,6 +5,7 @@ require('../glov/client/require');
 let deps = window.deps;
 // Node built-in pass-throughs
 deps.assert = require('assert');
+deps['child_process'] = require('child_process');
 deps['fs'] = require('fs');
 deps['os'] = require('os');
 deps['path'] = require('path');
