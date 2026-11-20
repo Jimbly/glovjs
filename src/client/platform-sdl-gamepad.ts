@@ -136,8 +136,8 @@ function sdlDeviceTypeToControllerIcons(devicetype: Sdl.Gamepad.GamepadType): Co
       return 'switch';
     case 'gamecube':
       return 'switch';
-    // case 'steam': // not yet in the published version, TypeScript should notify us when it is
-    //   return 'steamdeck';
+    case 'steam':
+      return 'steamdeck';
     default:
       unreachable(devicetype);
   }

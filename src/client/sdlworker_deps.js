@@ -8,6 +8,6 @@ deps.assert = require('assert');
 deps['fs'] = require('fs');
 deps['worker_threads'] = require('worker_threads');
 
-// Package "exports" subpaths are not resolved by browserify, so reference the files directly
-deps['@kmamal/sdl/worker'] = require('@kmamal/sdl/src/javascript/worker.js');
+deps['@kmamal/sdl'] = require('@kmamal/sdl');
+// Package "exports" subpaths are not resolved by browserify, so reference the file directly
 deps['@wasm-audio-decoders/ogg-vorbis'] = require('@wasm-audio-decoders/ogg-vorbis/dist/ogg-vorbis-decoder.min.js');

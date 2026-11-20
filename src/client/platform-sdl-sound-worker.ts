@@ -3,15 +3,11 @@
 // Audio thread: decodes sounds, mixes active voices, and feeds the SDL playback stream.
 // Runs in the SDL worker bundle, controlled by platform-sdl-sound.ts.
 import fs from 'fs';
-import type { Sdl } from '@kmamal/sdl';
+import { default as sdl, Sdl } from '@kmamal/sdl';
 import { OggVorbisDecoder } from '@wasm-audio-decoders/ogg-vorbis';
 import { addHandler, sendmsg } from 'glov/client/worker_thread';
 import type { JSVec3 } from 'glov/common/vmath';
 import { indexOgg, OggFrameReader, type OggSource } from './platform-sdl-ogg-stream';
-// Types path used directly: package "exports" subpaths not supported with our moduleResolution
-import type * as SdlWorker from '@kmamal/sdl/src/types/worker';
-
-const sdl: typeof SdlWorker = require('@kmamal/sdl/worker');
 
 // Main thread -> worker
 export type SoundLoadMsg = {

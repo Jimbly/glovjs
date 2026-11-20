@@ -70,6 +70,7 @@ module.exports = function (config, opts) {
       'node:worker_threads',
       'node:os',
       'node:events',
+      'node:timers',
       './dist/linux64/steamworksjs.linux-x64-gnu.node',
       './dist/osx/steamworksjs.darwin-arm64.node',
       './dist/osx/steamworksjs.darwin-x64.node',
