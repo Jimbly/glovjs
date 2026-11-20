@@ -7,7 +7,16 @@ import { arrayToSet, forwardSlashes } from 'glov/common/util';
 assert(typeof window !== 'undefined');
 assert.equal(window.conf_platform, 'sdl');
 
+// Note: this is currently `false` in build.pkg/dist-dev/
+window.glov_platform_devmode = !(process as unknown as { pkg: unknown }).pkg;
+
 let listeners = new EventEmitter();
+
+
+if (!window.glov_platform_devmode && process.argv.includes('--console')) {
+  // eslint-disable-next-line n/global-require
+  require('console-api').allocConsole();
+}
 
 const KNOWN_EVENTS = arrayToSet([
   'blur',
@@ -67,9 +76,6 @@ window.addEventListener = addEventListener.bind(null, 'window') as typeof window
 window.navigator = new DummyNavigator() as unknown as Navigator;
 window.location = new DummyLocation() as (Location & string);
 // window.close = process.exit.bind(process, 0);
-
-// Note: this is currently `false` in build.pkg/dist-dev/
-window.glov_platform_devmode = !(process as unknown as { pkg: unknown }).pkg;
 
 // Expose globals that are looked for on `window` in GLOV.js code, but also as unscoped globals
 window.performance = globalThis.performance;

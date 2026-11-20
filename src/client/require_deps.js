@@ -11,8 +11,14 @@ glob.glov_require_deps = function (mod) {
     return nativeRequire(`../native/gl/${platarch}/webgl.node`);
   }
   if (mod === 'node-gyp-build') {
-    // Only used by alphafix
-    return () => nativeRequire(`../native/alphafix/${platarch}/alphafix.node`);
+    // Native prebuild packages get a __dirname of "<outdir>/<name>.node" (see nodeGypDirname in sdl-build.js)
+    return function (dir) {
+      let m2 = dir.match(/^(native\/.*)\/([^/]+\.node)$/);
+      if (!m2) {
+        throw new Error(`node-gyp-build: unmapped native module "${dir}"`);
+      }
+      return nativeRequire(`../${m2[1]}/${platarch}/${m2[2]}`);
+    };
   }
   let m;
   if ((m = mod.match(/^\.\/dist\/(.*steamworksjs.*\.node)$/))) {

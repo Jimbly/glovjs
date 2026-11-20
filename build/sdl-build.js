@@ -23,9 +23,28 @@ module.exports = function (config, opts) {
     ]
   };
 
+  // Packages loaded via node-gyp-build get a __dirname that tells the runtime shim
+  //   (glov_require_deps in require_deps.js) which .node file to load
+  const node_gyp_packages = {};
+  native_mappings.forEach(function ([indir, outdir]) {
+    let m = indir.match(/^node_modules\/(.+)\/prebuilds$/);
+    if (m) {
+      let pkg_dir = path.join(__dirname, '..', indir);
+      let plat = fs.readdirSync(pkg_dir)[0];
+      let node_file = fs.readdirSync(path.join(pkg_dir, plat)).find((name) => name.endsWith('.node'));
+      assert(node_file, `No .node file found in ${pkg_dir}/${plat}`);
+      node_gyp_packages[m[1]] = `${outdir}/${node_file}`;
+    }
+  });
+  function nodeGypDirname(file) {
+    let m = gb.forwardSlashes(file).match(/.*\/node_modules\/((?:@[^/]+\/)?[^/]+)\//);
+    let mapped = m && node_gyp_packages[m[1]];
+    return mapped ? JSON.stringify(mapped) : null;
+  }
+
   const browserify_options_deps_node = {
     insertGlobalVars: {
-      __dirname: null,
+      __dirname: nodeGypDirname,
       process: null,
       Buffer: null,
       setImmediate: null,

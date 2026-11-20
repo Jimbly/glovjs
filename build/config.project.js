@@ -73,6 +73,7 @@ module.exports = function (config) {
     company_name: 'Company Name',
     native_mappings: [
       ['node_modules/alphafix/prebuilds', 'native/alphafix'],
+      ['node_modules/console-api/prebuilds', 'native/console-api'],
     ],
   });
 };
