@@ -51,7 +51,7 @@ import {
   sdlWindowStateLoad,
   sdlWindowStateTrack,
 } from './sdl-window-state';
-const { PNG } = require('pngjs');
+const { pngReadAsync } = require('alphafix');
 
 const { round, min, max } = Math;
 
@@ -305,18 +305,21 @@ function requestFrame(user_time?: number): void {
   }
 }
 
+type SDLPNG = {
+  width: number;
+  height: number;
+  data: Buffer;
+  bpp: 4;
+  is_sdl_png: true;
+};
 function imageFromBuffer(buf: Uint8Array, done: ErrorCallback<HTMLImageElement>): void {
-  let png;
-  profilerStart('imageFromBuffer');
-  try {
-    png = PNG.sync.read(Buffer.from(buf));
-  } catch (e) {
-    profilerStop();
-    return void done(`Error decoding image: ${e}`);
-  }
-  png.is_sdl_png = true;
-  profilerStop();
-  done(null, png);
+  pngReadAsync(buf, { bpp: 4 }, function (err: Error | null, png: SDLPNG) {
+    if (err) {
+      return void done(`Error decoding image: ${err}`);
+    }
+    png.is_sdl_png = true;
+    done(null, png as unknown as HTMLImageElement);
+  });
 }
 
 function loadFile(filename: string, done: ErrorCallback<Buffer>): void {
@@ -353,17 +356,7 @@ function loadImageData(
     assert(data);
     if (ext === 'png') {
       // Note: ignoring prefer_arraybuffer, client JS can't decode an ArrayBuffer PNG without a browser
-      let png;
-      profilerStart('loadImageData:pngread');
-      try {
-        png = PNG.sync.read(data);
-      } catch (e) {
-        profilerStop();
-        return void done(`Error decoding image: ${e}`);
-      }
-      profilerStop();
-      png.is_sdl_png = true;
-      done(null, png);
+      imageFromBuffer(data, done);
     } else if (prefer_arraybuffer) {
       if (data.byteOffset === 0 && data.byteLength === data.buffer.byteLength) {
         done(null, data.buffer);

@@ -36,6 +36,7 @@ deps['spine-core/TextureAtlas'] = require('@jimbly/spine-core/dist/TextureAtlas'
 deps['spine-core/Utils'] = require('@jimbly/spine-core/dist/Utils');
 
 deps['pngjs'] = require('pngjs');
+deps['alphafix'] = require('alphafix');
 deps['@kmamal/gl'] = require('@kmamal/gl');
 deps['@kmamal/sdl'] = require('@kmamal/sdl');
 // deps['steamworks.js'] = require('steamworks.js');

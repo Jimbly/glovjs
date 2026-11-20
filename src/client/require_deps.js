@@ -10,6 +10,10 @@ glob.glov_require_deps = function (mod) {
   if (mod === '../../dist/webgl.node') {
     return nativeRequire(`../native/gl/${platarch}/webgl.node`);
   }
+  if (mod === 'node-gyp-build') {
+    // Only used by alphafix
+    return () => nativeRequire(`../native/alphafix/${platarch}/alphafix.node`);
+  }
   let m;
   if ((m = mod.match(/^\.\/dist\/(.*steamworksjs.*\.node)$/))) {
     return nativeRequire(`../native/steamworks/${m[1]}`);

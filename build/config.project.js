@@ -72,7 +72,7 @@ module.exports = function (config) {
     exe_name: 'sdltest',
     company_name: 'Company Name',
     native_mappings: [
-      // ['node_modules/src/folder', 'native/folder'],
+      ['node_modules/alphafix/prebuilds', 'native/alphafix'],
     ],
   });
 };

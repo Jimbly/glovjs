@@ -46,6 +46,7 @@ module.exports = function (config, opts) {
     ],
     exclude: [
       'electron',
+      'node-gyp-build',
       'worker_threads',
       'node:worker_threads',
       'node:os',
