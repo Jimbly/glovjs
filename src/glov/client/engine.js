@@ -14,6 +14,7 @@ export const hrnow = window.performance && window.performance.now ?
 export const internal = {
   needReposSet, // eslint-disable-line @typescript-eslint/no-use-before-define
   setCanvasDims, // eslint-disable-line @typescript-eslint/no-use-before-define
+  engineSetDomToCanvasRatio, // eslint-disable-line @typescript-eslint/no-use-before-define
   tick, // eslint-disable-line @typescript-eslint/no-use-before-define
   disableNumberExtend, // eslint-disable-line @typescript-eslint/no-use-before-define
 };
@@ -138,7 +139,7 @@ let height_3d;
 export let pixel_aspect = 1;
 export let render_pixel_perfect = 0; // 1.0 uses integral pixel scalars, 0.5 does for half of the resolutions, etc
 export let dom_to_canvas_ratio = 1;
-export function engineSetDomToCanvasRatio(value) {
+function engineSetDomToCanvasRatio(value) {
   dom_to_canvas_ratio = value;
 }
 export let antialias;

@@ -36,13 +36,18 @@ import {
   addTickFunc,
   debugDefineIsSet,
   internal as engine_internal,
-  engineSetDomToCanvasRatio,
   getFrameIndex,
   hrnow,
   isLoading,
   renderNeeded,
 } from './engine';
-const { disableNumberExtend, needReposSet, setCanvasDims, tick } = engine_internal;
+const {
+  disableNumberExtend,
+  needReposSet,
+  setCanvasDims,
+  engineSetDomToCanvasRatio,
+  tick,
+} = engine_internal;
 import { ERR_CONNECTION, ERR_TIMEOUT, fetch, FetchInternalParams, fetchNative } from './fetch';
 import { keyDown, keyDownEdge, KEYS, MOD_ALT } from './input';
 import {

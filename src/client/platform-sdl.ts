@@ -25,7 +25,13 @@ import {
   internal as engine_internal,
   hrnow,
 } from 'glov/client/engine';
-const { needReposSet, setCanvasDims, tick, disableNumberExtend } = engine_internal;
+const {
+  needReposSet,
+  setCanvasDims,
+  tick,
+  disableNumberExtend,
+  engineSetDomToCanvasRatio,
+} = engine_internal;
 import { FetchInternalParams, fetchNative } from 'glov/client/fetch';
 import { keyDownEdge, KEYS, MOD_ALT } from 'glov/client/input';
 import type {
@@ -139,6 +145,7 @@ function checkResizeInternal(): void {
   view.pw = sdlwindow.pixelWidth;
   view.ph = sdlwindow.pixelHeight;
 
+  engineSetDomToCanvasRatio(view.pw / view.w);
   setCanvasDims(view.pw, view.ph);
 
   resize_ext?.resize(view.pw, view.ph);
