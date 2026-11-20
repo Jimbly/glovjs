@@ -3,10 +3,28 @@ const assert = require('assert');
 const fs = require('node:fs');
 const util = require('node:util');
 
+function forwardSlashes(s) {
+  return s.replace(/\\/g, '/');
+}
+
+let application_root;
 if (process.pkg) {
+  let application_path = forwardSlashes(process.execPath);
+  let parts = application_path.split('/');
+  parts.pop();
+  application_root = parts.join('/') + '/';
+} else {
+  application_root = forwardSlashes(process.cwd());
+}
+if (!application_root.endsWith('/')) {
+  application_root += '/';
+}
+application_root += 'data/';
+
+if (process.argv.includes('--log')) {
   // Append log lines to output.log in the current directory, since stdout isn't
   // visible when the game is launched from Steam.
-  const LOG_FILE = __dirname + '/output.log';
+  const LOG_FILE = application_root + '../output.log';
   let logorig = console.log.bind(console);
   function log(...args) {
     const line = util.format(...args);
@@ -65,23 +83,6 @@ globalThis.window = {
   conf_platform: 'sdl',
 };
 
-function forwardSlashes(s) {
-  return s.replace(/\\/g, '/');
-}
-
-let application_root;
-if (process.pkg) {
-  let application_path = forwardSlashes(process.execPath);
-  let parts = application_path.split('/');
-  parts.pop();
-  application_root = parts.join('/') + '/';
-} else {
-  application_root = forwardSlashes(process.cwd());
-}
-if (!application_root.endsWith('/')) {
-  application_root += '/';
-}
-application_root += 'data/';
 globalThis.window.application_root = application_root;
 let nonPkgRequire = require;
 nonPkgRequire(application_root + 'fsdata.js');
