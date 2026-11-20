@@ -254,7 +254,7 @@ class GlovUIEditBox {
       getWidth: this.texteditGetWidth.bind(this),
       canInsert: this.texteditCanInsert.bind(this),
     };
-    this.textedit_state = texteditNewState(this.multiline <= 1);
+    this.textedit_state = texteditNewState(Boolean(this.multiline));
   }
   resetCSSCaching() {
     this.last_tab_index = -1;
@@ -273,8 +273,8 @@ class GlovUIEditBox {
     if (params.text && params.text !== this.last_set_text) {
       this.setText(params.text);
     }
-    this.multiline = this.multiline || 1;
-    this.h = this.multiline * this.font_height + padding.top + padding.bottom;
+    this.multiline = this.multiline <= 1 ? 0 : this.multiline;
+    this.h = (this.multiline || 1) * this.font_height + padding.top + padding.bottom;
   }
 
   lineWidth(line, len) {
@@ -342,7 +342,7 @@ class GlovUIEditBox {
             let paste_text = platformAdapterGet().clipboardRead();
             if (paste_text) {
               paste_text = paste_text.replace(/\r\n?/g, '\n');
-              if (this.multiline <= 1) {
+              if (!this.multiline) {
                 paste_text = paste_text.replace(/\n/g, ' ');
               }
               stb_textedit_paste(this.textedit_string, this.textedit_state, paste_text);
