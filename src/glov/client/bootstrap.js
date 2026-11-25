@@ -22,7 +22,12 @@ function forwardSlashes(s) {
 let crash_display = (msg, do_clear) => {
   console.error(msg);
 };
+let has_been_set = false;
+export function bootstrapCrashDisplayHasBeenSet() {
+  return has_been_set;
+}
 export function bootstrapSetCrashDisplayFunc(cb) {
+  has_been_set = true;
   crash_display = cb;
 }
 

@@ -20,6 +20,7 @@ import {
   Vec4,
   vec4,
 } from 'glov/common/vmath';
+import { bootstrapCrashDisplayHasBeenSet } from './bootstrap';
 import {
   is_android,
   is_ios,
@@ -84,6 +85,8 @@ import { CursorStyle } from './ui';
 const { max, min, round } = Math;
 
 let canvas: HTMLCanvasElement;
+
+assert(bootstrapCrashDisplayHasBeenSet()); // must have already done require('glov/client/platform-web-bootstrap')
 
 // Get safe area by examining safe-area-inset padded element
 function getSafeAreaFromDOM(out: Vec4, safearea: HTMLElement, view_w: number, view_h: number): void {
