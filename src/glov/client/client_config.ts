@@ -9,7 +9,7 @@ import {
 import type { TSMap } from 'glov/common/types';
 
 // Platform
-assert(platformIsValid(window.conf_platform));
+assert(platformIsValid(window.conf_platform), window.conf_platform);
 export const PLATFORM = window.conf_platform as PlatformID;
 
 let override_platform = PLATFORM;
