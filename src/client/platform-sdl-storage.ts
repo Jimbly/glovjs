@@ -493,6 +493,9 @@ function settingsFile(key: string): string | null {
       'cmd_parse_delayederror', // QP2A
       'demo_migrate_done', // QP2A
       'demo_migrate_avail', // QP2A
+      'cmd_parse_gfxmode', // moraff
+      'cmd_parse_fovmode', // moraff
+      'cmd_parse_heighteffect', // moraff
     ].includes(key)
   ) {
     return 'user-settings.json';
@@ -521,7 +524,8 @@ function settingsFile(key: string): string | null {
     key.startsWith('uitest.') || // ui_test
     key.match(/^c.+\.\d+$/) || // QP2A
     key.match(/^z.+\.best$/) || // QP2A
-    key.match(/^z.+\.oldbest$/) // QP2A
+    key.match(/^z.+\.oldbest$/) || // QP2A
+    key.startsWith('savedgame_') // crawlers
   ) {
     return 'file';
   }
