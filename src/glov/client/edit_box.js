@@ -319,7 +319,16 @@ class GlovUIEditBox {
     return text.length + chars.length <= this.max_len;
   }
   texteditHandleInput(focused, clipped_rect) {
-    this.textedit_string.text = this.text;
+    let new_text = this.text;
+    let platform_adapter = platformAdapterGet();
+    if (focused && platform_adapter.onscreenKeyboardGetText) {
+      let osk_new_text = platform_adapter.onscreenKeyboardGetText();
+      if (osk_new_text !== null) {
+        // note: note setting this.text so that it goes through the updateText() logic for size limits, etc
+        new_text = osk_new_text;
+      }
+    }
+    this.textedit_string.text = new_text;
     if (focused) {
       let text_input = inputTextInputQueue();
       for (let ii = 0; ii < text_input.length; ++ii) {
@@ -332,14 +341,14 @@ class GlovUIEditBox {
           if (is_copy || is_cut) {
             if (texteditHasSelection(this.textedit_state)) {
               let { select_start, select_end } = this.textedit_state;
-              platformAdapterGet().clipboardWrite(
+              platform_adapter.clipboardWrite(
                 this.textedit_string.text.slice(min(select_start, select_end), max(select_start, select_end)));
               if (is_cut) {
                 stb_textedit_cut(this.textedit_string, this.textedit_state);
               }
             }
           } else if (is_paste) {
-            let paste_text = platformAdapterGet().clipboardRead();
+            let paste_text = platform_adapter.clipboardRead();
             if (paste_text) {
               paste_text = paste_text.replace(/\r\n?/g, '\n');
               if (!this.multiline) {

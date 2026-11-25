@@ -1952,6 +1952,8 @@ export function modalTextEntry(param) {
     }
     buttons[key] = defaults({ cb }, param.buttons[key]);
   }
+
+  let first = true;
   param.buttons = buttons;
   param.text = `${param.text || ''}`;
   let old_tick = param.tick;
@@ -1964,6 +1966,18 @@ export function modalTextEntry(param) {
       w: params.avail_width || param.edit_w,
       font_height: params.font_height,
     });
+    if (first) {
+      first = false;
+      platformAdapterGet().onscreenKeyboardShow?.({
+        x: eb.x,
+        y: eb.y,
+        w: eb.w,
+        h: eb.h,
+        max_len: param.max_len,
+        text: param.edit_text || '',
+        desc: `${param.title}${param.title ? '\n' : ''}${param.text}`,
+      });
+    }
     if (!params.fullscreen_mode) {
       params.y += params.font_height * (param.multiline || 1) + modal_pad;
     }
