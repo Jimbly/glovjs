@@ -140,6 +140,7 @@ module.exports = function (gb) {
     extra_client_tasks: [],
     extra_server_tasks: [],
     extra_prod_inputs: [], // Will bypass the production zip bundling, but still get in the raw production output
+    extra_prod_rules: [], // These get used in all prod outputs, bundles, etc, use for excluding development-only assets
     extra_prod_tasks: [],
     extra_zip_inputs: [],
     client_intermediate_input: [

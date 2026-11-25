@@ -1090,6 +1090,7 @@ config.extra_index.forEach(function (elem) {
       'assets_dummy:**',
       ...config.extra_client_html,
       ...config.extra_zip_inputs,
+      ...config.extra_prod_rules,
       `gulpish-client_html_${elem.name}:**`,
     ],
     deps: ['build_deps'],
@@ -1180,6 +1181,7 @@ gb.task({
     'prod.posthash:**',
     ...config.gzipped_textures.map((ext) => `prod.posthash:!**/*${ext}`),
     ...config.extra_prod_inputs,
+    ...config.extra_prod_rules,
   ],
   target: 'prod',
   ...compress({
