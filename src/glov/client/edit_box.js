@@ -254,7 +254,10 @@ class GlovUIEditBox {
       getWidth: this.texteditGetWidth.bind(this),
       canInsert: this.texteditCanInsert.bind(this),
     };
-    this.textedit_state = texteditNewState(Boolean(this.multiline));
+    this.textedit_state = texteditNewState(!this.multiline);
+    if (this.initial_select) {
+      this.setSelectionRange(0, this.text.length);
+    }
   }
   resetCSSCaching() {
     this.last_tab_index = -1;
@@ -406,7 +409,9 @@ class GlovUIEditBox {
       // if (this.type === 'number') {
       //   this.input.type = 'text';
       // }
-      this.input.setSelectionRange(sel_start, sel_end);
+      if (this.input) {
+        this.input.setSelectionRange(sel_start, sel_end);
+      }
       // if (this.type === 'number') {
       //   this.input.type = 'number';
       // }
