@@ -497,7 +497,7 @@ function settingsFile(key: string): string | null {
   ) {
     return 'user-settings.json';
   } else if (
-    key.startsWith('sdl-') || // sdl-window-state
+    key.startsWith('window-') || // sdl-window-state
     [
       'cmd_parse_maxfps_2',
       'cmd_parse_useanimationframe',

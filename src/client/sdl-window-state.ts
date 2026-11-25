@@ -43,8 +43,15 @@ function isInt(v: unknown): v is number {
 }
 
 function stateRead(): WindowState | null {
-  let data = localStorageGetJSON<WindowState | null>('sdl-window-state', null);
-  if (!data || !isInt(data.x) || !isInt(data.y) ||
+  let data: WindowState = {
+    x: localStorageGetJSON('window-x', 0),
+    y: localStorageGetJSON('window-y', 0),
+    width: localStorageGetJSON('window-width', 0),
+    height: localStorageGetJSON('window-height', 0),
+    maximized: localStorageGetJSON('window-maximized', false),
+    fullscreen: localStorageGetJSON('window-fullscreen', true),
+  };
+  if (!isInt(data.x) || !isInt(data.y) ||
     !isInt(data.width) || data.width <= 0 || !isInt(data.height) || data.height <= 0
   ) {
     return null;
@@ -60,7 +67,10 @@ function stateRead(): WindowState | null {
 }
 
 function stateWrite(state: WindowState): void {
-  localStorageSetJSON('sdl-window-state', state);
+  let key: keyof WindowState;
+  for (key in state) {
+    localStorageSetJSON(`window-${key}`, state[key]);
+  }
 }
 
 function intersectArea(a: Rect, b: Rect): number {
@@ -103,7 +113,7 @@ function fullyOnScreen(displays: Sdl.Video.Display[], rect: Rect): boolean {
 export function sdlWindowStateLoad(): { create_opts: SDLWindowCreateOpts; maximized: boolean } {
   let state = stateRead();
   if (!state) {
-    return { create_opts: { fullscreen: !MODE_DEVELOPMENT }, maximized: false };
+    return { create_opts: { width: 1280, height: 720, fullscreen: !MODE_DEVELOPMENT }, maximized: false };
   }
   let displays = sdl.video.displays;
   let title_h = titleBarHeight(displays, state.x, state.y);
