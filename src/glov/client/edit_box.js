@@ -230,7 +230,7 @@ class GlovUIEditBox {
     this.focus_steal = this.focus_steal || this.initial_focus;
     assert.equal(typeof this.text, 'string');
 
-    this.dom_backed = is_mobile;
+    this.dom_backed = is_mobile || engine.defines.EDITDOM;
     this.last_autocomplete = null;
     this.last_placeholder = null;
     this.is_focused = false;
