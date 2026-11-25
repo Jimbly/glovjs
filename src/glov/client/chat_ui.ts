@@ -1428,7 +1428,7 @@ class ChatUI {
     let is_focused = false;
     let font_height = this.font_height;
     let anything_visible = false;
-    let hide_light = (opts.hide_input || opts.hide || engine.defines.NOUI || !netSubs().loggedIn()) &&
+    let hide_light = (opts.hide_input || opts.hide || engine.defines.NOUI || !netSubs() || !netSubs().loggedIn()) &&
       !was_focused ?
       1 : // must be numerical, used to index fade values
       0;
@@ -1986,7 +1986,11 @@ class ChatUI {
       prefix_usage_with_help: true,
       usage: 'Usage: /enter_chat [msg]',
       func: (param: string, resp_func: CmdRespFunc) => {
-        if (!param && !getAbilityChat()) {
+        if (!param && (
+          !getAbilityChat() ||
+          !netSubs() || !netSubs().loggedIn() ||
+          !this.channel
+        )) {
           return;
         }
         this.focus();

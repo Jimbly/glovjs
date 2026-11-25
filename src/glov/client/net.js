@@ -93,11 +93,11 @@ export function netClient() {
 }
 
 export function netClientId() {
-  return client.id;
+  return client && client.id;
 }
 
 export function netUserId() {
-  return subs.getUserId();
+  return subs && subs.getUserId();
 }
 
 export function netSubs() {
