@@ -1412,10 +1412,6 @@ class ChatUI {
     //   }
     // }
 
-    if (!this.did_run_late) {
-      this.runLate();
-    }
-    this.did_run_late = false;
     const x0 = opts.x === undefined ? camera2d.x0() : opts.x;
     const y0 = opts.y === undefined ? camera2d.y1() - this.h : opts.y;
     const y1 = y0 + this.h;
@@ -1822,6 +1818,11 @@ class ChatUI {
       // Gained focus undo pointerlock
       input.pointerLockExit();
     }
+
+    if (!this.did_run_late) {
+      this.runLate();
+    }
+    this.did_run_late = false;
 
     if (!anything_visible && (isMenuUp() || hide_light)) {
       return;
