@@ -399,6 +399,22 @@ function fetchSDL(params: FetchInternalParams, done: ErrorCallback<unknown>): vo
   if (fetchIsWeb(params)) {
     return fetchNative(params, done);
   }
+  if (params.response_type === 'json' && params.url.endsWith('.json')) {
+    return fs.readFile(application_root + params.url, 'utf8', function (err, data) {
+      if (err) {
+        console.error(`Error loading "${params.url}": ${err}`);
+        return done(err);
+      }
+      let ret;
+      try {
+        ret = JSON.parse(data);
+      } catch (e) {
+        console.error(`Error parsing "${params.url}": ${e}`);
+        return done(e);
+      }
+      done(null, ret);
+    });
+  }
   console.log(`unhandled fetch ${params.url}:${params.response_type}`);
 }
 
