@@ -532,6 +532,6 @@ function startConsole(): void {
   repl_inst.context.platform_adapter = platform_sdl;
 }
 
-if (window.glov_platform_devmode) { // TODO: or --console
+if (process.argv.includes('--repl')) {
   startConsole();
 }
