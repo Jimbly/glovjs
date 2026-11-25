@@ -544,7 +544,8 @@ module.exports = function (config, opts) {
         argv.port ? `--inspect=${9230 + Number(argv.port) - 3000}` : '--inspect=9230',
         '--enable-source-maps',
         'sdl:sdlmain.js',
-      ].concat(argv.debug ? ['--debug'] : []),
+      ].concat(argv.debug ? ['--debug'] : [])
+      .concat(argv.steam ? ['--steam'] : []),
       // .concat(argv['net-delay'] === false ? ['--no-net-delay'] : [])
       // .concat(argv.timeout === false ? ['--no-timeout'] : [])
       // .concat(argv['packet-debug'] === false ? ['--no-packet-debug'] : [])
