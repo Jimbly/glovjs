@@ -5,6 +5,7 @@ import type {
 } from 'glov/common/types';
 import type { ROVec3 } from 'glov/common/vmath';
 import type { FetchInternalParams } from './fetch';
+import type { Box } from './geom_types';
 import type { ValidKey } from './input';
 import type { CursorStyle } from './ui';
 
@@ -80,6 +81,14 @@ export type PlatformStartupRet = {
   webgl2: boolean;
 };
 
+export type PlatformOSKParam = Box & {
+  // Box is only used if a floating keyboard is shown,
+  // these others are only used if a fullscreen keyboard is shown
+  max_len: number;
+  desc: string;
+  text: string;
+};
+
 export type PlatformAdapter = {
   startup(param: PlatformStartupParam): PlatformStartupRet;
   checkResize(): void;
@@ -100,4 +109,7 @@ export type PlatformAdapter = {
   fscreenActive(): boolean;
   keyboardLocalName(key_code: number /* KEYS.FOO */): string | undefined;
   keyboardLocalNameInverse(letter: ValidKey): ValidKey | null;
+
+  onscreenKeyboardShow?(param: PlatformOSKParam): void;
+  onscreenKeyboardGetText?(): string | null;
 };
