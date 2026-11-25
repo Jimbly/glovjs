@@ -443,11 +443,31 @@ module.exports = function (config, opts) {
     ],
     func: function (job, done) {
       let file = job.getFile();
-      job.out({
-        relative: 'dist/' + file.relative,
-        contents: file.contents,
-      });
-      done();
+      let { relative } = file;
+      function passthrough() {
+        job.out({
+          relative: 'dist/' + relative,
+          contents: file.contents,
+        });
+        done();
+      }
+      if (relative.endsWith('.txp')) {
+        // filter out if we have a -astc.br and -dxt.br version
+        job.depAdd(`${file.bucket}:${relative}-astc.br`, function (err) {
+          if (err) {
+            return void passthrough();
+          }
+          job.depAdd(`${file.bucket}:${relative}-dxt.br`, function (err) {
+            if (err) {
+              return void passthrough();
+            }
+            // skip it
+            done();
+          });
+        });
+      } else {
+        passthrough();
+      }
     }
   });
 
