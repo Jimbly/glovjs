@@ -132,6 +132,8 @@ module.exports = function (config, opts) {
     input: [
       'native_modules:**/*',
       'sdl/**',
+      '!sdl/data/gameversion_main.dat',
+      '!sdl/data/gameversion_demo.dat',
     ],
     type: gb.SINGLE,
     version: [exe_name],
